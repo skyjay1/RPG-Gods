@@ -1,0 +1,38 @@
+{
+  "enabled": true,
+  "deity": "greek:zeus",
+  "female": false,
+  "slim": false,
+  "block": {
+    "Name": "minecraft:stone_slab"
+  },
+  "items": {
+    "mainhand": {
+      "id": "minecraft:iron_sword",
+      "Count": 1
+    },
+    "armor_locked": false,
+    "hands_locked": true
+  },
+  "pose": {
+    "head": {
+      "x": 0.174533
+    },
+    "left_arm": {
+      "x": -0.20944,
+      "y": 0,
+      "z": -0.0872665
+    },
+    "right_arm": {
+      "x": -2.61799,
+      "z": -0.174533
+    },
+    "left_leg": {
+      "z": -0.0349066
+    },
+    "right_leg": {
+      "z": 0.0349066
+    }
+  },
+  "pose_locked": true
+}

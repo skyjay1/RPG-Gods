@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+# The license for your mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
+license="GNU GPLv3"
+# A URL to refer people to when problems occur with this mod
+# issueTrackerURL="https://github.com/skyjay1/GreekFantasy/issues"
+
+[[mods]]
+    modId="rpggods"
+    version="16.5.0"
+    displayName="RPG Gods"
+    credits=""
+    authors="skyjay1"
+    description='''Gods and goddesses galore'''
+[[dependencies.greekfantasy]]
+    modId="forge"
+    mandatory=true
+    versionRange="[36.2,)"
+    ordering="NONE"
+    side="BOTH"

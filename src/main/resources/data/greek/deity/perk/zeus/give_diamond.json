@@ -1,0 +1,27 @@
+{
+    "icon": {
+        "item": {
+            "id": "minecraft:diamond",
+            "Count": 1
+        },
+        "color": 16711680
+    },
+    "range": {
+        "deity": "greek:zeus",
+        "minlevel": -2,
+        "maxlevel": 10
+    },
+    "cooldown_category": "item",
+    "cooldown": 100,
+    "chance": 0.2,
+    "condition": [
+        {
+            "type": "patron",
+            "data": "greek:zeus"
+        }
+    ],
+    "item": {
+        "id": "minecraft:diamond",
+      	"Count": 8
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "icon": {
+        "item": {
+            "id": "minecraft:diamond",
+            "Count": 1
+        },
+        "color": 6710886
+    },
+    "range": {
+        "deity": "greek:zeus",
+        "minlevel": -2,
+        "maxlevel": 10
+    },
+    "cooldown": 100,
+    "chance": 0.6,
+    "item": {
+        "id": "minecraft:iron_ingot",
+      	"Count": 8
+    }
+}
