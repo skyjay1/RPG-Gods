@@ -38,18 +38,22 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkHooks;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.deity.Altar;
+import rpggods.favor.Favor;
+import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
+import rpggods.gui.FavorContainer;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
+public class AltarEntity extends LivingEntity /* implements IInventoryChangedListener */ {
 
     private static final DataParameter<String> DEITY = EntityDataManager.createKey(AltarEntity.class, DataSerializers.STRING);
     private static final DataParameter<Byte> FLAGS = EntityDataManager.createKey(AltarEntity.class, DataSerializers.BYTE);
@@ -70,8 +74,8 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     private Optional<BlockState> block = Optional.empty();
     private Optional<ResourceLocation> deity = Optional.empty();
 
-    private static final int INV_SIZE = 7;
-    private Inventory inventory;
+    //private static final int INV_SIZE = 7;
+    //private Inventory inventory;
 
     @Nullable
     private GameProfile playerProfile = null;
@@ -185,27 +189,40 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     public ActionResultType applyPlayerInteraction(PlayerEntity player, Vector3d vec, Hand hand) {
         RPGGods.LOGGER.debug("Name: " + (hasCustomName() ? getCustomName().getUnformattedComponentText() : "<null>"));
         RPGGods.LOGGER.debug("Deity: " + getDeity());
-        RPGGods.LOGGER.debug("Flags: " + getFlags());
-        RPGGods.LOGGER.debug("\tFemale: " + isFemale());
-        RPGGods.LOGGER.debug("\tSlim: " + isSlim());
-        RPGGods.LOGGER.debug("Locked: " + getLocked());
-        RPGGods.LOGGER.debug("\tArmorLocked: " + isArmorLocked());
-        RPGGods.LOGGER.debug("\tHandsLocked: " + isHandsLocked());
-        RPGGods.LOGGER.debug("\tPoseLocked: " + isAltarPoseLocked());
-        RPGGods.LOGGER.debug("Items: " + getHeldEquipment());
-        RPGGods.LOGGER.debug("Block: " + getBaseBlock());
 
         // open container
         // open the container GUI
         if(player instanceof ServerPlayerEntity) {
-            NetworkHooks.openGui((ServerPlayerEntity)player,
-                    new SimpleNamedContainerProvider((id, inventory, p) ->
-                            new AltarContainer(id, inventory, null, this),
-                            StringTextComponent.EMPTY),
-                    buf -> {
-                        buf.writeInt(this.getEntityId());
-                    }
-            );
+            // attempt to process favor capability
+            if(getDeity().isPresent()) {
+                LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
+                if(favor.isPresent()) {
+                    ResourceLocation deity = getDeity().get();
+                    IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
+
+                    // open favor GUI
+                    NetworkHooks.openGui((ServerPlayerEntity)player,
+                            new SimpleNamedContainerProvider((id, inventory, p) ->
+                                    new FavorContainer(id, inventory, ifavor, deity),
+                                    StringTextComponent.EMPTY),
+                            buf -> {
+                                buf.writeCompoundTag(ifavor.serializeNBT());
+                                buf.writeResourceLocation(deity);
+                            }
+                    );
+                }
+
+            } else {
+                // open altar GUI
+                NetworkHooks.openGui((ServerPlayerEntity)player,
+                        new SimpleNamedContainerProvider((id, inventory, p) ->
+                                new AltarContainer(id, inventory, null, this),
+                                StringTextComponent.EMPTY),
+                        buf -> {
+                            buf.writeInt(this.getEntityId());
+                        }
+                );
+            }
         }
 
         return ActionResultType.SUCCESS;
@@ -456,6 +473,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     @Nullable
     public GameProfile getPlayerProfile() { return this.playerProfile; }
 
+    /*
     public void initInventory() {
         Inventory simplecontainer = this.inventory;
         this.inventory = new Inventory(INV_SIZE);
@@ -474,9 +492,5 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         this.inventory.addListener(this);
         this.onInventoryChanged(this.inventory);
     }
-
-    @Override
-    public void onInventoryChanged(IInventory invBasic) {
-
-    }
+     */
 }

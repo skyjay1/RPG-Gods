@@ -87,14 +87,14 @@ public final class RGRegistry {
                 return new AltarContainer(windowId, inv, null, (AltarEntity)entity); // TODO
             });
             // Favor screen requires Favor as a Compound Tag and Deity ID as a ResourceLocation
-//            ContainerType<FavorContainer> favorContainer = IForgeContainerType.create((windowId, inv, data) -> {
-//                final IFavor favor = RPGGods.FAVOR.getDefaultInstance();
-//                RPGGods.FAVOR.readNBT(favor, null, data.readCompoundTag());
-//                ResourceLocation deityId = data.readResourceLocation();
-//                return new FavorContainer(windowId, inv, favor, deityId);
-//            });
+            ContainerType<FavorContainer> favorContainer = IForgeContainerType.create((windowId, inv, data) -> {
+                final IFavor favor = RPGGods.FAVOR.getDefaultInstance();
+                RPGGods.FAVOR.readNBT(favor, null, data.readCompoundTag());
+                ResourceLocation deityId = data.readResourceLocation();
+                return new FavorContainer(windowId, inv, favor, deityId);
+            });
             event.getRegistry().register(altarContainer.setRegistryName(RPGGods.MODID, "altar_container"));
-//            event.getRegistry().register(favorContainer.setRegistryName(RPGGods.MODID, "favor_container"));
+            event.getRegistry().register(favorContainer.setRegistryName(RPGGods.MODID, "favor_container"));
         }
     }
 
@@ -114,8 +114,7 @@ public final class RGRegistry {
         private static void registerContainerRenders() {
             RPGGods.LOGGER.debug("registerContainerRenders");
             ScreenManager.registerFactory(RGRegistry.ContainerReg.ALTAR_CONTAINER, rpggods.client.screen.AltarScreen::new);
-            // TODO
-            //ScreenManager.registerFactory(RGRegistry.ContainerReg.FAVOR_CONTAINER, rpggods.client.screen.FavorScreen::new);
+            ScreenManager.registerFactory(RGRegistry.ContainerReg.FAVOR_CONTAINER, rpggods.client.screen.FavorScreen::new);
         }
     }
 }

@@ -36,6 +36,11 @@ public class AltarContainer extends Container {
         this.entity = entity;
         this.altar = entity != null ? entity.createAltarProperties() : Altar.EMPTY;
         // add container inventory
+        // TODO:
+        // you can access it as an IItemHandler
+        //there's values you can pass into the side parameter of getCapability to get just the armor or just the hands
+        //they don't do validation [e.g. making sure chest slot is chest armor], so you'll need to do it yourself and honestly a custom container might be easier
+        //you can subclass Slot to do whatever you want, there's a SlotItemHandler that works with IItemHandler
         handItems = new ArrayList<>();
         armorItems = new ArrayList<>();
         if(iinventory != null) {
