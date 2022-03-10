@@ -56,6 +56,7 @@ public class AltarModel<T extends AltarEntity> extends EntityModel<T> implements
         super(RenderType::getEntityCutoutNoCull);
         this.textureWidth = 64;
         this.textureHeight = 64;
+        this.isChild = false;
         // head
         this.bipedHead = new ModelRenderer(this, 0, 0);
         this.bipedHead.addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, modelSizeIn);
@@ -195,7 +196,7 @@ public class AltarModel<T extends AltarEntity> extends EntityModel<T> implements
     }
 
     public void render(final T entity, MatrixStack matrixStackIn, IVertexBuilder bufferIn, int packedLightIn, int packedOverlayIn,
-                       float offsetY, final boolean female, final boolean slim, float red, float green, float blue, float alpha) {
+                       final boolean female, final boolean slim, float red, float green, float blue, float alpha) {
         // update which parts can be shown for male/female
         this.bipedBodyChest.showModel = female;
         // determine which parts this block will be rendering

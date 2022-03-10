@@ -1,5 +1,6 @@
 package rpggods.entity;
 
+import com.mojang.authlib.GameProfile;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.material.Material;
@@ -14,6 +15,9 @@ import net.minecraft.entity.item.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.IInventoryChangedListener;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -22,6 +26,7 @@ import net.minecraft.nbt.NBTUtil;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.tileentity.SkullTileEntity;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
@@ -41,9 +46,10 @@ import rpggods.altar.AltarPose;
 import rpggods.deity.Altar;
 import rpggods.gui.AltarContainer;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class AltarEntity extends LivingEntity {
+public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
 
     private static final DataParameter<String> DEITY = EntityDataManager.createKey(AltarEntity.class, DataSerializers.STRING);
     private static final DataParameter<Byte> FLAGS = EntityDataManager.createKey(AltarEntity.class, DataSerializers.BYTE);
@@ -63,6 +69,14 @@ public class AltarEntity extends LivingEntity {
     private NonNullList<ItemStack> armorItems = NonNullList.withSize(4, ItemStack.EMPTY);
     private Optional<BlockState> block = Optional.empty();
     private Optional<ResourceLocation> deity = Optional.empty();
+
+    private static final int INV_SIZE = 7;
+    private Inventory inventory;
+
+    @Nullable
+    private GameProfile playerProfile = null;
+    private String textureName = "";
+
     private AltarPose pose = new AltarPose();
 
     private EntitySize smallSize = new EntitySize(0.8F, 1.98F, false);
@@ -339,6 +353,15 @@ public class AltarEntity extends LivingEntity {
         recalculateSize();
     }
 
+    private void setPlayerProfile(@Nullable GameProfile profile) {
+        this.playerProfile = profile;
+        this.updatePlayerProfile();
+    }
+
+    private void updatePlayerProfile() {
+        this.playerProfile = SkullTileEntity.updateGameProfile(this.playerProfile);
+    }
+
     public boolean isArmorLocked() {
         return (getLocked() & 0x01) > 0;
     }
@@ -393,6 +416,18 @@ public class AltarEntity extends LivingEntity {
         setFlags((byte) (slim ? (flags | 0x02) : (flags & ~0x02)));
     }
 
+    @Override
+    public void setCustomName(final ITextComponent name) {
+        super.setCustomName(name);
+        // attempt to use custom name to set texture
+        if(name != null && !getDeity().isPresent()) {
+            String sName = name.getUnformattedComponentText();
+            if(sName.length() <= 16) {
+                this.textureName = sName;
+            }
+        }
+    }
+
     public boolean isFemale() {
         return (getFlags() & 0x01) > 0;
     }
@@ -416,5 +451,32 @@ public class AltarEntity extends LivingEntity {
     public void setAltarPose(final AltarPose pose) {
         this.pose = pose;
         this.getDataManager().set(POSE, this.pose.serializeNBT());
+    }
+
+    @Nullable
+    public GameProfile getPlayerProfile() { return this.playerProfile; }
+
+    public void initInventory() {
+        Inventory simplecontainer = this.inventory;
+        this.inventory = new Inventory(INV_SIZE);
+        if (simplecontainer != null) {
+            simplecontainer.removeListener(this);
+            int i = Math.min(simplecontainer.getSizeInventory(), this.inventory.getSizeInventory());
+
+            for(int j = 0; j < i; ++j) {
+                ItemStack itemstack = simplecontainer.getStackInSlot(j);
+                if (!itemstack.isEmpty()) {
+                    this.inventory.setInventorySlotContents(j, itemstack.copy());
+                }
+            }
+        }
+
+        this.inventory.addListener(this);
+        this.onInventoryChanged(this.inventory);
+    }
+
+    @Override
+    public void onInventoryChanged(IInventory invBasic) {
+
     }
 }

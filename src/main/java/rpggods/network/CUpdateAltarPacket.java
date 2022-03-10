@@ -5,6 +5,9 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.client.ForgeHooksClient;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
@@ -20,7 +23,7 @@ import java.util.function.Supplier;
  **/
 public class CUpdateAltarPacket {
 
-    protected static final int NAME_LEN = 16;
+    protected static final int NAME_LEN = 50;
     protected int entityId;
     protected AltarPose pose = AltarPose.EMPTY;
     protected boolean female = false;
@@ -92,7 +95,7 @@ public class CUpdateAltarPacket {
                 final ServerPlayerEntity player = context.getSender();
                 Entity entity = context.getSender().getEntityWorld().getEntityByID(message.entityId);
                 RPGGods.LOGGER.debug("Updating entity id " + message.entityId + ": " + (entity != null ? entity.toString() : "NOT FOUND"));
-                double maxDistance = context.getSender().getEntityWorld().getMaxEntityRadius();
+                double maxDistance = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
                 if(entity != null && entity instanceof AltarEntity && player.getDistanceSq(entity) < Math.pow(maxDistance, 2)) {
                     // update pose and name
                     AltarEntity altar = (AltarEntity) entity;

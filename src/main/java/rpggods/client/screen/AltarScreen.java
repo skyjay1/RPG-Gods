@@ -7,11 +7,11 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.gui.widget.AbstractSlider;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -20,7 +20,6 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraftforge.common.model.Models;
 import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
@@ -31,9 +30,6 @@ import rpggods.gui.AltarContainer;
 import rpggods.network.CUpdateAltarPacket;
 
 import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 public class AltarScreen extends ContainerScreen<AltarContainer> {
 
@@ -48,20 +44,18 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private static final int SCREEN_WIDTH = 224;
     private static final int SCREEN_HEIGHT = 202;
 
-    private static final int PREVIEW_WIDTH = 52;
-    private static final int PREVIEW_HEIGHT = 86;
-    private static final int PREVIEW_X = 8;
-    private static final int PREVIEW_Y = 8;
+    private static final int PREVIEW_WIDTH = 54;
+    private static final int PREVIEW_HEIGHT = 80;
+    private static final int PREVIEW_X = 7;
+    private static final int PREVIEW_Y = 7;
 
     private static final int PARTS_X = 147;
     private static final int PARTS_Y = 7;
 
     private static final int GENDER_X = 7;
     private static final int GENDER_Y = 87;
-
     private static final int SLIM_X = 45;
     private static final int SLIM_Y = 87;
-
     private static final int RESET_X = 123;
     private static final int RESET_Y = 87;
 
@@ -73,7 +67,10 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private static final int BTN_WIDTH = 70;
     private static final int BTN_HEIGHT = 16;
 
-
+    private static final int TEXT_X = 100;
+    private static final int TEXT_Y = 7;
+    private static final int TEXT_WIDTH = 117;
+    private static final int TEXT_HEIGHT = 16;
 
     private final AltarScreen.TabButton[] tabButtons = new AltarScreen.TabButton[TAB_COUNT];
     private int tabIndex;
@@ -85,7 +82,6 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private AltarItems items;
     private BlockState block;
     private boolean blockLocked;
-    private ResourceLocation material;
     private AltarPose pose;
     private boolean poseLocked;
 
@@ -96,22 +92,24 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private IconButton genderButton;
     private IconButton slimButton;
     private IconButton resetButton;
-
     private ModelPart selectedPart = ModelPart.BODY;
+
+    private TextFieldWidget nameField;
 
     public AltarScreen(final AltarContainer screenContainer, final PlayerInventory inv, final ITextComponent title) {
         super(screenContainer, inv, title);
         this.xSize = SCREEN_WIDTH;
-        this.ySize = SCREEN_HEIGHT;
+        this.ySize = SCREEN_HEIGHT - TAB_HEIGHT / 2;
+        this.playerInventoryTitleX = this.guiLeft + AltarContainer.PLAYER_INV_X;
+        this.playerInventoryTitleY = this.guiTop + AltarContainer.PLAYER_INV_Y - 10;
         Altar altar = screenContainer.getAltar();
         enabled = altar.isEnabled();
-        name = altar.getName();
+        name = altar.getDeity().isPresent() ? Optional.empty() : altar.getName();
         female = altar.isFemale();
         slim = altar.isSlim();
         items = altar.getItems();
         block = altar.getBlock();
         blockLocked = altar.isBlockLocked();
-        material = altar.getMaterial();
         pose = altar.getPose();
         poseLocked = altar.isPoseLocked();
     }
@@ -119,13 +117,10 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     @Override
     public void init(Minecraft minecraft, int width, int height) {
         super.init(minecraft, width, height);
-        this.guiTop += TAB_HEIGHT;
-        this.playerInventoryTitleX = this.guiLeft + AltarContainer.PLAYER_INV_X;
-        this.playerInventoryTitleY = this.guiTop + AltarContainer.PLAYER_INV_Y - 10;
         // add tab buttons
         tabButtons[0] = addButton(new AltarScreen.TabButton(this, 0, new TranslationTextComponent("gui.altar.pose"),
                 guiLeft + (0 * TAB_WIDTH), guiTop - TAB_HEIGHT + 4, new ItemStack(Items.ARMOR_STAND)));
-        tabButtons[1] = addButton(new AltarScreen.TabButton(this, 0, new TranslationTextComponent("gui.altar.items"),
+        tabButtons[1] = addButton(new AltarScreen.TabButton(this, 1, new TranslationTextComponent("gui.altar.items"),
                 guiLeft + (1 * TAB_WIDTH), guiTop - TAB_HEIGHT + 4, new ItemStack(Items.IRON_SWORD)));
         // add part buttons
         for (int i = 0, l = ModelPart.values().length; i < l; i++) {
@@ -185,6 +180,22 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         this.addButton(sliderAngleX);
         this.addButton(sliderAngleY);
         this.addButton(sliderAngleZ);
+        // items tab
+        this.minecraft.keyboardListener.enableRepeatEvents(true);
+        int i = (this.width - this.xSize) / 2;
+        int j = (this.height - this.ySize) / 2;
+        this.nameField = new TextFieldWidget(this.font, this.guiLeft + TEXT_X, this.guiTop + TEXT_Y, TEXT_WIDTH, TEXT_HEIGHT, new TranslationTextComponent("gui.altar.name"));
+        this.nameField.setText(name.orElse(""));
+        this.nameField.setCanLoseFocus(true);
+        this.nameField.setTextColor(-1);
+        this.nameField.setDisabledTextColour(-1);
+        this.nameField.setEnableBackgroundDrawing(true);
+        this.nameField.setMaxStringLength(35);
+        this.nameField.setResponder(s -> name = (s != null && s.length() > 0) ? Optional.of(s) : Optional.empty());
+        // TODO disable when deity is present
+        //this.nameField.setEnabled(!getContainer().getAltar().getDeity().isPresent());
+        this.children.add(this.nameField);
+        // update
         this.updateSliders();
         this.updateTab(0);
     }
@@ -196,7 +207,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         // draw background
         this.minecraft.getTextureManager().bindTexture(SCREEN_TEXTURE);
-        this.blit(matrixStack, this.guiLeft, this.guiTop, 0, 0, this.xSize, this.ySize);
+        this.blit(matrixStack, this.guiLeft, this.guiTop, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         // draw preview pane
         this.minecraft.getTextureManager().bindTexture(SCREEN_WIDGETS);
         this.blit(matrixStack, this.guiLeft + PREVIEW_X, this.guiTop + PREVIEW_Y, 168, 130, PREVIEW_WIDTH, PREVIEW_HEIGHT);
@@ -206,7 +217,9 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         super.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw tile entity preview
-        drawEntityOnScreen(matrixStack, this.guiLeft + PREVIEW_X, this.guiTop + PREVIEW_Y, mouseX, mouseY, partialTicks);
+        drawEntityOnScreen(matrixStack, this.guiLeft + PREVIEW_X + 12, this.guiTop + PREVIEW_Y + 4, mouseX, mouseY, partialTicks);
+        // draw text box
+        this.nameField.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw hovering text LAST
         for (final Widget b : this.buttons) {
             if (b.visible && b.isHovered()) {
@@ -217,10 +230,32 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        this.nameField.tick();
+    }
+
+    @Override
     public void onClose() {
         super.onClose();
+        this.minecraft.keyboardListener.enableRepeatEvents(false);
         // send update packet to server
         RPGGods.CHANNEL.sendToServer(new CUpdateAltarPacket(this.container.getEntity().getEntityId(), this.pose, this.female, this.slim, this.name.orElse("")));
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+        String s = this.nameField.getText();
+        this.init(minecraft, width, height);
+        this.nameField.setText(s);
+    }
+
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) {
+            this.minecraft.player.closeScreen();
+        }
+
+        return !this.nameField.keyPressed(keyCode, scanCode, modifiers) && !this.nameField.canWrite() ? super.keyPressed(keyCode, scanCode, modifiers) : true;
     }
 
     protected void updateSliders() {
@@ -244,8 +279,8 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         for(PartButton pb : partButtons) {
             pb.visible = tab0;
         }
-        // TODO tab 1
-        
+        nameField.visible = tab1;
+        this.setListener(tab1 ? this.nameField : null);
     }
 
     @SuppressWarnings("deprecation")
@@ -278,7 +313,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
 
         IRenderTypeBuffer.Impl bufferType = minecraft.getRenderTypeBuffers().getBufferSource();
         Minecraft.getInstance().getRenderManager().getRenderer(container.getEntity())
-                        .render(container.getEntity(), 0F, partialTicks, matrixStackIn, bufferType, OverlayTexture.NO_OVERLAY);
+                        .render(container.getEntity(), 0F, partialTicks, matrixStackIn, bufferType, 15728880);
         bufferType.finish();
 
         RenderSystem.enableDepthTest();
@@ -298,7 +333,9 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         entity.setAltarPose(this.pose);
         entity.setFemale(female);
         entity.setSlim(slim);
-        // TODO: texture name
+        if(name.isPresent()) {
+            entity.setCustomName(new StringTextComponent(name.get()));
+        }
     }
 
     protected class TabButton extends Button {

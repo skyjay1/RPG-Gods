@@ -1,5 +1,7 @@
 package rpggods.client.render;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 import net.minecraft.block.BlockState;
@@ -17,7 +19,11 @@ import net.minecraft.client.renderer.entity.layers.HeldItemLayer;
 import net.minecraft.client.renderer.entity.layers.LayerRenderer;
 import net.minecraft.client.renderer.entity.model.ArmorStandArmorModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.entity.Entity;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.math.vector.Vector3f;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.model.data.EmptyModelData;
@@ -25,12 +31,17 @@ import net.minecraftforge.common.MinecraftForge;
 import rpggods.RPGGods;
 import rpggods.altar.AltarPose;
 import rpggods.altar.ModelPart;
+import rpggods.client.screen.AltarScreen;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
+
+import java.util.Map;
 
 public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> extends LivingRenderer<T, M> {
 
     private static final ResourceLocation TEXTURE = new ResourceLocation("greek", "textures/altar/zeus.png");
+    protected static final ResourceLocation STEVE_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/steve.png");
+    protected static final ResourceLocation ALEX_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/alex.png");
 
     public AltarRenderer(final EntityRendererManager renderManagerIn) {
         super(renderManagerIn, (M) new AltarModel<T>(0.0F, 0.0F), 0.5F);
@@ -64,6 +75,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
 
         // prepare to render model
         AltarPose pose = entityIn.getAltarPose();
+        getEntityModel().isChild = false;
         getEntityModel().setRotationAngles(entityIn, 0F, 0F, 0F, 0F, 0F);
 
         // determine render type
@@ -75,14 +87,14 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
 
         // render model
         matrixStackIn.push();
-        getEntityModel().translateRotateAroundBody(pose.get(ModelPart.BODY), pose.get(ModelPart.OFFSET), matrixStackIn, partialTicks);
+        getEntityModel().translateRotateAroundBody(pose.get(ModelPart.OFFSET), pose.get(ModelPart.BODY), matrixStackIn, partialTicks);
         matrixStackIn.translate(0.0F, 2.0F + baseHeight, 0.0F);
         matrixStackIn.rotate(Vector3f.XP.rotationDegrees(180.0F));
         if (rendertype != null) {
             IVertexBuilder ivertexbuilder = bufferIn.getBuffer(rendertype);
             int i = getPackedOverlay(entityIn, this.getOverlayProgress(entityIn, partialTicks));
             getEntityModel().render(entityIn, matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
-                    baseHeight, entityIn.isFemale(), entityIn.isSlim(), 1.0F, 1.0F, 1.0F, 1.0F);
+                    entityIn.isFemale(), entityIn.isSlim(), 1.0F, 1.0F, 1.0F, 1.0F);
         }
 
         // render layers
@@ -105,18 +117,49 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
     }
 
     @Override
+    public boolean canRenderName(final AltarEntity entityIn) {
+        final Minecraft mc = Minecraft.getInstance();
+        if(mc.currentScreen instanceof AltarScreen) {
+            return false;
+        }
+        final Vector3d pos = entityIn.getPositionVec().add(0, entityIn.getType().getSize().height / 2D, 0);
+        return isWithinDistanceToRenderName(pos, 6.0D);
+    }
+
+    @Override
     public ResourceLocation getEntityTexture(final T entity) {
-        ResourceLocation tex = TEXTURE;
+        // return deity texture
         if(entity.getDeity().isPresent()) {
             ResourceLocation deity = entity.getDeity().get();
-            tex = new ResourceLocation(deity.getNamespace(), "textures/altar/" + deity.getPath() + ".png");
+            return new ResourceLocation(deity.getNamespace(), "textures/altar/" + deity.getPath() + ".png");
         }
-        return tex;
+        // return player texture
+        final GameProfile gameProfile = entity.getPlayerProfile();
+        final boolean slim = entity.isSlim();
+        if(gameProfile != null) {
+            Minecraft minecraft = Minecraft.getInstance();
+            Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraft.getSkinManager().loadSkinFromCache(gameProfile);
+            if(map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
+                return minecraft.getSkinManager().loadSkin(map.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN);
+            }
+        }
+        // return default texture
+        // TODO: return dynamic texture based on material
+        return slim ? ALEX_TEXTURE : STEVE_TEXTURE;
     }
 
     @Override
     protected RenderType func_230496_a_(final T entityIn, boolean isVisible, boolean isVisibleToPlayer, boolean isGlowing) {
         // TODO: optimize, allow for player skins, etc.
         return super.func_230496_a_(entityIn, isVisible, isVisibleToPlayer, isGlowing);
+    }
+
+    public boolean isWithinDistanceToRenderName(final Vector3d pos, final double dis) {
+        final Minecraft mc = Minecraft.getInstance();
+        final EntityRendererManager renderManager = mc.getRenderManager();
+        return renderManager.getDistanceToCamera(pos.x, pos.y, pos.z) < (dis * dis)
+                && mc.objectMouseOver != null
+                && mc.objectMouseOver.getType() == RayTraceResult.Type.ENTITY
+                && mc.objectMouseOver.getHitVec().squareDistanceTo(pos) < Math.pow(0.9D, 2);
     }
 }
