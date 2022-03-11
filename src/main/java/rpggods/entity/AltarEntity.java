@@ -11,7 +11,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.Pose;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.item.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
@@ -191,6 +190,9 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
     public ActionResultType applyPlayerInteraction(PlayerEntity player, Vector3d vec, Hand hand) {
         RPGGods.LOGGER.debug("Name: " + (hasCustomName() ? getCustomName().getUnformattedComponentText() : "<null>"));
         RPGGods.LOGGER.debug("Deity: " + getDeity());
+        if(getDeity().isPresent()) {
+            RPGGods.LOGGER.debug("Deity data: " + RPGGods.DEITY.get(getDeity().get()));
+        }
 
         // open container
         // open the container GUI
@@ -312,7 +314,7 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         setSlim(altar.isSlim());
         setArmorLocked(altar.getItems().isArmorLocked());
         setHandsLocked(altar.getItems().isHandsLocked());
-        setBaseBlock(altar.getBlock());
+        setBaseBlock(altar.getBlock().getDefaultState());
         setBlockLocked(altar.isBlockLocked());
         setAltarPose(altar.getPose());
         setAltarPoseLocked(altar.isPoseLocked());
@@ -336,8 +338,8 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
         ResourceLocation material = Altar.MATERIAL; // TODO
-        return new Altar(true /*TODO*/, name, isFemale(), isSlim(), ItemStack.EMPTY, items, getBaseBlock(), isBlockLocked(),
-                material, getAltarPose(), isAltarPoseLocked());
+        return new Altar(true /*TODO*/, name, isFemale(), isSlim(), ItemStack.EMPTY, items,
+                getBaseBlock().getBlock().getRegistryName(), isBlockLocked(), material, getAltarPose(), isAltarPoseLocked());
     }
 
     public void setDeity(final Optional<ResourceLocation> deity) {

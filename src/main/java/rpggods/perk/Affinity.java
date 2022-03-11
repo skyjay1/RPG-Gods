@@ -6,19 +6,19 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.ResourceLocation;
 
-public class Dread {
+public class Affinity {
 
-    public static final Dread EMPTY = new Dread(Dread.Type.PASSIVE, new ResourceLocation("null"));
+    public static final Affinity EMPTY = new Affinity(Affinity.Type.PASSIVE, new ResourceLocation("null"));
 
-    public static final Codec<Dread> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Dread.Type.CODEC.fieldOf("type").forGetter(Dread::getType),
-            ResourceLocation.CODEC.fieldOf("entity").forGetter(Dread::getEntity)
-    ).apply(instance, Dread::new));
+    public static final Codec<Affinity> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Affinity.Type.CODEC.fieldOf("type").forGetter(Affinity::getType),
+            ResourceLocation.CODEC.fieldOf("entity").forGetter(Affinity::getEntity)
+    ).apply(instance, Affinity::new));
 
-    private final Dread.Type type;
+    private final Affinity.Type type;
     private final ResourceLocation entity;
 
-    public Dread(Type type, ResourceLocation entity) {
+    public Affinity(Type type, ResourceLocation entity) {
         this.type = type;
         this.entity = entity;
     }
@@ -37,20 +37,20 @@ public class Dread {
         FLEE("flee"),
         TAME("tame");
 
-        private static final Codec<Dread.Type> CODEC = Codec.STRING.comapFlatMap(Dread.Type::fromString, Dread.Type::getString).stable();
+        private static final Codec<Affinity.Type> CODEC = Codec.STRING.comapFlatMap(Affinity.Type::fromString, Affinity.Type::getString).stable();
         private final String name;
 
         private Type(final String id) {
             name = id;
         }
 
-        public static DataResult<Dread.Type> fromString(String id) {
-            for(final Dread.Type t : values()) {
+        public static DataResult<Affinity.Type> fromString(String id) {
+            for(final Affinity.Type t : values()) {
                 if(t.getString().equals(id)) {
                     return DataResult.success(t);
                 }
             }
-            return DataResult.error("Failed to parse dread type '" + id + "'");
+            return DataResult.error("Failed to parse affinity type '" + id + "'");
         }
 
         @Override

@@ -3,7 +3,7 @@
   "name": "greek:artemis",
   "female": true,
   "slim": true,
-  "block": "minecraft:birch_slab",
+  "block":  "minecraft:birch_slab",
   "icon": {
     "id": "minecraft:arrow",
     "Count": 1

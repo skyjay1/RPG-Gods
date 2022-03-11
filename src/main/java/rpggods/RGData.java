@@ -26,10 +26,10 @@ public final class RGData {
     public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
         PlayerEntity player = event.getPlayer();
         if (player instanceof ServerPlayerEntity) {
-            RPGGods.ALTAR.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), new SAltarPacket(e.getKey(), e.getValue().get())));
-            RPGGods.OFFERING.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), new SOfferingPacket(e.getKey(), e.getValue().get())));
-            RPGGods.SACRIFICE.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), new SSacrificePacket(e.getKey(), e.getValue().get())));
-            RPGGods.PERK.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), new SPerkPacket(e.getKey(), e.getValue().get())));
+            RPGGods.ALTAR.syncOnReload();
+            RPGGods.OFFERING.syncOnReload();
+            RPGGods.SACRIFICE.syncOnReload();
+            RPGGods.PERK.syncOnReload();
         }
     }
 
@@ -40,6 +40,7 @@ public final class RGData {
     @SubscribeEvent
     public static void onReloadListeners(final AddReloadListenerEvent event) {
         RPGGods.LOGGER.debug("onReloadListeners");
+        RPGGods.DEITY.forEach((id, deity) -> deity.clear());
         event.addListener(RPGGods.ALTAR);
         event.addListener(RPGGods.OFFERING);
         event.addListener(RPGGods.SACRIFICE);

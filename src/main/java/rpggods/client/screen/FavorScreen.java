@@ -62,8 +62,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     private static final int PAGE_HEIGHT = 32;
     private static final int PAGE_COUNT = 4;
 
-    private static final int ARROW_WIDTH = 14;
-    private static final int ARROW_HEIGHT = 18;
+    private static final int ARROW_WIDTH = 12;
+    private static final int ARROW_HEIGHT = 17;
 
     private static final int SCROLL_X = 216;
     private static final int SCROLL_Y = 30;
@@ -126,6 +126,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     // UI elements
     private final FavorScreen.TabButton[] tabButtons = new FavorScreen.TabButton[TAB_COUNT];
     private final FavorScreen.PageButton[] pageButtons = new FavorScreen.PageButton[PAGE_COUNT];
+    private FavorScreen.TabArrowButton leftButton;
+    private FavorScreen.TabArrowButton rightButton;
     private ScrollButton scrollButton;
     private boolean scrollVisible;
     private boolean scrollEnabled;
@@ -214,6 +216,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             tabButtons[i] = this.addButton(new TabButton(this, i, new TranslationTextComponent(Altar.createTranslationKey(deityList.get(i))),
                     guiLeft + startX + (i * TAB_WIDTH), guiTop - TAB_HEIGHT + 13));
         }
+        // add tab buttons
+        leftButton = this.addButton(new TabArrowButton(this, guiLeft + startX - (ARROW_WIDTH + 4), guiTop - TAB_HEIGHT + 20, true));
+        rightButton = this.addButton(new TabArrowButton(this, guiLeft + startX + TAB_WIDTH * TAB_COUNT + 4, guiTop - TAB_HEIGHT + 20, false));
         // add pages
         startX = (this.xSize - (PAGE_WIDTH * PAGE_COUNT)) / 2;
         for(int i = 0; i < PAGE_COUNT; i++) {
@@ -370,7 +375,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         this.deity = deity;
         // update deity name and favor text for header
         deityName = new TranslationTextComponent(Altar.createTranslationKey(deity))
-                .mergeStyle(TextFormatting.BLACK, TextFormatting.BOLD);
+                .mergeStyle(TextFormatting.BLACK);
         final FavorLevel favorLevel = getContainer().getFavor().getFavor(deity);
         deityFavor = new StringTextComponent(favorLevel.getLevel() + " / " + favorLevel.getMax())
                 .mergeStyle(TextFormatting.DARK_PURPLE);
@@ -427,7 +432,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     }
 
     public void updateTabGroup(final int tabGroup) {
-        this.tabGroup = tabGroup % tabGroupCount;
+        this.tabGroup = MathHelper.clamp(tabGroup, 0, tabGroupCount - 1);
+        // show or hide tab arrows
+        leftButton.visible = (this.tabGroup > 0);
+        rightButton.visible = (this.tabGroup < tabGroupCount - 1);
+        // update tabs
         for(TabButton tab : tabButtons) {
             if(tab != null) {
                 tab.updateDeity();
@@ -639,7 +648,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             this.id = index;
             this.itemTooltip = StringTextComponent.EMPTY;
             this.favorText = StringTextComponent.EMPTY;
-            this.functionText = new StringTextComponent(" \u2605 ").mergeStyle(TextFormatting.GOLD);
+            this.functionText = new StringTextComponent(" \u2605 ").mergeStyle(TextFormatting.BLUE);
             this.functionTooltip = new TranslationTextComponent("gui.favor.offering.function.tooltip");
         }
 
@@ -712,7 +721,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             this.id = index;
             this.entityText = StringTextComponent.EMPTY;
             this.favorText = StringTextComponent.EMPTY;
-            this.functionText = new StringTextComponent(" \u2605 ").mergeStyle(TextFormatting.GOLD);
+            this.functionText = new StringTextComponent(" \u2605 ").mergeStyle(TextFormatting.BLUE);
             this.functionTooltip = new TranslationTextComponent("gui.favor.sacrifice.function.tooltip");
         }
 
@@ -802,13 +811,13 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         public void renderWidget(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if(this.visible) {
                 final boolean selected = FavorScreen.this.tab == id;
-                int dY = selected ? 0 : 3;
+                int dY = selected ? 0 : 4;
                 final int u = (id % TAB_COUNT) * TAB_WIDTH;
-                final int v = selected ? this.height : 4;
+                final int v = selected ? this.height : dY;
                 // draw button background
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
                 FavorScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
-                this.blit(matrixStack, this.x, this.y - dY, u, v - dY, this.width, this.height - dY);
+                this.blit(matrixStack, this.x, this.y, u, v, this.width, this.height - dY);
                 // draw item
                 FavorScreen.this.itemRenderer.renderItemIntoGUI(item, this.x + (this.width - 16) / 2, this.y + (this.height - 16) / 2);
             }
@@ -825,6 +834,29 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 this.visible = false;
             }
         }
+    }
+
+    protected class TabArrowButton extends Button {
+        protected boolean left;
+
+        public TabArrowButton(FavorScreen gui, int x, int y, boolean left) {
+            super(x, y, ARROW_WIDTH, ARROW_HEIGHT, StringTextComponent.EMPTY,
+                    b -> gui.updateTabGroup(gui.tabGroup + (left ? -1 : 1)));
+            this.left = left;
+        }
+
+        @Override
+        public void renderWidget(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+            if(this.visible) {
+                final int u = left ? ARROW_WIDTH : 0;
+                final int v = 130 + (isHovered() ? this.height : 0);
+                // draw button
+                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+                FavorScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
+                this.blit(matrixStack, this.x, this.y, u, v, this.width, this.height);
+            }
+        }
+
     }
 
     protected class PageButton extends Button {

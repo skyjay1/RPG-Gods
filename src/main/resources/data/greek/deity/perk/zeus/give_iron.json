@@ -11,10 +11,13 @@
         "minlevel": -2,
         "maxlevel": 10
     },
+    "action": {
+        "type": "item",
+        "item": {
+            "id": "minecraft:iron_ingot",
+            "Count": 8
+        }
+    },
     "cooldown": 100,
-    "chance": 0.6,
-    "item": {
-        "id": "minecraft:iron_ingot",
-      	"Count": 8
-    }
+    "chance": 0.6
 }

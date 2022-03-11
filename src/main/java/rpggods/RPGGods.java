@@ -23,6 +23,7 @@ import net.minecraftforge.fml.network.simple.SimpleChannel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import rpggods.deity.Altar;
+import rpggods.deity.Deity;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.favor.Favor;
@@ -35,6 +36,8 @@ import rpggods.network.SSacrificePacket;
 import rpggods.perk.Perk;
 import rpggods.util.GenericJsonReloadListener;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Mod(RPGGods.MODID)
@@ -48,14 +51,28 @@ public class RPGGods {
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, "channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
+
+    public static final Map<ResourceLocation, Deity> DEITY = new HashMap<>();
     public static final GenericJsonReloadListener<Altar> ALTAR = new GenericJsonReloadListener<>("deity/altar", Altar.class, Altar.CODEC,
-            l -> l.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()))));
+            l -> l.getEntries().forEach(e -> {
+                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()));
+                e.getValue().ifPresent(a -> a.getDeity().ifPresent(d -> RPGGods.DEITY.computeIfAbsent(d, Deity::new).add(a)));
+            }));
     public static final GenericJsonReloadListener<Offering> OFFERING = new GenericJsonReloadListener<>("deity/offering", Offering.class, Offering.CODEC,
-            l -> l.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SOfferingPacket(e.getKey(), e.getValue().get()))));
+            l -> l.getEntries().forEach(e -> {
+                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SOfferingPacket(e.getKey(), e.getValue().get()));
+                e.getValue().ifPresent(o -> RPGGods.DEITY.computeIfAbsent(o.getDeity(), Deity::new).add(o));
+            }));
     public static final GenericJsonReloadListener<Sacrifice> SACRIFICE = new GenericJsonReloadListener<>("deity/sacrifice", Sacrifice.class, Sacrifice.CODEC,
-            l -> l.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SSacrificePacket(e.getKey(), e.getValue().get()))));
+            l -> l.getEntries().forEach(e -> {
+                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SSacrificePacket(e.getKey(), e.getValue().get()));
+                e.getValue().ifPresent(s -> RPGGods.DEITY.computeIfAbsent(s.getDeity(), Deity::new).add(s));
+            }));
     public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
-            l -> l.getEntries().forEach(e -> RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()))));
+            l -> l.getEntries().forEach(e -> {
+                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()));
+                e.getValue().ifPresent(p -> RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(p));
+            }));
 
     public static final Logger LOGGER = LogManager.getFormatterLogger(RPGGods.MODID);
 
@@ -86,6 +103,4 @@ public class RPGGods {
         // register capability
         CapabilityManager.INSTANCE.register(IFavor.class, new Favor.Storage(), Favor::new);
     }
-
-
 }

@@ -2,12 +2,11 @@ package rpggods.deity;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.block.BlockState;
+import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.TranslationTextComponent;
-import org.lwjgl.system.CallbackI;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 
@@ -23,7 +22,7 @@ public class Altar {
     public static final ResourceLocation MATERIAL = new ResourceLocation("stone");
 
     public static final Altar EMPTY = new Altar(true, Optional.empty(), false, false,
-            ItemStack.EMPTY, AltarItems.EMPTY, Blocks.STONE_SLAB.getDefaultState(), false,
+            ItemStack.EMPTY, AltarItems.EMPTY, Blocks.STONE_SLAB.getRegistryName(), false,
             MATERIAL, new AltarPose(), false);
 
     public static final Codec<Altar> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -33,7 +32,7 @@ public class Altar {
             Codec.BOOL.optionalFieldOf("slim", false).forGetter(Altar::isSlim),
             ItemStack.CODEC.optionalFieldOf("icon", ItemStack.EMPTY).forGetter(Altar::getIcon),
             AltarItems.CODEC.optionalFieldOf("items", AltarItems.EMPTY).forGetter(Altar::getItems),
-            BlockState.CODEC.optionalFieldOf("block", Blocks.STONE_SLAB.getDefaultState()).forGetter(Altar::getBlock),
+            ResourceLocation.CODEC.optionalFieldOf("block", Blocks.STONE_SLAB.getRegistryName()).forGetter(Altar::getBlockId),
             Codec.BOOL.optionalFieldOf("block_locked", true).forGetter(Altar::isBlockLocked),
             ResourceLocation.CODEC.optionalFieldOf("material", MATERIAL).forGetter(Altar::getMaterial),
             AltarPose.CODEC.optionalFieldOf("pose", new AltarPose()).forGetter(Altar::getPose),
@@ -46,7 +45,7 @@ public class Altar {
     private final boolean slim;
     private final ItemStack icon;
     private final AltarItems items;
-    private final BlockState block;
+    private final ResourceLocation blockId;
     private final boolean blockLocked;
     private final ResourceLocation material;
     private final AltarPose pose;
@@ -55,7 +54,7 @@ public class Altar {
     private final Optional<ResourceLocation> deity;
 
     public Altar(boolean enabled, Optional<String> name, boolean female, boolean slim, ItemStack icon,
-                 AltarItems items, BlockState block, boolean blockLocked, ResourceLocation material,
+                 AltarItems items, ResourceLocation blockId, boolean blockLocked, ResourceLocation material,
                  AltarPose pose, boolean poseLocked) {
         this.enabled = enabled;
         this.name = name;
@@ -63,7 +62,7 @@ public class Altar {
         this.slim = slim;
         this.icon = icon;
         this.items = items;
-        this.block = block;
+        this.blockId = blockId;
         this.blockLocked = blockLocked;
         this.material = material;
         this.pose = pose;
@@ -100,10 +99,12 @@ public class Altar {
         return items;
     }
 
+    public ResourceLocation getBlockId() {
+        return blockId;
+    }
 
-
-    public BlockState getBlock() {
-        return block;
+    public Block getBlock() {
+        return Optional.ofNullable(ForgeRegistries.BLOCKS.getValue(getBlockId())).orElse(Blocks.AIR);
     }
 
     public boolean isBlockLocked() {
@@ -127,7 +128,7 @@ public class Altar {
         final StringBuilder b = new StringBuilder("Deity:");
         b.append(" enabled[").append(enabled).append("]");
         b.append(" items[").append(items.toString()).append("]");
-        b.append(" block[").append(block.toString()).append("]");
+        b.append(" block[").append(blockId.toString()).append("]");
         b.append(" block_locked[").append(blockLocked).append("]");
         b.append(" female[").append(female).append("]");
         b.append(" slim[").append(slim).append("]");

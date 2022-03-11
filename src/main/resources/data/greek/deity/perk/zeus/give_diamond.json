@@ -1,7 +1,7 @@
 {
     "icon": {
         "item": {
-            "id": "minecraft:diamond",
+            "id": "minecraft:iron_ingot",
             "Count": 1
         },
         "color": 16711680
@@ -11,17 +11,20 @@
         "minlevel": -2,
         "maxlevel": 10
     },
-    "cooldown_category": "item",
-    "cooldown": 100,
-    "chance": 0.2,
     "condition": [
         {
             "type": "patron",
             "data": "greek:zeus"
         }
     ],
-    "item": {
-        "id": "minecraft:diamond",
-      	"Count": 8
-    }
+    "action": {
+        "type": "item",
+        "item": {
+            "id": "minecraft:diamond",
+            "Count": 8
+        }
+    },
+    "chance": 0.2,
+    "cooldown_category": "item",
+    "cooldown": 100
 }

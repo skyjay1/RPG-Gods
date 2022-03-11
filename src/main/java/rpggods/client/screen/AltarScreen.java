@@ -108,7 +108,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         female = altar.isFemale();
         slim = altar.isSlim();
         items = altar.getItems();
-        block = altar.getBlock();
+        block = altar.getBlock().getDefaultState();
         blockLocked = altar.isBlockLocked();
         pose = altar.getPose();
         poseLocked = altar.isPoseLocked();
