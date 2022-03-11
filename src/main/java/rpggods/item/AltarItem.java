@@ -1,13 +1,17 @@
 package rpggods.item;
 
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItemUseContext;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUseContext;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Direction;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
@@ -15,16 +19,74 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
+import javax.annotation.Nullable;
+import javax.swing.text.html.Option;
+import java.util.List;
+import java.util.Optional;
+
 public class AltarItem extends Item {
+
+    public static final String KEY_ALTAR = "altar";
+
     public AltarItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public ITextComponent getDisplayName(ItemStack stack) {
+        String sAltarId = stack.getOrCreateTag().getString(KEY_ALTAR);
+        // create translation key using altar information
+        if(sAltarId != null && !sAltarId.isEmpty()) {
+            ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+            // determine if altar is a deity
+            Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
+            if(altar.isPresent() && altar.get().getDeity().isPresent()) {
+                return new TranslationTextComponent("item.rpggods.altar_x",
+                        new TranslationTextComponent(Altar.createTranslationKey(altarId)));
+            }
+        }
+        // fallback when no altar information provided
+        return new TranslationTextComponent(this.getTranslationKey(stack));
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
+        String sAltarId = stack.getOrCreateTag().getString(KEY_ALTAR);
+        // create translation key using altar information
+        if(!sAltarId.isEmpty()) {
+            ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+            // determine if altar is not a deity but has a name
+            Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
+            if(altar.isPresent() && !altar.get().getDeity().isPresent() && altar.get().getName().isPresent()) {
+                tooltip.add(new StringTextComponent(altar.get().getName().get()));
+            }
+        }
+    }
+
+
+
+    @Override
+    public void fillItemGroup(ItemGroup group, NonNullList<ItemStack> items) {
+        if (this.isInGroup(group)) {
+            // add altar item stacks for each registered altar
+            for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
+                ItemStack itemStack = new ItemStack(this);
+                itemStack.getOrCreateTag().putString(KEY_ALTAR, altarId.toString());
+                items.add(itemStack);
+            }
+        }
     }
 
     @Override
@@ -42,14 +104,17 @@ public class AltarItem extends Item {
             if (world.hasNoCollisions((Entity)null, axisalignedbb, (entity) -> {
                 return true;
             }) && world.getEntitiesWithinAABBExcludingEntity((Entity)null, axisalignedbb).isEmpty()) {
-                // DEBUG:
-                ResourceLocation DEBUG = new ResourceLocation("greek:artemis");
-                Altar altar = RPGGods.ALTAR.get(DEBUG).orElse(Altar.EMPTY);
-                RPGGods.LOGGER.debug("Creating altar from '" + DEBUG  + "' " + altar);
-
                 if (world instanceof ServerWorld) {
                     ServerWorld serverworld = (ServerWorld)world;
-                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, altar);
+                    // determine altar properties to apply
+                    String sAltarId = context.getItem().getOrCreateTag().getString(KEY_ALTAR);
+                    ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+                    Altar altar = Altar.EMPTY;
+                    if(altarId != null) {
+                        altar = RPGGods.ALTAR.get(altarId).orElse(Altar.EMPTY);
+                    }
+                    // crate altar entity
+                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getPlacementHorizontalFacing(), altar);
                     if (altarEntity == null) {
                         return ActionResultType.FAIL;
                     }

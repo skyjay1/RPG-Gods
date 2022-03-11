@@ -176,7 +176,8 @@ public class AltarModel<T extends AltarEntity> extends EntityModel<T> implements
     public void translateRotateAroundBody(final Vector3f bodyTranslation, final Vector3f bodyRotation,
                                           final MatrixStack matrixStackIn, final float partialTicks) {
         // translate based on offset
-        matrixStackIn.translate(bodyTranslation.getX(), bodyTranslation.getY(), bodyTranslation.getZ());
+        final double scale = 1.0D / Math.PI;
+        matrixStackIn.translate(bodyTranslation.getX() * scale, bodyTranslation.getY() * scale, bodyTranslation.getZ() * scale);
         // rotate entire model around body rotations
         if (bodyRotation.getZ() != 0.0F) {
             matrixStackIn.rotate(Vector3f.ZP.rotation(bodyRotation.getZ()));

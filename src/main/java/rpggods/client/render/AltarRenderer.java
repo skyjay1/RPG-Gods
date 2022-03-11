@@ -76,7 +76,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         // prepare to render model
         AltarPose pose = entityIn.getAltarPose();
         getEntityModel().isChild = false;
-        getEntityModel().setRotationAngles(entityIn, 0F, 0F, 0F, 0F, 0F);
+        getEntityModel().setRotationAngles(entityIn, entityIn.limbSwing, entityIn.limbSwingAmount, entityIn.ticksExisted, entityIn.getRotationYawHead(), entityIn.getPitch(partialTicks));
 
         // determine render type
         Minecraft minecraft = Minecraft.getInstance();
@@ -100,7 +100,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         // render layers
         if (!entityIn.isSpectator()) {
             for(LayerRenderer<T, M> layerrenderer : this.layerRenderers) {
-                layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, 0F, 0F, partialTicks, 0F, 0F, 0F);
+                layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, entityIn.limbSwing, entityIn.limbSwingAmount, partialTicks, entityIn.ticksExisted, entityIn.getRotationYawHead(), entityIn.getPitch(partialTicks));
             }
         }
         matrixStackIn.pop();
@@ -129,13 +129,12 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
     @Override
     public ResourceLocation getEntityTexture(final T entity) {
         // return deity texture
-        if(entity.getDeity().isPresent()) {
+        if(entity.getDeity().isPresent() && !entity.getDeity().get().toString().isEmpty()) {
             ResourceLocation deity = entity.getDeity().get();
             return new ResourceLocation(deity.getNamespace(), "textures/altar/" + deity.getPath() + ".png");
         }
         // return player texture
         final GameProfile gameProfile = entity.getPlayerProfile();
-        final boolean slim = entity.isSlim();
         if(gameProfile != null) {
             Minecraft minecraft = Minecraft.getInstance();
             Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraft.getSkinManager().loadSkinFromCache(gameProfile);
@@ -145,7 +144,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         }
         // return default texture
         // TODO: return dynamic texture based on material
-        return slim ? ALEX_TEXTURE : STEVE_TEXTURE;
+        return entity.isSlim() ? ALEX_TEXTURE : STEVE_TEXTURE;
     }
 
     @Override

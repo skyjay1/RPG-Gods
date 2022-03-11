@@ -15,9 +15,6 @@ import net.minecraft.entity.item.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.IInventoryChangedListener;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -28,6 +25,7 @@ import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.tileentity.SkullTileEntity;
 import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
 import net.minecraft.util.NonNullList;
@@ -45,7 +43,6 @@ import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.deity.Altar;
-import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
@@ -90,9 +87,9 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         this.stepHeight = 0.0F;
     }
 
-    public static AltarEntity createAltar(final World world, final BlockPos pos, final Altar altar) {
-        AltarEntity entity = RGRegistry.EntityReg.ALTAR.create(world);
-        entity.setPosition(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+    public static AltarEntity createAltar(final World world, final BlockPos pos, Direction facing, final Altar altar) {
+        AltarEntity entity = new AltarEntity(RGRegistry.EntityReg.ALTAR, world);
+        entity.setPositionAndRotation(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, facing.getHorizontalAngle(), 0F);
         entity.applyAltarProperties(altar);
         return entity;
     }
@@ -117,7 +114,12 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
     public void notifyDataManagerChange(DataParameter<?> key) {
         super.notifyDataManagerChange(key);
         if(key.equals(DEITY)) {
-            this.setDeity(Optional.ofNullable(ResourceLocation.tryCreate(getDataManager().get(DEITY))));
+            String sDeityId = getDataManager().get(DEITY);
+            if(sDeityId != null && !sDeityId.isEmpty()) {
+                this.setDeity(Optional.ofNullable(ResourceLocation.tryCreate(sDeityId)));
+            } else {
+                this.setDeity(Optional.empty());
+            }
         }
         if(key.equals(POSE)) {
             this.setAltarPose(new AltarPose(getDataManager().get(POSE)));
@@ -334,20 +336,22 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
         ResourceLocation material = Altar.MATERIAL; // TODO
-        return new Altar(true /*TODO*/, name, isFemale(), isSlim(), items, getBaseBlock(), isBlockLocked(),
+        return new Altar(true /*TODO*/, name, isFemale(), isSlim(), ItemStack.EMPTY, items, getBaseBlock(), isBlockLocked(),
                 material, getAltarPose(), isAltarPoseLocked());
     }
 
     public void setDeity(final Optional<ResourceLocation> deity) {
         this.deity = deity;
         String deityString = "";
-        if(deity.isPresent()) {
+        if(deity.isPresent() && !deity.get().toString().isEmpty()) {
             // determine string to save deity name
             ResourceLocation deityId = deity.get();
             deityString = deityId.toString();
             // set custom name
             setCustomName(new TranslationTextComponent(Altar.createTranslationKey(deityId)));
             setCustomNameVisible(false);
+        } else {
+            setCustomName(null);
         }
         // update data manager
         getDataManager().set(DEITY, deityString);

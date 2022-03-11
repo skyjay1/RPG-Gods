@@ -1,0 +1,13 @@
+{
+  "deity": "greek:artemis",
+  "item": {
+    "id": "minecraft:bow",
+    "Count": 1
+  },
+  "trade": {
+    "id": "minecraft:crossbow",
+    "Count": 1
+  },
+  "minlevel": 2,
+  "function": "minecraft:stone"
+}

@@ -21,14 +21,6 @@ public class ScrollButton<T extends Screen> extends Button {
      **/
     private float scrollAmount;
     /**
-     * Number of ticks that this scroll button has been scrolling
-     **/
-    private int scrollTicks;
-    /**
-     * Number of ticks between updating the scroll amount while scrolling
-     **/
-    private final int updateInterval;
-    /**
      * If the scroll bar is enabled
      **/
     private final Predicate<T> enabled;
@@ -44,7 +36,7 @@ public class ScrollButton<T extends Screen> extends Button {
     public ScrollButton(final T gui, final int x, final int y,
                         final int width, final int height, final int uX, final int vY,
                         final ResourceLocation textureIn, final boolean isVertical, final Predicate<T> isEnabled,
-                        final int updateIntervalIn, final Consumer<ScrollButton<T>> onScrollEnd) {
+                        final Consumer<ScrollButton<T>> onScrollEnd) {
         super(x, y, width, height, StringTextComponent.EMPTY, b -> {
         });
         screen = gui;
@@ -54,14 +46,13 @@ public class ScrollButton<T extends Screen> extends Button {
         vertical = isVertical;
         if (isVertical) {
             uWidth = 12;
-            vHeight = 16;
+            vHeight = 15;
         } else {
-            uWidth = 16;
+            uWidth = 15;
             vHeight = 12;
         }
         enabled = isEnabled;
-        updateInterval = updateIntervalIn;
-        scrollEndHandler = onScrollEnd.andThen(t -> t.resetTick());
+        scrollEndHandler = onScrollEnd;
         scrollAmount = 0;
         scrollEndHandler.accept(this);
     }
@@ -72,11 +63,11 @@ public class ScrollButton<T extends Screen> extends Button {
             screen.getMinecraft().getTextureManager().bindTexture(texture);
             final boolean isEnabled = enabled.test(screen);
             final float scroll = isEnabled ? scrollAmount : 0.0F;
-            final int uOffset = isEnabled ? 0 : uWidth;
-            final int offset = MathHelper.clamp((int) (scroll * this.height - this.vHeight / 2), 0, this.height - vHeight + 1);
+            final int vOffset = isEnabled ? 0 : vHeight;
+            final int offset = MathHelper.clamp((int) (scroll * this.height - this.vHeight / 2), 1, this.height - vHeight - 1);
             final int dx = vertical ? 1 : offset;
             final int dy = vertical ? offset : 1;
-            this.blit(matrixStack, this.x + dx, this.y + dy, u + uOffset, v, uWidth, vHeight);
+            this.blit(matrixStack, this.x + dx, this.y + dy, u, v + vOffset, uWidth, vHeight);
         }
     }
 
@@ -129,15 +120,4 @@ public class ScrollButton<T extends Screen> extends Button {
         scrollAmount = 0.0F;
         scrollEndHandler.accept(this);
     }
-
-    public void tick() {
-//    if(++scrollTicks % updateInterval == 0) {
-//      scrollEndHandler.accept(this);
-//    }
-    }
-
-    public void resetTick() {
-        scrollTicks = 0;
-    }
-
 }

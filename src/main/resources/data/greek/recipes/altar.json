@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "O",
+    "O",
+    "#"
+  ],
+  "key": {
+    "#": { "item": "minecraft:stone_slab" },
+    "O": { "item": "minecraft:stone" }
+  },
+  "result": {
+    "item": "rpggods:altar",
+    "count": 1
+  }
+}

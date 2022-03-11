@@ -35,7 +35,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
 
     // CONSTANTS
     private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/altar.png");
-    private static final ResourceLocation SCREEN_WIDGETS = new ResourceLocation(RPGGods.MODID, "textures/gui/favor_widgets.png");
+    private static final ResourceLocation SCREEN_WIDGETS = new ResourceLocation(RPGGods.MODID, "textures/gui/altar_widgets.png");
 
     private static final int TAB_WIDTH = 28;
     private static final int TAB_HEIGHT = 32;
@@ -250,6 +250,12 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         this.nameField.setText(s);
     }
 
+    @Override
+    public boolean isPauseScreen() {
+        return true;
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.minecraft.player.closeScreen();

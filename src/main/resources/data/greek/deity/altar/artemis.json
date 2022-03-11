@@ -3,8 +3,10 @@
   "name": "greek:artemis",
   "female": true,
   "slim": true,
-  "block": {
-    "Name": "minecraft:sandstone_slab"
+  "block": "minecraft:birch_slab",
+  "icon": {
+    "id": "minecraft:arrow",
+    "Count": 1
   },
   "items": {
     "head": {
@@ -27,7 +29,7 @@
       "id": "minecraft:bow",
       "Count": 1
     },
-    "armor_locked": false,
+    "armor_locked": true,
     "hands_locked": true
   },
   "pose": {

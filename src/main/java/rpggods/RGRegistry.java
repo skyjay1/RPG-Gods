@@ -9,6 +9,8 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
+import net.minecraft.item.crafting.IRecipeSerializer;
+import net.minecraft.item.crafting.ShapelessRecipe;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
@@ -25,6 +27,7 @@ import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
+import rpggods.recipe.AltarRecipe;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -55,7 +58,11 @@ public final class RGRegistry {
         }
     }
 
+    @ObjectHolder(RPGGods.MODID)
     public static final class ItemReg {
+
+        @ObjectHolder("altar")
+        public static final Item ALTAR = null;
 
         @SubscribeEvent
         public static void registerItems(final RegistryEvent.Register<Item> event) {
@@ -65,7 +72,16 @@ public final class RGRegistry {
         }
     }
 
+    @ObjectHolder(RPGGods.MODID)
     public static final class RecipeReg {
+        @ObjectHolder(AltarRecipe.CATEGORY)
+        public static final IRecipeSerializer<ShapelessRecipe> ALTAR_RECIPE_SERIALIZER = null;
+
+        @SubscribeEvent
+        public static void registerRecipeSerializers(final RegistryEvent.Register<IRecipeSerializer<?>> event) {
+            RPGGods.LOGGER.debug("registerRecipeSerializers");
+            event.getRegistry().register(new AltarRecipe.Factory().setRegistryName(RPGGods.MODID, AltarRecipe.CATEGORY));
+        }
 
     }
 

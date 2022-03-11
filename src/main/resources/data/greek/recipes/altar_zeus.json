@@ -1,0 +1,15 @@
+{
+  "type": "rpggods:altar",
+  "ingredients": [
+    {
+      "item": "rpggods:altar"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "result": {
+    "item": "rpggods:altar"
+  },
+  "altar": "greek:zeus"
+}

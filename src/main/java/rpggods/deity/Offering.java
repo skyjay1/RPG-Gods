@@ -17,7 +17,7 @@ public class Offering {
                     //.xmap(either -> either.map(rl -> ForgeRegistries.ITEMS.getValue(rl), stack -> stack.getItem().getRegistryName()))
             ItemStack.CODEC
                     .fieldOf("item").forGetter(Offering::getAccept),
-            Codec.INT.fieldOf("favor").forGetter(Offering::getFavor),
+            Codec.INT.optionalFieldOf("favor", 0).forGetter(Offering::getFavor),
             ItemStack.CODEC.optionalFieldOf("trade").forGetter(Offering::getTrade),
             Codec.INT.optionalFieldOf("minlevel").forGetter(Offering::getTradeMinLevel),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Offering::getFunction)

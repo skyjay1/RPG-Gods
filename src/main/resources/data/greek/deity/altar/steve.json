@@ -1,16 +1,14 @@
 {
-  "enabled": true,
-  "name": "greek:zeus",
   "female": false,
   "slim": false,
-  "block": "minecraft:quartz_slab",
-  "icon": {
-    "id": "minecraft:feather",
-    "Count": 1
-  },
+  "block": "minecraft:sandstone_slab",
   "items": {
     "mainhand": {
       "id": "minecraft:iron_sword",
+      "Count": 1
+    },
+    "offhand": {
+      "id": "minecraft:shield",
       "Count": 1
     },
     "armor_locked": false,
@@ -26,7 +24,7 @@
       "z": -0.0872665
     },
     "right_arm": {
-      "x": -2.61799,
+      "x": -0.20944,
       "z": -0.174533
     },
     "left_leg": {
@@ -36,5 +34,5 @@
       "z": 0.0349066
     }
   },
-  "pose_locked": true
+  "pose_locked": false
 }

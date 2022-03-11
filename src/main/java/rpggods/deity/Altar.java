@@ -4,8 +4,10 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TranslationTextComponent;
+import org.lwjgl.system.CallbackI;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 
@@ -20,14 +22,16 @@ public class Altar {
 
     public static final ResourceLocation MATERIAL = new ResourceLocation("stone");
 
-    public static final Altar EMPTY = new Altar(false, Optional.empty(), false, false,
-            AltarItems.EMPTY, Blocks.STONE_SLAB.getDefaultState(), true, MATERIAL, new AltarPose(), true);
+    public static final Altar EMPTY = new Altar(true, Optional.empty(), false, false,
+            ItemStack.EMPTY, AltarItems.EMPTY, Blocks.STONE_SLAB.getDefaultState(), false,
+            MATERIAL, new AltarPose(), false);
 
     public static final Codec<Altar> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.BOOL.optionalFieldOf("enabled", true).forGetter(Altar::isEnabled),
             Codec.STRING.optionalFieldOf("name").forGetter(Altar::getName),
             Codec.BOOL.optionalFieldOf("female", false).forGetter(Altar::isFemale),
             Codec.BOOL.optionalFieldOf("slim", false).forGetter(Altar::isSlim),
+            ItemStack.CODEC.optionalFieldOf("icon", ItemStack.EMPTY).forGetter(Altar::getIcon),
             AltarItems.CODEC.optionalFieldOf("items", AltarItems.EMPTY).forGetter(Altar::getItems),
             BlockState.CODEC.optionalFieldOf("block", Blocks.STONE_SLAB.getDefaultState()).forGetter(Altar::getBlock),
             Codec.BOOL.optionalFieldOf("block_locked", true).forGetter(Altar::isBlockLocked),
@@ -40,6 +44,7 @@ public class Altar {
     private final Optional<String> name;
     private final boolean female;
     private final boolean slim;
+    private final ItemStack icon;
     private final AltarItems items;
     private final BlockState block;
     private final boolean blockLocked;
@@ -49,13 +54,14 @@ public class Altar {
 
     private final Optional<ResourceLocation> deity;
 
-    public Altar(boolean enabled, Optional<String> name, boolean female, boolean slim, AltarItems items,
-                 BlockState block, boolean blockLocked, ResourceLocation material,
+    public Altar(boolean enabled, Optional<String> name, boolean female, boolean slim, ItemStack icon,
+                 AltarItems items, BlockState block, boolean blockLocked, ResourceLocation material,
                  AltarPose pose, boolean poseLocked) {
         this.enabled = enabled;
         this.name = name;
         this.female = female;
         this.slim = slim;
+        this.icon = icon;
         this.items = items;
         this.block = block;
         this.blockLocked = blockLocked;
@@ -63,7 +69,11 @@ public class Altar {
         this.pose = pose;
         this.poseLocked = poseLocked;
 
-        this.deity = Optional.ofNullable(ResourceLocation.tryCreate(name.orElse("")));
+        if(name.isPresent() && !name.get().isEmpty()) {
+            this.deity = Optional.ofNullable(ResourceLocation.tryCreate(name.get()));
+        } else {
+            this.deity = Optional.empty();
+        }
     }
 
     public boolean isEnabled() {
@@ -83,6 +93,8 @@ public class Altar {
     public boolean isSlim() {
         return slim;
     }
+
+    public ItemStack getIcon() { return icon; }
 
     public AltarItems getItems() {
         return items;

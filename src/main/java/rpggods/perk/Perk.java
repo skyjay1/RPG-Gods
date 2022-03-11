@@ -124,4 +124,8 @@ public class Perk {
     public Optional<Long> getFavor() {
         return favor;
     }
+
+    public ResourceLocation getDeity() {
+        return getRange().getDeity();
+    }
 }
