@@ -3,8 +3,14 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.entity.EntityType;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.IFormattableTextComponent;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
+
+import java.util.Optional;
 
 public class Affinity {
 
@@ -17,6 +23,7 @@ public class Affinity {
 
     private final Affinity.Type type;
     private final ResourceLocation entity;
+    private ITextComponent translationKey;
 
     public Affinity(Type type, ResourceLocation entity) {
         this.type = type;
@@ -31,9 +38,16 @@ public class Affinity {
         return entity;
     }
 
+    public IFormattableTextComponent getDisplayName() {
+        Optional<EntityType<?>> entityType = EntityType.byKey(getEntity().toString());
+        String entityName = entityType.isPresent() ? entityType.get().getName().getUnformattedComponentText() : getEntity().toString();
+        return new TranslationTextComponent("favor.affinity",
+                entityName, getType().getDisplayName().getUnformattedComponentText());
+    }
+
     public static enum Type implements IStringSerializable {
-        PASSIVE("hostile"),
-        HOSTILE("passive"),
+        PASSIVE("passive"),
+        HOSTILE("hostile"),
         FLEE("flee"),
         TAME("tame");
 
@@ -51,6 +65,10 @@ public class Affinity {
                 }
             }
             return DataResult.error("Failed to parse affinity type '" + id + "'");
+        }
+
+        public ITextComponent getDisplayName() {
+            return new TranslationTextComponent("favor.affinity." + getString());
         }
 
         @Override

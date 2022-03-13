@@ -6,6 +6,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
+import net.minecraft.client.gui.screen.inventory.InventoryScreen;
 import net.minecraft.client.gui.widget.AbstractSlider;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.Widget;
@@ -13,6 +14,7 @@ import net.minecraft.client.gui.widget.button.Button;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.inventory.container.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.ResourceLocation;
@@ -29,13 +31,15 @@ import rpggods.entity.AltarEntity;
 import rpggods.gui.AltarContainer;
 import rpggods.network.CUpdateAltarPacket;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class AltarScreen extends ContainerScreen<AltarContainer> {
 
     // CONSTANTS
-    private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/altar.png");
-    private static final ResourceLocation SCREEN_WIDGETS = new ResourceLocation(RPGGods.MODID, "textures/gui/altar_widgets.png");
+    private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/altar/altar.png");
+    private static final ResourceLocation SCREEN_WIDGETS = new ResourceLocation(RPGGods.MODID, "textures/gui/altar/altar_widgets.png");
 
     private static final int TAB_WIDTH = 28;
     private static final int TAB_HEIGHT = 32;
@@ -104,7 +108,13 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         this.playerInventoryTitleY = this.guiTop + AltarContainer.PLAYER_INV_Y - 10;
         Altar altar = screenContainer.getAltar();
         enabled = altar.isEnabled();
-        name = altar.getDeity().isPresent() ? Optional.empty() : altar.getName();
+        if(altar.getDeity().isPresent()) {
+            name = Optional.empty();
+        } else if(screenContainer.getEntity().hasCustomName()) {
+            name = Optional.of(screenContainer.getEntity().getCustomName().getUnformattedComponentText());
+        } else {
+            name = Optional.empty();
+        }
         female = altar.isFemale();
         slim = altar.isSlim();
         items = altar.getItems();
@@ -208,6 +218,20 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         // draw background
         this.minecraft.getTextureManager().bindTexture(SCREEN_TEXTURE);
         this.blit(matrixStack, this.guiLeft, this.guiTop, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        // draw item slots
+        if(this.tabIndex == 1) {
+            // slots on texture are at 31, 119
+            for(int i = 0, l = getContainer().getAltarSlots().size(); i < l; i++) {
+                Slot slot = getContainer().getAltarSlots().get(i);
+                this.blit(matrixStack, this.guiLeft + slot.xPos - 1, this.guiTop + slot.yPos - 1,
+                        AltarContainer.PLAYER_INV_X - 1, AltarContainer.PLAYER_INV_Y - 1, 18, 18);
+                // render slab icon on last slot
+                if(i == l - 1 && slot.getStack().isEmpty()) {
+                    this.blit(matrixStack, this.guiLeft + slot.xPos, this.guiTop + slot.yPos,
+                            48, 202, BTN_HEIGHT, BTN_HEIGHT);
+                }
+            }
+        }
         // draw preview pane
         this.minecraft.getTextureManager().bindTexture(SCREEN_WIDGETS);
         this.blit(matrixStack, this.guiLeft + PREVIEW_X, this.guiTop + PREVIEW_Y, 168, 130, PREVIEW_WIDTH, PREVIEW_HEIGHT);
@@ -216,7 +240,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     @Override
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         super.render(matrixStack, mouseX, mouseY, partialTicks);
-        // draw tile entity preview
+        // draw entity preview
         drawEntityOnScreen(matrixStack, this.guiLeft + PREVIEW_X + 12, this.guiTop + PREVIEW_Y + 4, mouseX, mouseY, partialTicks);
         // draw text box
         this.nameField.render(matrixStack, mouseX, mouseY, partialTicks);
@@ -287,6 +311,12 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         }
         nameField.visible = tab1;
         this.setListener(tab1 ? this.nameField : null);
+        // show/hide inventory
+        for (Slot slot : this.getContainer().inventorySlots) {
+            if(slot instanceof AltarContainer.AltarSlot) {
+                ((AltarContainer.AltarSlot)slot).setHidden(tab0);
+            }
+        }
     }
 
     @SuppressWarnings("deprecation")

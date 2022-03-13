@@ -26,6 +26,7 @@ import rpggods.deity.Altar;
 import rpggods.deity.Deity;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
+import rpggods.event.FavorEventHandler;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.network.CUpdateAltarPacket;
@@ -86,9 +87,10 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.RecipeReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
-        // Forge event bus listeners
         // Required for data pack sync and favor capability
         MinecraftForge.EVENT_BUS.register(RGData.class);
+        // Events that affect Favor and Perks
+        MinecraftForge.EVENT_BUS.register(FavorEventHandler.ForgeEvents.class);
 
         LOGGER.debug("registerNetwork");
         int messageId = 0;

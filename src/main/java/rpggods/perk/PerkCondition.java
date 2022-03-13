@@ -3,24 +3,37 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.entity.EntityType;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.RegistryKey;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.IFormattableTextComponent;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.BiomeDictionary;
+import rpggods.deity.Altar;
 
 import java.util.Optional;
 
 public class PerkCondition {
+
+//    public static final Codec<PerkCondition> LOSSY_CODEC = Codec.STRING.comapFlatMap(PerkCondition::fromString, p -> p.getType().getString()).stable();
 
     public static final Codec<PerkCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkCondition.Type.CODEC.fieldOf("type").forGetter(PerkCondition::getType),
             Codec.STRING.optionalFieldOf("data").forGetter(PerkCondition::getData)
     ).apply(instance, PerkCondition::new));
 
-    private PerkCondition.Type type;
-    private Optional<String> data;
+//    public static final Codec<PerkCondition> CODEC = Codec.either(LOSSY_CODEC, LOSSLESS_CODEC)
+//            .xmap(either -> either.map(Function.identity(), Function.identity()), p -> p.getData().isPresent() ? Either.right(p) : Either.left(p));
+
+    private final PerkCondition.Type type;
+    private final Optional<String> data;
+    private IFormattableTextComponent translationKey;
 
     public PerkCondition(PerkCondition.Type type, Optional<String> data) {
         this.type = type;
@@ -33,6 +46,13 @@ public class PerkCondition {
 
     public Optional<String> getData() {
         return data;
+    }
+
+    public Optional<ResourceLocation> getId() {
+        if(getData().isPresent() && getData().get().contains(":")) {
+            return Optional.ofNullable(ResourceLocation.tryCreate(getData().get()));
+        }
+        return Optional.empty();
     }
 
     public boolean isInBiome(final World world, final BlockPos pos) {
@@ -58,11 +78,59 @@ public class PerkCondition {
         return true;
     }
 
+    public static DataResult<PerkCondition> fromString(String id) {
+        Optional<Type> type = Type.fromString(id).result();
+        if(type.isPresent()) {
+            return DataResult.success(new PerkCondition(type.get(), Optional.empty()));
+        }
+        return DataResult.error("Failed to parse perk condition '" + id + "'");
+    }
+
+    @Override
+    public String toString() {
+        return "PerkCondition: " + " type[" + type + "]" + " data[" + data + "]";
+    }
+
+    public IFormattableTextComponent getDisplayName() {
+//        if(null == translationKey) {
+//            ITextComponent tData = getData().isPresent() ? dataToTranslationKey(getData().get()) : StringTextComponent.EMPTY;
+//            translationKey = this.getType().getTranslationKey(tData);
+//        }
+//        return translationKey;
+        return this.getType().getDisplayName(dataToDisplay(getData().orElse("")));
+    }
+
+    private ITextComponent dataToDisplay(final String d) {
+        ResourceLocation rl = ResourceLocation.tryCreate(d);
+        switch (getType()) {
+            case PATRON: return new TranslationTextComponent(Altar.createTranslationKey(rl));
+            case BIOME:
+                // read data as either biome name or biome dictionary type
+                return d.contains(":")
+                    ? new TranslationTextComponent("biome." + rl.getNamespace() + "." + rl.getPath())
+                    : new StringTextComponent(d);
+            case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER: case ENTITY_KILLED_PLAYER:
+                // read data as Entity ID
+                Optional<EntityType<?>> entityType = EntityType.byKey(d);
+                return entityType.isPresent()
+                        ? new TranslationTextComponent(entityType.get().getTranslationKey())
+                        : new StringTextComponent("<Entity>");
+            case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: default:
+                return StringTextComponent.EMPTY;
+        }
+    }
+
     public static enum Type implements IStringSerializable {
         PATRON("patron"),
         BIOME("biome"),
         DAY("day"),
-        NIGHT("night");
+        NIGHT("night"),
+        RANDOM_TICK("random_tick"),
+        ENTITY_HURT_PLAYER("entity_hurt_player"),
+        ENTITY_KILLED_PLAYER("entity_killed_player"),
+        PLAYER_HURT_ENTITY("player_hurt_entity"),
+        PLAYER_KILLED_ENTITY("player_killed_entity"),
+        ENTER_COMBAT("enter_combat");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getString).stable();
         private final String name;
@@ -78,6 +146,10 @@ public class PerkCondition {
                 }
             }
             return DataResult.error("Failed to parse perk condition '" + id + "'");
+        }
+
+        public IFormattableTextComponent getDisplayName(ITextComponent data) {
+            return new TranslationTextComponent("favor.perk.condition." + getString(), data);
         }
 
         @Override

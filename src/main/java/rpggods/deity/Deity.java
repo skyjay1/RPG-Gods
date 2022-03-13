@@ -2,8 +2,8 @@ package rpggods.deity;
 
 import net.minecraft.util.ResourceLocation;
 import rpggods.perk.Perk;
+import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkData;
-import rpggods.perk.PerkTrigger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,8 +23,8 @@ public class Deity {
     public final Map<ResourceLocation, List<Offering>> offeringMap = new HashMap<>();
     /** Map of Entity ID to Sacrifice(s) **/
     public final Map<ResourceLocation, List<Sacrifice>> sacrificeMap = new HashMap<>();
-    /** Map of PerkTrigger.Type to Perk(s) **/
-    public final Map<PerkTrigger.Type, List<Perk>> perkByTriggerMap = new HashMap<>();
+    /** Map of PerkCondition.Type to Perk(s). May contain multiple instances of the same Perk. **/
+    public final Map<PerkCondition.Type, List<Perk>> perkByConditionMap = new HashMap<>();
     /** Map of PerkData.Type to Perk(s) **/
     public final Map<PerkData.Type, List<Perk>> perkByTypeMap = new HashMap<>();
     /** List of all Perks **/
@@ -41,7 +41,7 @@ public class Deity {
         altarList.clear();
         offeringMap.clear();
         sacrificeMap.clear();
-        perkByTriggerMap.clear();
+        perkByConditionMap.clear();
         perkByTypeMap.clear();
         perkList.clear();
     }
@@ -56,10 +56,7 @@ public class Deity {
      */
     public void add(final Offering offering) {
         ResourceLocation id = offering.getAccept().getItem().getRegistryName();
-        if(!offeringMap.containsKey(id)) {
-            offeringMap.put(id, new ArrayList<>());
-        }
-        offeringMap.get(id).add(offering);
+        offeringMap.computeIfAbsent(id, r -> new ArrayList<>()).add(offering);
     }
 
     /**
@@ -68,10 +65,7 @@ public class Deity {
      */
     public void add(final Sacrifice sacrifice) {
         ResourceLocation id = sacrifice.getEntity();
-        if(!sacrificeMap.containsKey(id)) {
-            sacrificeMap.put(id, new ArrayList<>());
-        }
-        sacrificeMap.get(id).add(sacrifice);
+        sacrificeMap.computeIfAbsent(id, r -> new ArrayList<>()).add(sacrifice);
     }
 
     /**
@@ -81,20 +75,15 @@ public class Deity {
     public void add(final Perk perk) {
         // add to list
         perkList.add(perk);
-        // add to perkByTrigger map
-        if(perk.getTrigger().isPresent()) {
-            PerkTrigger.Type type = perk.getTrigger().get().getType();
-            if(!perkByTriggerMap.containsKey(type)) {
-                perkByTriggerMap.put(type, new ArrayList<>());
-            }
-            perkByTriggerMap.get(type).add(perk);
+        // add to perkByCondition map
+        for(PerkCondition condition : perk.getConditions()) {
+            perkByConditionMap.computeIfAbsent(condition.getType(), r -> new ArrayList<>()).add(perk);
         }
         // add to perkByType map
-        PerkData.Type type = perk.getData().getType();
-        if(!perkByTypeMap.containsKey(type)) {
-            perkByTypeMap.put(type, new ArrayList<>());
+        for(final PerkData action : perk.getActions()) {
+            PerkData.Type type = action.getType();
+            perkByTypeMap.computeIfAbsent(type, r -> new ArrayList<>()).add(perk);
         }
-        perkByTypeMap.get(type).add(perk);
     }
 
     @Override

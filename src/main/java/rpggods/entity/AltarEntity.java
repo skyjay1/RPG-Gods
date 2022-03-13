@@ -1,5 +1,6 @@
 package rpggods.entity;
 
+import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -14,7 +15,11 @@ import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.IInventoryChangedListener;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
@@ -27,7 +32,6 @@ import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
-import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
@@ -42,6 +46,7 @@ import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.deity.Altar;
+import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
@@ -49,7 +54,7 @@ import rpggods.gui.FavorContainer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class AltarEntity extends LivingEntity /* implements IInventoryChangedListener */ {
+public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
 
     private static final DataParameter<String> DEITY = EntityDataManager.createKey(AltarEntity.class, DataSerializers.STRING);
     private static final DataParameter<Byte> FLAGS = EntityDataManager.createKey(AltarEntity.class, DataSerializers.BYTE);
@@ -58,20 +63,18 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
     private static final DataParameter<Optional<BlockState>> BLOCK = EntityDataManager.createKey(AltarEntity.class, DataSerializers.OPTIONAL_BLOCK_STATE);
 
     private static final String KEY_DEITY = "Deity";
-    private static final String KEY_ARMOR = "ArmorItems";
-    private static final String KEY_HANDS = "HandItems";
+    private static final String KEY_INVENTORY = "Inventory";
+    private static final String KEY_SLOT = "Slot";
     private static final String KEY_FLAGS = "Flags";
     private static final String KEY_LOCKED = "Locked";
     private static final String KEY_POSE = "Pose";
     private static final String KEY_BLOCK = "Block";
 
-    private NonNullList<ItemStack> handItems = NonNullList.withSize(2, ItemStack.EMPTY);
-    private NonNullList<ItemStack> armorItems = NonNullList.withSize(4, ItemStack.EMPTY);
     private Optional<BlockState> block = Optional.empty();
     private Optional<ResourceLocation> deity = Optional.empty();
 
-    //private static final int INV_SIZE = 7;
-    //private Inventory inventory;
+    private static final int INV_SIZE = 7;
+    private Inventory inventory;
 
     @Nullable
     private GameProfile playerProfile = null;
@@ -84,6 +87,7 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
     public AltarEntity(final EntityType<? extends AltarEntity> entityType, final World world) {
         super(entityType, world);
         this.stepHeight = 0.0F;
+        initInventory();
     }
 
     public static AltarEntity createAltar(final World world, final BlockPos pos, Direction facing, final Altar altar) {
@@ -130,34 +134,28 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
 
     @Override
     public Iterable<ItemStack> getHeldEquipment() {
-        return handItems;
+        return Lists.newArrayList(
+                this.inventory.getStackInSlot(EquipmentSlotType.MAINHAND.getSlotIndex()),
+                this.inventory.getStackInSlot(EquipmentSlotType.OFFHAND.getSlotIndex())
+        );
     }
 
     @Override
     public Iterable<ItemStack> getArmorInventoryList() {
-        return armorItems;
+        return Lists.newArrayList(
+                this.inventory.getStackInSlot(EquipmentSlotType.FEET.getSlotIndex()),
+                this.inventory.getStackInSlot(EquipmentSlotType.LEGS.getSlotIndex()),
+                this.inventory.getStackInSlot(EquipmentSlotType.CHEST.getSlotIndex()),
+                this.inventory.getStackInSlot(EquipmentSlotType.HEAD.getSlotIndex())
+        );
     }
 
     public ItemStack getItemStackFromSlot(EquipmentSlotType slotIn) {
-        switch(slotIn.getSlotType()) {
-            case HAND:
-                return handItems.get(slotIn.getIndex());
-            case ARMOR:
-                return armorItems.get(slotIn.getIndex());
-        }
-        return ItemStack.EMPTY;
+        return this.inventory.getStackInSlot(slotIn.getSlotIndex());
     }
 
     public void setItemStackToSlot(EquipmentSlotType slotIn, ItemStack stack) {
-        int index = slotIn.getIndex();
-        switch(slotIn.getSlotType()) {
-            case HAND:
-                handItems.set(index, stack);
-                break;
-            case ARMOR:
-                armorItems.set(index, stack);
-                break;
-        }
+        this.inventory.setInventorySlotContents(slotIn.getSlotIndex(), stack);
     }
 
     @Override
@@ -203,7 +201,13 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
                 if(favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
-
+                    ItemStack heldItem = player.getHeldItem(hand);
+                    // apply offering
+                    ItemStack offeringResult = FavorEventHandler.onOffering(deity, player, ifavor, heldItem);
+                    // if item changed, update player inventory
+                    if(heldItem != offeringResult || !ItemStack.areItemStacksEqual(heldItem, offeringResult)) {
+                        player.setHeldItem(hand, offeringResult);
+                    }
                     // open favor GUI
                     NetworkHooks.openGui((ServerPlayerEntity)player,
                             new SimpleNamedContainerProvider((id, inventory, p) ->
@@ -219,8 +223,8 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
             } else {
                 // open altar GUI
                 NetworkHooks.openGui((ServerPlayerEntity)player,
-                        new SimpleNamedContainerProvider((id, inventory, p) ->
-                                new AltarContainer(id, inventory, null, this),
+                        new SimpleNamedContainerProvider((id, inv, p) ->
+                                new AltarContainer(id, inv, this.inventory, this),
                                 StringTextComponent.EMPTY),
                         buf -> {
                             buf.writeInt(this.getEntityId());
@@ -239,27 +243,19 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         if(getDeity().isPresent()) {
             compound.putString(KEY_DEITY, getDeity().get().toString());
         }
-        // write armor items
-        ListNBT armor = new ListNBT();
-        for(ItemStack stack : this.armorItems) {
-            CompoundNBT compoundnbt = new CompoundNBT();
+        // write inventory
+        ListNBT listNBT = new ListNBT();
+        // write inventory slots to NBT
+        for (int i = 0; i < inventory.getSizeInventory(); i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
-                stack.write(compoundnbt);
+                CompoundNBT slotNBT = new CompoundNBT();
+                slotNBT.putByte(KEY_SLOT, (byte) i);
+                stack.write(slotNBT);
+                listNBT.add(slotNBT);
             }
-            armor.add(compoundnbt);
         }
-        compound.put(KEY_ARMOR, armor);
-        // write hand items
-        ListNBT hands = new ListNBT();
-        for(ItemStack stack : this.handItems) {
-            CompoundNBT compoundNBT = new CompoundNBT();
-            if (!stack.isEmpty()) {
-                stack.write(compoundNBT);
-            }
-
-            hands.add(compoundNBT);
-        }
-        compound.put(KEY_HANDS, hands);
+        compound.put(KEY_INVENTORY, listNBT);
         // write flags
         compound.putByte(KEY_FLAGS, getFlags());
         // write locked flags
@@ -277,19 +273,16 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         if(compound.contains(KEY_DEITY)) {
             setDeity(Optional.of(ResourceLocation.tryCreate(compound.getString(KEY_DEITY))));
         }
-        // read armor
-        if (compound.contains(KEY_ARMOR, 9)) {
-            ListNBT armor = compound.getList(KEY_ARMOR, 10);
-
-            for(int i = 0; i < this.armorItems.size(); ++i) {
-                this.armorItems.set(i, ItemStack.read(armor.getCompound(i)));
-            }
-        }
-        // read hands
-        if (compound.contains(KEY_HANDS, 9)) {
-            ListNBT hands = compound.getList(KEY_HANDS, 10);
-            for(int j = 0; j < this.handItems.size(); ++j) {
-                this.handItems.set(j, ItemStack.read(hands.getCompound(j)));
+        // init inventory
+        initInventory();
+        // read inventory
+        final ListNBT list = compound.getList(KEY_INVENTORY, 10);
+        // read inventory slots from NBT
+        for (int i = 0; i < list.size(); i++) {
+            CompoundNBT slotNBT = list.getCompound(i);
+            int slotNum = slotNBT.getByte(KEY_SLOT) & 0xFF;
+            if (slotNum >= 0 && slotNum < inventory.getSizeInventory()) {
+                inventory.setInventorySlotContents(slotNum, ItemStack.read(slotNBT));
             }
         }
         // read flags
@@ -302,25 +295,78 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
         setBaseBlock(NBTUtil.readBlockState(compound.getCompound(KEY_BLOCK)));
     }
 
+    public Inventory getInventory() {
+        return this.inventory;
+    }
+
+    public void initInventory() {
+        Inventory simplecontainer = this.inventory;
+        this.inventory = new Inventory(INV_SIZE);
+        if (simplecontainer != null) {
+            simplecontainer.removeListener(this);
+            int i = Math.min(simplecontainer.getSizeInventory(), this.inventory.getSizeInventory());
+
+            for(int j = 0; j < i; ++j) {
+                ItemStack itemstack = simplecontainer.getStackInSlot(j);
+                if (!itemstack.isEmpty()) {
+                    this.inventory.setInventorySlotContents(j, itemstack.copy());
+                }
+            }
+        }
+
+        this.inventory.addListener(this);
+        this.onInventoryChanged(this.inventory);
+    }
+
+    @Override
+    public void onInventoryChanged(IInventory inv) {
+        ItemStack baseBlockItem = inv.getStackInSlot(INV_SIZE - 1);
+        Optional<BlockState> baseBlock = Optional.empty();
+        if(baseBlockItem.getItem() instanceof BlockItem) {
+            baseBlock = Optional.of(((BlockItem)baseBlockItem.getItem()).getBlock().getDefaultState());
+        }
+        setBaseBlock(baseBlock);
+    }
+
+    @Override
+    protected void dropInventory() {
+        super.dropInventory();
+        if (this.inventory != null) {
+            if(!isHandsLocked()) {
+                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.MAINHAND.getSlotIndex()));
+                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.OFFHAND.getSlotIndex()));
+            }
+            if(!isArmorLocked()) {
+                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.FEET.getSlotIndex()));
+                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.LEGS.getSlotIndex()));
+                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.CHEST.getSlotIndex()));
+                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.HEAD.getSlotIndex()));
+            }
+            if(!isBlockLocked()) {
+                this.entityDropItem(this.inventory.getStackInSlot(INV_SIZE - 1));
+            }
+        }
+    }
+
     /**
      * Applies the Altar properties to this entity
      * @param altar the Altar with properties to use
      */
     public void applyAltarProperties(final Altar altar) {
-        altar.getName().ifPresent(name -> setCustomName(new StringTextComponent(name)));
+        setCustomName(altar.getName().isPresent() ? new StringTextComponent(altar.getName().get()) : null);
         setCustomNameVisible(false);
         setDeity(altar.getDeity());
         setFemale(altar.isFemale());
         setSlim(altar.isSlim());
         setArmorLocked(altar.getItems().isArmorLocked());
         setHandsLocked(altar.getItems().isHandsLocked());
-        setBaseBlock(altar.getBlock().getDefaultState());
         setBlockLocked(altar.isBlockLocked());
         setAltarPose(altar.getPose());
         setAltarPoseLocked(altar.isPoseLocked());
         for(EquipmentSlotType slot : EquipmentSlotType.values()) {
-            setItemStackToSlot(slot, altar.getItems().getItemStackFromSlot(slot));
+            setItemStackToSlot(slot, altar.getItems().getItemStackFromSlot(slot).copy());
         }
+        this.inventory.setInventorySlotContents(INV_SIZE - 1, new ItemStack(altar.getBlock().getBlock().asItem()));
     }
 
     /**
@@ -372,7 +418,11 @@ public class AltarEntity extends LivingEntity /* implements IInventoryChangedLis
     }
 
     public void setBaseBlock(final BlockState block) {
-        getDataManager().set(BLOCK, Optional.ofNullable(block));
+        setBaseBlock(Optional.ofNullable(block));
+    }
+
+    public void setBaseBlock(final Optional<BlockState> block) {
+        getDataManager().set(BLOCK, block);
         recalculateSize();
     }
 

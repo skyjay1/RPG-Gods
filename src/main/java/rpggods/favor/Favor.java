@@ -28,13 +28,7 @@ public class Favor implements IFavor {
 
     @Override
     public FavorLevel getFavor(final ResourceLocation deity) {
-        if (favorMap.containsKey(deity)) {
-            return favorMap.get(deity);
-        } else {
-            final FavorLevel favorLevel = new FavorLevel(0);
-            favorMap.put(deity, favorLevel);
-            return favorLevel;
-        }
+        return favorMap.computeIfAbsent(deity, id -> new FavorLevel(0));
     }
 
     @Override

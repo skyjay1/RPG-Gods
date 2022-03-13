@@ -1,23 +1,38 @@
 {
     "icon": {
         "item": {
-            "id": "minecraft:diamond",
+            "id": "minecraft:iron_ingot",
             "Count": 1
         },
-        "color": 6710886
+        "color": 14277081
     },
     "range": {
         "deity": "greek:zeus",
-        "minlevel": -2,
+        "minlevel": 1,
         "maxlevel": 10
     },
-    "action": {
-        "type": "item",
-        "item": {
-            "id": "minecraft:iron_ingot",
-            "Count": 8
+    "condition": [
+        {
+            "type": "random_tick"
         }
-    },
-    "cooldown": 100,
+    ],
+    "action": [
+        {
+            "type": "item",
+            "item": {
+                "id": "minecraft:iron_ingot",
+                "Count": 8
+            }
+        },
+        {
+            "type": "potion",
+            "tag": {
+                "Potion": "minecraft:strength",
+                "Amplifier": 0,
+                "Duration": 400
+            }
+        }
+    ],
+    "cooldown": 1000,
     "chance": 0.6
 }

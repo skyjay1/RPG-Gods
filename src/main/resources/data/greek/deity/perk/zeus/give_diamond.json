@@ -1,10 +1,10 @@
 {
     "icon": {
         "item": {
-            "id": "minecraft:iron_ingot",
+            "id": "minecraft:diamond",
             "Count": 1
         },
-        "color": 16711680
+        "color": 65535
     },
     "range": {
         "deity": "greek:zeus",
@@ -12,6 +12,9 @@
         "maxlevel": 10
     },
     "condition": [
+        {
+            "type": "random_tick"
+        },
         {
             "type": "patron",
             "data": "greek:zeus"
@@ -26,5 +29,5 @@
     },
     "chance": 0.2,
     "cooldown_category": "item",
-    "cooldown": 100
+    "cooldown": 1000
 }

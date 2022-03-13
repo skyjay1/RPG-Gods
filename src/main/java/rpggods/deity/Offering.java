@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public class Offering {
     public static final Offering EMPTY = new Offering(new ResourceLocation("null"), ItemStack.EMPTY, 0,
-            Optional.empty(), Optional.empty(), Optional.empty());
+            Optional.empty(), 0, Optional.empty());
 
     public static final Codec<Offering> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("deity").forGetter(Offering::getDeity),
@@ -19,7 +19,7 @@ public class Offering {
                     .fieldOf("item").forGetter(Offering::getAccept),
             Codec.INT.optionalFieldOf("favor", 0).forGetter(Offering::getFavor),
             ItemStack.CODEC.optionalFieldOf("trade").forGetter(Offering::getTrade),
-            Codec.INT.optionalFieldOf("minlevel").forGetter(Offering::getTradeMinLevel),
+            Codec.INT.optionalFieldOf("minlevel", 0).forGetter(Offering::getTradeMinLevel),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Offering::getFunction)
     ).apply(instance, Offering::new));
 
@@ -27,11 +27,11 @@ public class Offering {
     private final ItemStack accept;
     private final int favor;
     private final Optional<ItemStack> trade;
-    private final Optional<Integer> tradeMinLevel;
+    private final int tradeMinLevel;
     private final Optional<ResourceLocation> function;
 
     public Offering(ResourceLocation deity, ItemStack accept, int favor, Optional<ItemStack> trade,
-                    Optional<Integer> tradeMinLevel, Optional<ResourceLocation> function) {
+                    int tradeMinLevel, Optional<ResourceLocation> function) {
         this.deity = deity;
         this.accept = accept;
         this.favor = favor;
@@ -56,7 +56,7 @@ public class Offering {
         return trade;
     }
 
-    public Optional<Integer> getTradeMinLevel() {
+    public int getTradeMinLevel() {
         return tradeMinLevel;
     }
 

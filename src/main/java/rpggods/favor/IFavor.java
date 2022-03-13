@@ -108,13 +108,13 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
     /**
      * Reduces all perk cooldown categories by the given amount
      * @param currentTime the current time in ticks
-     * @param amount the amount to decrement cooldowns
      */
-    default void tickPerkCooldown(final long currentTime, final int amount) {
+    default void tickPerkCooldown(final long currentTime) {
+        long timeSinceLastTick = currentTime - getCooldownTimestamp();
         setCooldownTimestamp(currentTime);
         for(Entry<String, Long> entry : getPerkCooldownMap().entrySet()) {
             if(entry.getValue() > 0) {
-                entry.setValue(entry.getValue() - amount);
+                entry.setValue(entry.getValue() - timeSinceLastTick);
             }
         }
     }
