@@ -92,11 +92,6 @@ public class PerkCondition {
     }
 
     public IFormattableTextComponent getDisplayName() {
-//        if(null == translationKey) {
-//            ITextComponent tData = getData().isPresent() ? dataToTranslationKey(getData().get()) : StringTextComponent.EMPTY;
-//            translationKey = this.getType().getTranslationKey(tData);
-//        }
-//        return translationKey;
         return this.getType().getDisplayName(dataToDisplay(getData().orElse("")));
     }
 

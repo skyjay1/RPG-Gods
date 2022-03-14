@@ -203,10 +203,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
                     ItemStack heldItem = player.getHeldItem(hand);
                     // apply offering
-                    ItemStack offeringResult = FavorEventHandler.onOffering(deity, player, ifavor, heldItem);
+                    Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(deity, player, ifavor, heldItem);
                     // if item changed, update player inventory
-                    if(heldItem != offeringResult || !ItemStack.areItemStacksEqual(heldItem, offeringResult)) {
-                        player.setHeldItem(hand, offeringResult);
+                    if(offeringResult.isPresent()) {
+                        player.setHeldItem(hand, offeringResult.get());
+                        return ActionResultType.CONSUME;
                     }
                     // open favor GUI
                     NetworkHooks.openGui((ServerPlayerEntity)player,

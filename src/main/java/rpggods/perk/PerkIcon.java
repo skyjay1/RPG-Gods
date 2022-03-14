@@ -15,22 +15,25 @@ import java.util.function.Function;
 
 public class PerkIcon {
 
-    public static final PerkIcon EMPTY = new PerkIcon(ItemStack.EMPTY, 0x000);
+    public static final PerkIcon EMPTY = new PerkIcon(ItemStack.EMPTY, 0x000, true);
 
     public static final Codec<PerkIcon> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ItemStack.CODEC.fieldOf("item").forGetter(PerkIcon::getItem),
-            Codec.INT.optionalFieldOf("color", 0x000).forGetter(PerkIcon::getColor)
+            ItemStack.CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(PerkIcon::getItem),
+            Codec.INT.optionalFieldOf("color", 0x000).forGetter(PerkIcon::getColor),
+            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkIcon::isHidden)
     ).apply(instance, PerkIcon::new));
 
     private final ItemStack item;
     private final int color;
+    private final boolean hidden;
     private final float colorRed;
     private final float colorGreen;
     private final float colorBlue;
 
-    public PerkIcon(ItemStack item, int color) {
+    public PerkIcon(ItemStack item, int color, boolean hidden) {
         this.item = item;
         this.color = color;
+        this.hidden = hidden;
         // unpack color from int
         final Vector3f colorVec = unpackColor(color);
         this.colorRed = colorVec.getX();
@@ -44,6 +47,10 @@ public class PerkIcon {
 
     public int getColor() {
         return color;
+    }
+
+    public boolean isHidden() {
+        return hidden;
     }
 
     public float getColorRed() {

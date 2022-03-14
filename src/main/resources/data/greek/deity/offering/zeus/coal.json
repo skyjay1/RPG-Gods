@@ -1,0 +1,8 @@
+{
+  "deity": "greek:zeus",
+  "item": {
+    "id": "minecraft:coal",
+    "Count": 1
+  },
+  "favor": -100
+}

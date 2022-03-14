@@ -72,14 +72,16 @@ public class FavorEventHandler {
      * @param player the player
      * @param favor the player's favor
      * @param item the item being offered
-     * @return the ItemStack after applying the offering, may be same as original
+     * @return the ItemStack to replace the one provided, if any
      */
-    public static ItemStack onOffering(final ResourceLocation deity, final PlayerEntity player, final IFavor favor, final ItemStack item) {
+    public static Optional<ItemStack> onOffering(final ResourceLocation deity, final PlayerEntity player, final IFavor favor, final ItemStack item) {
         if(favor.isEnabled() && !item.isEmpty()) {
             // find first matching offering for the given deity
             Offering offering = null;
             for(Offering o : RPGGods.DEITY.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
-                if(ItemStack.areItemStacksEqual(offering.getAccept(), item)) {
+                if(o != null && item.getCount() >= o.getAccept().getCount()
+                        && ItemStack.areItemsEqual(item, o.getAccept())
+                        && ItemStack.areItemStackTagsEqual(item, o.getAccept())) {
                     offering = o;
                     break;
                 }
@@ -90,17 +92,18 @@ public class FavorEventHandler {
                 offering.getFunction().ifPresent(f -> runFunction(player.world, player, f));
                 // shrink item stack
                 if(!player.isCreative()) {
-                    item.shrink(1);
+                    item.shrink(offering.getAccept().getCount());
                 }
                 // process trade, if any
                 if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() >= offering.getTradeMinLevel()) {
                     player.addItemStackToInventory(offering.getTrade().get().copy());
                 }
+                return Optional.of(item);
             }
         }
 
 
-        return item;
+        return Optional.empty();
     }
 
     /**
@@ -117,7 +120,7 @@ public class FavorEventHandler {
             List<Sacrifice> sacrificeList = new ArrayList<>();
             ResourceLocation entityId = entity.getType().getRegistryName();
             for(Optional<Sacrifice> sacrifice : RPGGods.SACRIFICE.getValues()) {
-                if(sacrifice.isPresent() && entityId.equals(sacrifice.get().getEntity())) {
+                if(sacrifice != null && sacrifice.isPresent() && entityId.equals(sacrifice.get().getEntity())) {
                     sacrificeList.add(sacrifice.get());
                 }
             }
