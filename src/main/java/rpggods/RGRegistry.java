@@ -37,8 +37,8 @@ public final class RGRegistry {
     public static final class EntityReg {
 
         public static EntityType<AltarEntity> ALTAR = EntityType.Builder
-                .create(AltarEntity::new, EntityClassification.MISC)
-                .size(0.8F, 2.48F).trackingRange(10)
+                .of(AltarEntity::new, EntityClassification.MISC)
+                .sized(0.8F, 2.48F).clientTrackingRange(10)
                 .build("altar");
 
         @SubscribeEvent
@@ -54,7 +54,7 @@ public final class RGRegistry {
         @SubscribeEvent
         public static void registerAttributes(final EntityAttributeCreationEvent event) {
             RPGGods.LOGGER.debug("registerAttributes");
-            event.put(EntityReg.ALTAR, AltarEntity.registerAttributes().create());
+            event.put(EntityReg.ALTAR, AltarEntity.registerAttributes().build());
         }
     }
 
@@ -67,7 +67,7 @@ public final class RGRegistry {
         @SubscribeEvent
         public static void registerItems(final RegistryEvent.Register<Item> event) {
             RPGGods.LOGGER.debug("registerItems");
-            event.getRegistry().register(new AltarItem(new Item.Properties().group(ItemGroup.MISC))
+            event.getRegistry().register(new AltarItem(new Item.Properties().tab(ItemGroup.TAB_MISC))
                     .setRegistryName(RPGGods.MODID, "altar"));
         }
     }
@@ -99,14 +99,14 @@ public final class RGRegistry {
             // Altar screen requires UUID of altar entity
             ContainerType<AltarContainer> altarContainer = IForgeContainerType.create((windowId, inv, data) -> {
                 final int entityId = data.readInt();
-                Entity entity = inv.player.world.getEntityByID(entityId);
+                Entity entity = inv.player.level.getEntity(entityId);
                 AltarEntity altarEntity = (AltarEntity) entity;
                 return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity); // TODO
             });
             // Favor screen requires Favor as a Compound Tag and Deity ID as a ResourceLocation
             ContainerType<FavorContainer> favorContainer = IForgeContainerType.create((windowId, inv, data) -> {
                 final IFavor favor = RPGGods.FAVOR.getDefaultInstance();
-                RPGGods.FAVOR.readNBT(favor, null, data.readCompoundTag());
+                RPGGods.FAVOR.readNBT(favor, null, data.readNbt());
                 ResourceLocation deityId = data.readResourceLocation();
                 return new FavorContainer(windowId, inv, favor, deityId);
             });
@@ -130,8 +130,8 @@ public final class RGRegistry {
 
         private static void registerContainerRenders() {
             RPGGods.LOGGER.debug("registerContainerRenders");
-            ScreenManager.registerFactory(RGRegistry.ContainerReg.ALTAR_CONTAINER, rpggods.client.screen.AltarScreen::new);
-            ScreenManager.registerFactory(RGRegistry.ContainerReg.FAVOR_CONTAINER, rpggods.client.screen.FavorScreen::new);
+            ScreenManager.register(RGRegistry.ContainerReg.ALTAR_CONTAINER, rpggods.client.screen.AltarScreen::new);
+            ScreenManager.register(RGRegistry.ContainerReg.FAVOR_CONTAINER, rpggods.client.screen.FavorScreen::new);
         }
     }
 }

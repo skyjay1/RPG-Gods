@@ -50,7 +50,7 @@ public class PerkCondition {
 
     public Optional<ResourceLocation> getId() {
         if(getData().isPresent() && getData().get().contains(":")) {
-            return Optional.ofNullable(ResourceLocation.tryCreate(getData().get()));
+            return Optional.ofNullable(ResourceLocation.tryParse(getData().get()));
         }
         return Optional.empty();
     }
@@ -58,7 +58,7 @@ public class PerkCondition {
     public boolean isInBiome(final World world, final BlockPos pos) {
         // if biome data is present for this condition, make sure the biome matches
         if(type == PerkCondition.Type.BIOME && data.isPresent()) {
-            final Optional<RegistryKey<Biome>> biome = world.func_242406_i(pos);
+            final Optional<RegistryKey<Biome>> biome = world.getBiomeName(pos);
             if(data.get().contains(":")) {
                 // interpret as a ResourceLocation
                 // if the biome name does not match, the condition is false
@@ -96,7 +96,7 @@ public class PerkCondition {
     }
 
     private ITextComponent dataToDisplay(final String d) {
-        ResourceLocation rl = ResourceLocation.tryCreate(d);
+        ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
             case PATRON: return new TranslationTextComponent(Altar.createTranslationKey(rl));
             case BIOME:
@@ -107,9 +107,9 @@ public class PerkCondition {
             case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER: case PLAYER_INTERACT_ENTITY:
                 // read data as Entity ID
-                Optional<EntityType<?>> entityType = EntityType.byKey(d);
+                Optional<EntityType<?>> entityType = EntityType.byString(d);
                 return entityType.isPresent()
-                        ? new TranslationTextComponent(entityType.get().getTranslationKey())
+                        ? new TranslationTextComponent(entityType.get().getDescriptionId())
                         : new StringTextComponent("<Entity>");
             case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: default:
                 return StringTextComponent.EMPTY;
@@ -129,7 +129,7 @@ public class PerkCondition {
         PLAYER_INTERACT_ENTITY("player_interact_entity"),
         ENTER_COMBAT("enter_combat");
 
-        private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getString).stable();
+        private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();
         private final String name;
 
         private Type(final String id) {
@@ -138,7 +138,7 @@ public class PerkCondition {
 
         public static DataResult<Type> fromString(String id) {
             for(final PerkCondition.Type t : values()) {
-                if(t.getString().equals(id)) {
+                if(t.getSerializedName().equals(id)) {
                     return DataResult.success(t);
                 }
             }
@@ -146,11 +146,11 @@ public class PerkCondition {
         }
 
         public IFormattableTextComponent getDisplayName(ITextComponent data) {
-            return new TranslationTextComponent("favor.perk.condition." + getString(), data);
+            return new TranslationTextComponent("favor.perk.condition." + getSerializedName(), data);
         }
 
         @Override
-        public String getString() {
+        public String getSerializedName() {
             return name;
         }
     }

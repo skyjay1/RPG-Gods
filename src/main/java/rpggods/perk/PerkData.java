@@ -126,9 +126,9 @@ public class PerkData {
                     Optional<EffectInstance> effect = FavorEventHandler.readEffectInstance(tag.get());
                     if(effect.isPresent()) {
                         String potencyKey = "potion.potency." + effect.get().getAmplifier();
-                        return new TranslationTextComponent(effect.get().getEffectName())
-                                .appendString(" ")
-                                .appendSibling(new TranslationTextComponent(potencyKey));
+                        return new TranslationTextComponent(effect.get().getDescriptionId())
+                                .append(" ")
+                                .append(new TranslationTextComponent(potencyKey));
                     }
                 }
                 return StringTextComponent.EMPTY;
@@ -136,12 +136,12 @@ public class PerkData {
                 if(tag.isPresent()) {
                     // format entity ID as name
                     String entity = tag.get().getString("id");
-                    Optional<EntityType<?>> type = EntityType.byKey(entity);
-                    return type.isPresent() ? type.get().getName() : new StringTextComponent(entity);
+                    Optional<EntityType<?>> type = EntityType.byString(entity);
+                    return type.isPresent() ? type.get().getDescription() : new StringTextComponent(entity);
                 }
                 return StringTextComponent.EMPTY;
             case ITEM:
-                return getItem().orElse(ItemStack.EMPTY).getDisplayName();
+                return getItem().orElse(ItemStack.EMPTY).getHoverName();
             case FAVOR:
                 if(favor.isPresent()) {
                     // format favor as discrete amount
@@ -194,7 +194,7 @@ public class PerkData {
         SPECIAL_PRICE("special_price"),
         XP("xp");
 
-        private static final Codec<PerkData.Type> CODEC = Codec.STRING.comapFlatMap(PerkData.Type::fromString, PerkData.Type::getString).stable();
+        private static final Codec<PerkData.Type> CODEC = Codec.STRING.comapFlatMap(PerkData.Type::fromString, PerkData.Type::getSerializedName).stable();
 
         private final String name;
 
@@ -204,7 +204,7 @@ public class PerkData {
 
         public static DataResult<PerkData.Type> fromString(String id) {
             for(final PerkData.Type t : values()) {
-                if(t.getString().equals(id)) {
+                if(t.getSerializedName().equals(id)) {
                     return DataResult.success(t);
                 }
             }
@@ -216,18 +216,18 @@ public class PerkData {
          * @return Translation key for the description of this perk type, using the provided data
          */
         public IFormattableTextComponent getDisplayDescription(final ITextComponent data) {
-            return new TranslationTextComponent("favor.perk.type." + getString() + ".description", data);
+            return new TranslationTextComponent("favor.perk.type." + getSerializedName() + ".description", data);
         }
 
         /**
          * @return Translation key for the name of this perk type
          */
         public IFormattableTextComponent getDisplayName() {
-            return new TranslationTextComponent("favor.perk.type." + getString());
+            return new TranslationTextComponent("favor.perk.type." + getSerializedName());
         }
 
         @Override
-        public String getString() {
+        public String getSerializedName() {
             return name;
         }
     }

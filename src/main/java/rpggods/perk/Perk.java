@@ -50,7 +50,7 @@ public class Perk {
         this.cooldown = cooldown;
         // determine category if not provided
         if(null == category || category.isEmpty()) {
-            category = actions.isEmpty() ? "wtf u broke it" : actions.get(0).getType().getString();
+            category = actions.isEmpty() ? "wtf u broke it" : actions.get(0).getType().getSerializedName();
         }
         this.category = category;
     }

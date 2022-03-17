@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import net.minecraft.client.gui.widget.button.Button.IPressable;
+
 public class AltarScreen extends ContainerScreen<AltarContainer> {
 
     // CONSTANTS
@@ -102,23 +104,23 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
 
     public AltarScreen(final AltarContainer screenContainer, final PlayerInventory inv, final ITextComponent title) {
         super(screenContainer, inv, title);
-        this.xSize = SCREEN_WIDTH;
-        this.ySize = SCREEN_HEIGHT - TAB_HEIGHT / 2;
-        this.playerInventoryTitleX = this.guiLeft + AltarContainer.PLAYER_INV_X;
-        this.playerInventoryTitleY = this.guiTop + AltarContainer.PLAYER_INV_Y - 10;
+        this.imageWidth = SCREEN_WIDTH;
+        this.imageHeight = SCREEN_HEIGHT - TAB_HEIGHT / 2;
+        this.inventoryLabelX = this.leftPos + AltarContainer.PLAYER_INV_X;
+        this.inventoryLabelY = this.topPos + AltarContainer.PLAYER_INV_Y - 10;
         Altar altar = screenContainer.getAltar();
         enabled = altar.isEnabled();
         if(altar.getDeity().isPresent()) {
             name = Optional.empty();
         } else if(screenContainer.getEntity().hasCustomName()) {
-            name = Optional.of(screenContainer.getEntity().getCustomName().getUnformattedComponentText());
+            name = Optional.of(screenContainer.getEntity().getCustomName().getContents());
         } else {
             name = Optional.empty();
         }
         female = altar.isFemale();
         slim = altar.isSlim();
         items = altar.getItems();
-        block = altar.getBlock().getDefaultState();
+        block = altar.getBlock().defaultBlockState();
         blockLocked = altar.isBlockLocked();
         pose = altar.getPose();
         poseLocked = altar.isPoseLocked();
@@ -129,14 +131,14 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         super.init(minecraft, width, height);
         // add tab buttons
         tabButtons[0] = addButton(new AltarScreen.TabButton(this, 0, new TranslationTextComponent("gui.altar.pose"),
-                guiLeft + (0 * TAB_WIDTH), guiTop - TAB_HEIGHT + 4, new ItemStack(Items.ARMOR_STAND)));
+                leftPos + (0 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.ARMOR_STAND)));
         tabButtons[1] = addButton(new AltarScreen.TabButton(this, 1, new TranslationTextComponent("gui.altar.items"),
-                guiLeft + (1 * TAB_WIDTH), guiTop - TAB_HEIGHT + 4, new ItemStack(Items.IRON_SWORD)));
+                leftPos + (1 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.IRON_SWORD)));
         // add part buttons
         for (int i = 0, l = ModelPart.values().length; i < l; i++) {
             final ModelPart p = ModelPart.values()[i];
-            final ITextComponent title = new TranslationTextComponent("gui.altar." + p.getString());
-            partButtons[i] = this.addButton(new PartButton(this, this.guiLeft + PARTS_X, this.guiTop + PARTS_Y + (BTN_HEIGHT * i), title, button -> {
+            final ITextComponent title = new TranslationTextComponent("gui.altar." + p.getSerializedName());
+            partButtons[i] = this.addButton(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (BTN_HEIGHT * i), title, button -> {
                 this.selectedPart = p;
                 AltarScreen.this.updateSliders();
             }) {
@@ -148,13 +150,13 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         }
         // add reset button
         final ITextComponent titleReset = new TranslationTextComponent("controls.reset");
-        resetButton = this.addButton(new IconButton(this, this.guiLeft + RESET_X, this.guiTop + RESET_Y, 0, 202, titleReset, button -> {
+        resetButton = this.addButton(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
             AltarScreen.this.pose.set(AltarScreen.this.selectedPart, 0, 0, 0);
             AltarScreen.this.updateSliders();
         }));
         // add gender button
         final ITextComponent titleGender = new TranslationTextComponent("gui.altar.gender");
-        genderButton = this.addButton(new IconButton(this, this.guiLeft + GENDER_X, this.guiTop + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
+        genderButton = this.addButton(new IconButton(this, this.leftPos + GENDER_X, this.topPos + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
             @Override
             public int getIconX() {
                 return super.getIconX() + (AltarScreen.this.female ? 0 : this.width);
@@ -162,45 +164,45 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         });
         // add slim button
         final ITextComponent titleSlim = new TranslationTextComponent("gui.altar.slim");
-        slimButton = this.addButton(new IconButton(this, this.guiLeft + SLIM_X, this.guiTop + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
+        slimButton = this.addButton(new IconButton(this, this.leftPos + SLIM_X, this.topPos + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
             @Override
             public int getIconX() {
                 return super.getIconX() + (AltarScreen.this.slim ? 0 : this.width);
             }
         });
         // add sliders
-        this.sliderAngleX = (new AltarScreen.AngleSlider(this.guiLeft + SLIDER_X, this.guiTop + SLIDER_Y, "X") {
+        this.sliderAngleX = (new AltarScreen.AngleSlider(this.leftPos + SLIDER_X, this.topPos + SLIDER_Y, "X") {
             @Override
             void setAngleValue(double angRadians) { AltarScreen.this.pose.get(AltarScreen.this.selectedPart).setX((float)angRadians); }
             @Override
-            double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).getX()); }
+            double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).x()); }
         });
-        this.sliderAngleY = (new AltarScreen.AngleSlider(this.guiLeft + SLIDER_X, this.guiTop + SLIDER_Y + (SLIDER_HEIGHT + SLIDER_SPACING), "Y") {
+        this.sliderAngleY = (new AltarScreen.AngleSlider(this.leftPos + SLIDER_X, this.topPos + SLIDER_Y + (SLIDER_HEIGHT + SLIDER_SPACING), "Y") {
             @Override
             void setAngleValue(double angRadians) { AltarScreen.this.pose.get(AltarScreen.this.selectedPart).setY((float)angRadians); }
             @Override
-            double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).getY()); }
+            double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).y()); }
         });
-        this.sliderAngleZ = (new AltarScreen.AngleSlider(this.guiLeft + SLIDER_X, this.guiTop + SLIDER_Y + 2 * (SLIDER_HEIGHT + SLIDER_SPACING), "Z") {
+        this.sliderAngleZ = (new AltarScreen.AngleSlider(this.leftPos + SLIDER_X, this.topPos + SLIDER_Y + 2 * (SLIDER_HEIGHT + SLIDER_SPACING), "Z") {
             @Override
             void setAngleValue(double angRadians) { AltarScreen.this.pose.get(AltarScreen.this.selectedPart).setZ((float)angRadians); }
             @Override
-            double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).getZ()); }
+            double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).z()); }
         });
         this.addButton(sliderAngleX);
         this.addButton(sliderAngleY);
         this.addButton(sliderAngleZ);
         // items tab
-        this.minecraft.keyboardListener.enableRepeatEvents(true);
-        int i = (this.width - this.xSize) / 2;
-        int j = (this.height - this.ySize) / 2;
-        this.nameField = new TextFieldWidget(this.font, this.guiLeft + TEXT_X, this.guiTop + TEXT_Y, TEXT_WIDTH, TEXT_HEIGHT, new TranslationTextComponent("gui.altar.name"));
-        this.nameField.setText(name.orElse(""));
+        this.minecraft.keyboardHandler.setSendRepeatsToGui(true);
+        int i = (this.width - this.imageWidth) / 2;
+        int j = (this.height - this.imageHeight) / 2;
+        this.nameField = new TextFieldWidget(this.font, this.leftPos + TEXT_X, this.topPos + TEXT_Y, TEXT_WIDTH, TEXT_HEIGHT, new TranslationTextComponent("gui.altar.name"));
+        this.nameField.setValue(name.orElse(""));
         this.nameField.setCanLoseFocus(true);
         this.nameField.setTextColor(-1);
-        this.nameField.setDisabledTextColour(-1);
-        this.nameField.setEnableBackgroundDrawing(true);
-        this.nameField.setMaxStringLength(35);
+        this.nameField.setTextColorUneditable(-1);
+        this.nameField.setBordered(true);
+        this.nameField.setMaxLength(35);
         this.nameField.setResponder(s -> name = (s != null && s.length() > 0) ? Optional.of(s) : Optional.empty());
         // TODO disable when deity is present
         //this.nameField.setEnabled(!getContainer().getAltar().getDeity().isPresent());
@@ -211,37 +213,37 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     }
 
     @Override
-    protected void drawGuiContainerBackgroundLayer(MatrixStack matrixStack, float partialTicks, int mouseX, int mouseY) {
+    protected void renderBg(MatrixStack matrixStack, float partialTicks, int mouseX, int mouseY) {
         this.renderBackground(matrixStack);
-        RenderHelper.setupGuiFlatDiffuseLighting();
+        RenderHelper.setupForFlatItems();
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         // draw background
-        this.minecraft.getTextureManager().bindTexture(SCREEN_TEXTURE);
-        this.blit(matrixStack, this.guiLeft, this.guiTop, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        this.minecraft.getTextureManager().bind(SCREEN_TEXTURE);
+        this.blit(matrixStack, this.leftPos, this.topPos, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         // draw item slots
         if(this.tabIndex == 1) {
             // slots on texture are at 31, 119
-            for(int i = 0, l = getContainer().getAltarSlots().size(); i < l; i++) {
-                Slot slot = getContainer().getAltarSlots().get(i);
-                this.blit(matrixStack, this.guiLeft + slot.xPos - 1, this.guiTop + slot.yPos - 1,
+            for(int i = 0, l = getMenu().getAltarSlots().size(); i < l; i++) {
+                Slot slot = getMenu().getAltarSlots().get(i);
+                this.blit(matrixStack, this.leftPos + slot.x - 1, this.topPos + slot.y - 1,
                         AltarContainer.PLAYER_INV_X - 1, AltarContainer.PLAYER_INV_Y - 1, 18, 18);
                 // render slab icon on last slot
-                if(i == l - 1 && slot.getStack().isEmpty()) {
-                    this.blit(matrixStack, this.guiLeft + slot.xPos, this.guiTop + slot.yPos,
+                if(i == l - 1 && slot.getItem().isEmpty()) {
+                    this.blit(matrixStack, this.leftPos + slot.x, this.topPos + slot.y,
                             48, 202, BTN_HEIGHT, BTN_HEIGHT);
                 }
             }
         }
         // draw preview pane
-        this.minecraft.getTextureManager().bindTexture(SCREEN_WIDGETS);
-        this.blit(matrixStack, this.guiLeft + PREVIEW_X, this.guiTop + PREVIEW_Y, 168, 130, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+        this.minecraft.getTextureManager().bind(SCREEN_WIDGETS);
+        this.blit(matrixStack, this.leftPos + PREVIEW_X, this.topPos + PREVIEW_Y, 168, 130, PREVIEW_WIDTH, PREVIEW_HEIGHT);
     }
 
     @Override
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         super.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw entity preview
-        drawEntityOnScreen(matrixStack, this.guiLeft + PREVIEW_X + 12, this.guiTop + PREVIEW_Y + 4, mouseX, mouseY, partialTicks);
+        drawEntityOnScreen(matrixStack, this.leftPos + PREVIEW_X + 12, this.topPos + PREVIEW_Y + 4, mouseX, mouseY, partialTicks);
         // draw text box
         this.nameField.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw hovering text LAST
@@ -250,7 +252,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
                 b.renderToolTip(matrixStack, mouseX, mouseY);
             }
         }
-        this.renderHoveredTooltip(matrixStack, mouseX, mouseY);
+        this.renderTooltip(matrixStack, mouseX, mouseY);
     }
 
     @Override
@@ -260,18 +262,18 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     }
 
     @Override
-    public void onClose() {
-        super.onClose();
-        this.minecraft.keyboardListener.enableRepeatEvents(false);
+    public void removed() {
+        super.removed();
+        this.minecraft.keyboardHandler.setSendRepeatsToGui(false);
         // send update packet to server
-        RPGGods.CHANNEL.sendToServer(new CUpdateAltarPacket(this.container.getEntity().getEntityId(), this.pose, this.female, this.slim, this.name.orElse("")));
+        RPGGods.CHANNEL.sendToServer(new CUpdateAltarPacket(this.menu.getEntity().getId(), this.pose, this.female, this.slim, this.name.orElse("")));
     }
 
     @Override
     public void resize(Minecraft minecraft, int width, int height) {
-        String s = this.nameField.getText();
+        String s = this.nameField.getValue();
         this.init(minecraft, width, height);
-        this.nameField.setText(s);
+        this.nameField.setValue(s);
     }
 
     @Override
@@ -282,10 +284,10 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
-            this.minecraft.player.closeScreen();
+            this.minecraft.player.closeContainer();
         }
 
-        return !this.nameField.keyPressed(keyCode, scanCode, modifiers) && !this.nameField.canWrite() ? super.keyPressed(keyCode, scanCode, modifiers) : true;
+        return !this.nameField.keyPressed(keyCode, scanCode, modifiers) && !this.nameField.canConsumeInput() ? super.keyPressed(keyCode, scanCode, modifiers) : true;
     }
 
     protected void updateSliders() {
@@ -310,9 +312,9 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
             pb.visible = tab0;
         }
         nameField.visible = tab1;
-        this.setListener(tab1 ? this.nameField : null);
+        this.setFocused(tab1 ? this.nameField : null);
         // show/hide inventory
-        for (Slot slot : this.getContainer().inventorySlots) {
+        for (Slot slot : this.getMenu().slots) {
             if(slot instanceof AltarContainer.AltarSlot) {
                 ((AltarContainer.AltarSlot)slot).setHidden(tab0);
             }
@@ -324,10 +326,10 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
                                        final float mouseX, final float mouseY, final float partialTicks) {
         float margin = 12;
         float scale = PREVIEW_WIDTH - margin * 2;
-        float rotX = (float) Math.atan((double) ((mouseX - this.guiLeft) / 40.0F));
-        float rotY = (float) Math.atan((double) ((mouseY - this.guiTop - PREVIEW_HEIGHT / 2) / 40.0F));
+        float rotX = (float) Math.atan((double) ((mouseX - this.leftPos) / 40.0F));
+        float rotY = (float) Math.atan((double) ((mouseY - this.topPos - PREVIEW_HEIGHT / 2) / 40.0F));
         // preview client-side tile entity information
-        updateAltarEntity(container.getEntity());
+        updateAltarEntity(menu.getEntity());
 
         // Render the Entity with given scale
         RenderSystem.pushMatrix();
@@ -345,15 +347,15 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         RenderSystem.rotatef(rotX * 15.0F, 0.0F, 1.0F, 0.0F);
         RenderSystem.rotatef(rotY * 15.0F, 1.0F, 0.0F, 0.0F);
 
-        RenderHelper.setupGuiFlatDiffuseLighting();
+        RenderHelper.setupForFlatItems();
 
-        IRenderTypeBuffer.Impl bufferType = minecraft.getRenderTypeBuffers().getBufferSource();
-        Minecraft.getInstance().getRenderManager().getRenderer(container.getEntity())
-                        .render(container.getEntity(), 0F, partialTicks, matrixStackIn, bufferType, 15728880);
-        bufferType.finish();
+        IRenderTypeBuffer.Impl bufferType = minecraft.renderBuffers().bufferSource();
+        Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(menu.getEntity())
+                        .render(menu.getEntity(), 0F, partialTicks, matrixStackIn, bufferType, 15728880);
+        bufferType.endBatch();
 
         RenderSystem.enableDepthTest();
-        RenderHelper.setupGui3DDiffuseLighting();
+        RenderHelper.setupFor3DItems();
         RenderSystem.disableAlphaTest();
         RenderSystem.disableRescaleNormal();
         RenderSystem.popMatrix();
@@ -388,17 +390,17 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         }
 
         @Override
-        public void renderWidget(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+        public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if(this.visible) {
                 int selected = isSelected() ? 0 : 2;
                 final int xOffset = (index % TAB_COUNT) * TAB_WIDTH;
                 final int yOffset = isSelected() ? this.height : 2;
                 // draw button background
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                AltarScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
+                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y - selected, xOffset, yOffset - selected, this.width, this.height - selected);
                 // draw item
-                AltarScreen.this.itemRenderer.renderItemIntoGUI(item, this.x + (this.width - 16) / 2, this.y + (this.height - 16) / 2);
+                AltarScreen.this.itemRenderer.renderGuiItem(item, this.x + (this.width - 16) / 2, this.y + (this.height - 16) / 2);
             }
         }
 
@@ -415,13 +417,13 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         }
 
         @Override
-        public void renderWidget(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+        public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible) {
                 final boolean selected = isSelected();
                 final int xOffset = 25;
                 final int yOffset = 130 + (selected ? this.height : 0);
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                AltarScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
+                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, xOffset, yOffset, this.width, this.height);
                 drawCenteredString(matrixStack, AltarScreen.this.font, this.getMessage(), this.x + this.width / 2, this.y + (this.height - 8) / 2, getFGColor() | MathHelper.ceil(this.alpha * 255.0F) << 24);
             }
@@ -440,22 +442,22 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         public IconButton(final AltarScreen screenIn, final int x, final int y, final int tX, final int tY,
                           final ITextComponent title, final IPressable pressedAction) {
             super(x, y, BTN_HEIGHT, BTN_HEIGHT, StringTextComponent.EMPTY, pressedAction,
-                    (b, m, bx, by) -> screenIn.renderTooltip(m, screenIn.minecraft.fontRenderer.trimStringToWidth(title, Math.max(screenIn.width / 2 - 43, 170)), bx, by));
+                    (b, m, bx, by) -> screenIn.renderTooltip(m, screenIn.minecraft.font.split(title, Math.max(screenIn.width / 2 - 43, 170)), bx, by));
             this.textureX = tX;
             this.textureY = tY;
         }
 
         @Override
-        public void renderWidget(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+        public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible) {
                 int xOffset = 97;
                 int yOffset = 130 + (this.isHovered() ? this.height : 0);
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
                 // draw button background
-                AltarScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
+                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, xOffset, yOffset, this.width, this.height);
                 // draw button icon
-                AltarScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_TEXTURE);
+                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
                 this.blit(matrixStack, this.x, this.y, getIconX(), getIconY(), this.width, this.height);
             }
         }
@@ -476,26 +478,26 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         public AngleSlider(final int x, final int y, final String rName) {
             super(x, y, BTN_WIDTH, SLIDER_HEIGHT, StringTextComponent.EMPTY, 0.5D);
             rotationName = rName;
-            this.func_230979_b_();
+            this.updateMessage();
         }
 
         // called when the value is changed
-        protected void func_230979_b_() {
+        protected void updateMessage() {
             this.setMessage(new TranslationTextComponent("gui.altar.rotation", rotationName, Math.round(getAngleValue())));
         }
 
         // called when the value is changed and is different from its previous value
-        protected void func_230972_a_() {
-            setAngleValue(Math.toRadians((this.sliderValue - 0.5D) * getAngleBounds()));
+        protected void applyValue() {
+            setAngleValue(Math.toRadians((this.value - 0.5D) * getAngleBounds()));
         }
 
         protected double getValueRadians() {
-            return Math.toRadians((this.sliderValue - 0.5D) * getAngleBounds());
+            return Math.toRadians((this.value - 0.5D) * getAngleBounds());
         }
 
         public void updateSlider() {
-            this.sliderValue = MathHelper.clamp((getAngleValue() / getAngleBounds()) + 0.5D, 0.0D, 1.0D);
-            this.func_230979_b_();
+            this.value = MathHelper.clamp((getAngleValue() / getAngleBounds()) + 0.5D, 0.0D, 1.0D);
+            this.updateMessage();
         }
 
         /**

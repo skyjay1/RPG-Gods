@@ -1,5 +1,6 @@
 package rpggods.network;
 
+import com.google.common.collect.Lists;
 import com.mojang.serialization.DataResult;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.INBT;
@@ -45,7 +46,7 @@ public class SPerkPacket {
      */
     public static SPerkPacket fromBytes(final PacketBuffer buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readCompoundTag();
+        final CompoundNBT sNBT = buf.readNbt();
         final Optional<Perk> sEffect = RPGGods.PERK.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Perk from NBT for packet\n" + error));
         return new SPerkPacket(sName, sEffect.orElse(Perk.EMPTY));
@@ -61,7 +62,7 @@ public class SPerkPacket {
         DataResult<INBT> nbtResult = RPGGods.PERK.writeObject(msg.perk);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Perk to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.deityName);
-        buf.writeCompoundTag((CompoundNBT) tag);
+        buf.writeNbt((CompoundNBT) tag);
     }
 
     /**
@@ -83,7 +84,7 @@ public class SPerkPacket {
                     if(action.getAffinity().isPresent()) {
                         Affinity affinity = action.getAffinity().get();
                         RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                .put(affinity.getType(), perk);
+                                .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(perk);
                     }
                 }
             });

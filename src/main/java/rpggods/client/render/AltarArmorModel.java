@@ -25,35 +25,35 @@ public class AltarArmorModel<T extends AltarEntity> extends BipedModel<T> {
      * Sets this entity's model rotation angles
      */
     @Override
-    public void setRotationAngles(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         final AltarPose pose = entityIn.getAltarPose();
 
         Vector3f rot = pose.get(ModelPart.HEAD);
-        this.bipedHead.rotateAngleX = rot.getX();
-        this.bipedHead.rotateAngleY = rot.getY();
-        this.bipedHead.rotateAngleZ = rot.getZ();
-        this.bipedHead.setRotationPoint(0.0F, 1.0F, 0.0F);
-        this.bipedBody.rotateAngleX = 0.0F;
-        this.bipedBody.rotateAngleY = 0.0F;
-        this.bipedBody.rotateAngleZ = 0.0F;
+        this.head.xRot = rot.x();
+        this.head.yRot = rot.y();
+        this.head.zRot = rot.z();
+        this.head.setPos(0.0F, 1.0F, 0.0F);
+        this.body.xRot = 0.0F;
+        this.body.yRot = 0.0F;
+        this.body.zRot = 0.0F;
         rot = pose.get(ModelPart.LEFT_ARM);
-        this.bipedLeftArm.rotateAngleX = rot.getX();
-        this.bipedLeftArm.rotateAngleY = rot.getY();
-        this.bipedLeftArm.rotateAngleZ = rot.getZ();
+        this.leftArm.xRot = rot.x();
+        this.leftArm.yRot = rot.y();
+        this.leftArm.zRot = rot.z();
         rot = pose.get(ModelPart.RIGHT_ARM);
-        this.bipedRightArm.rotateAngleX = rot.getX();
-        this.bipedRightArm.rotateAngleY = rot.getY();
-        this.bipedRightArm.rotateAngleZ = rot.getZ();
+        this.rightArm.xRot = rot.x();
+        this.rightArm.yRot = rot.y();
+        this.rightArm.zRot = rot.z();
         rot = pose.get(ModelPart.LEFT_LEG);
-        this.bipedLeftLeg.rotateAngleX = rot.getX();
-        this.bipedLeftLeg.rotateAngleY = rot.getY();
-        this.bipedLeftLeg.rotateAngleZ = rot.getZ();
-        this.bipedLeftLeg.setRotationPoint(1.9F, 11.0F, 0.0F);
+        this.leftLeg.xRot = rot.x();
+        this.leftLeg.yRot = rot.y();
+        this.leftLeg.zRot = rot.z();
+        this.leftLeg.setPos(1.9F, 11.0F, 0.0F);
         rot = pose.get(ModelPart.RIGHT_LEG);
-        this.bipedRightLeg.rotateAngleX = rot.getX();
-        this.bipedRightLeg.rotateAngleY = rot.getY();
-        this.bipedRightLeg.rotateAngleZ = rot.getZ();
-        this.bipedRightLeg.setRotationPoint(-1.9F, 11.0F, 0.0F);
-        this.bipedHeadwear.copyModelAngles(this.bipedHead);
+        this.rightLeg.xRot = rot.x();
+        this.rightLeg.yRot = rot.y();
+        this.rightLeg.zRot = rot.z();
+        this.rightLeg.setPos(-1.9F, 11.0F, 0.0F);
+        this.hat.copyFrom(this.head);
     }
 }

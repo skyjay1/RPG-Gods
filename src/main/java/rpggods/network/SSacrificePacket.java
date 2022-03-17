@@ -41,7 +41,7 @@ public class SSacrificePacket {
      */
     public static SSacrificePacket fromBytes(final PacketBuffer buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readCompoundTag();
+        final CompoundNBT sNBT = buf.readNbt();
         final Optional<Sacrifice> sEffect = RPGGods.SACRIFICE.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Sacrifice from NBT for packet\n" + error));
         return new SSacrificePacket(sName, sEffect.orElse(Sacrifice.EMPTY));
@@ -57,7 +57,7 @@ public class SSacrificePacket {
         DataResult<INBT> nbtResult = RPGGods.SACRIFICE.writeObject(msg.sacrifice);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Sacrifice to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.deityName);
-        buf.writeCompoundTag((CompoundNBT) tag);
+        buf.writeNbt((CompoundNBT) tag);
     }
 
     /**

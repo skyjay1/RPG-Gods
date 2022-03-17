@@ -40,8 +40,8 @@ public class Affinity {
     }
 
     public IFormattableTextComponent getDisplayName() {
-        Optional<EntityType<?>> entityType = EntityType.byKey(getEntity().toString());
-        ITextComponent entityName = entityType.isPresent() ? entityType.get().getName() : new StringTextComponent(getEntity().toString());
+        Optional<EntityType<?>> entityType = EntityType.byString(getEntity().toString());
+        ITextComponent entityName = entityType.isPresent() ? entityType.get().getDescription() : new StringTextComponent(getEntity().toString());
         return new TranslationTextComponent("favor.affinity",
                 entityName, getType().getDisplayName());
     }
@@ -52,7 +52,7 @@ public class Affinity {
         FLEE("flee"),
         TAME("tame");
 
-        private static final Codec<Affinity.Type> CODEC = Codec.STRING.comapFlatMap(Affinity.Type::fromString, Affinity.Type::getString).stable();
+        private static final Codec<Affinity.Type> CODEC = Codec.STRING.comapFlatMap(Affinity.Type::fromString, Affinity.Type::getSerializedName).stable();
         private final String name;
 
         private Type(final String id) {
@@ -61,7 +61,7 @@ public class Affinity {
 
         public static DataResult<Affinity.Type> fromString(String id) {
             for(final Affinity.Type t : values()) {
-                if(t.getString().equals(id)) {
+                if(t.getSerializedName().equals(id)) {
                     return DataResult.success(t);
                 }
             }
@@ -69,11 +69,11 @@ public class Affinity {
         }
 
         public ITextComponent getDisplayName() {
-            return new TranslationTextComponent("favor.affinity." + getString());
+            return new TranslationTextComponent("favor.affinity." + getSerializedName());
         }
 
         @Override
-        public String getString() {
+        public String getSerializedName() {
             return name;
         }
     }

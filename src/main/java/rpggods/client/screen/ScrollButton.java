@@ -58,9 +58,9 @@ public class ScrollButton<T extends Screen> extends Button {
     }
 
     @Override
-    public void renderWidget(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         if (this.visible) {
-            screen.getMinecraft().getTextureManager().bindTexture(texture);
+            screen.getMinecraft().getTextureManager().bind(texture);
             final boolean isEnabled = enabled.test(screen);
             final float scroll = isEnabled ? scrollAmount : 0.0F;
             final int vOffset = isEnabled ? 0 : vHeight;

@@ -66,50 +66,50 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         final BlockState base = entityIn.getBaseBlock();
         if(base != null && base.getMaterial() != Material.AIR) {
             baseHeight = 0.0F;
-            matrixStackIn.push();
+            matrixStackIn.pushPose();
             matrixStackIn.translate(-0.5D, 0.0D, -0.5D);
-            Minecraft.getInstance().getBlockRendererDispatcher().renderBlock(base,
+            Minecraft.getInstance().getBlockRenderer().renderBlock(base,
                     matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY, EmptyModelData.INSTANCE);
-            matrixStackIn.pop();
+            matrixStackIn.popPose();
         }
 
         // prepare to render model
         AltarPose pose = entityIn.getAltarPose();
-        getEntityModel().isChild = false;
-        getEntityModel().setRotationAngles(entityIn, entityIn.limbSwing, entityIn.limbSwingAmount, entityIn.ticksExisted, entityIn.getRotationYawHead(), entityIn.getPitch(partialTicks));
+        getModel().young = false;
+        getModel().setupAnim(entityIn, entityIn.animationPosition, entityIn.animationSpeed, entityIn.tickCount, entityIn.getYHeadRot(), entityIn.getViewXRot(partialTicks));
 
         // determine render type
         Minecraft minecraft = Minecraft.getInstance();
-        boolean flag = this.isVisible(entityIn);
-        boolean flag1 = !flag && !entityIn.isInvisibleToPlayer(minecraft.player);
-        boolean flag2 = minecraft.isEntityGlowing(entityIn);
-        RenderType rendertype = this.func_230496_a_(entityIn, flag, flag1, flag2);
+        boolean flag = this.isBodyVisible(entityIn);
+        boolean flag1 = !flag && !entityIn.isInvisibleTo(minecraft.player);
+        boolean flag2 = minecraft.shouldEntityAppearGlowing(entityIn);
+        RenderType rendertype = this.getRenderType(entityIn, flag, flag1, flag2);
 
         // render model
-        matrixStackIn.push();
-        getEntityModel().translateRotateAroundBody(pose.get(ModelPart.OFFSET), pose.get(ModelPart.BODY), matrixStackIn, partialTicks);
+        matrixStackIn.pushPose();
+        getModel().translateRotateAroundBody(pose.get(ModelPart.OFFSET), pose.get(ModelPart.BODY), matrixStackIn, partialTicks);
         matrixStackIn.translate(0.0F, 2.0F + baseHeight, 0.0F);
-        matrixStackIn.rotate(Vector3f.XP.rotationDegrees(180.0F));
+        matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(180.0F));
         if (rendertype != null) {
             IVertexBuilder ivertexbuilder = bufferIn.getBuffer(rendertype);
-            int i = getPackedOverlay(entityIn, this.getOverlayProgress(entityIn, partialTicks));
-            getEntityModel().render(entityIn, matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
+            int i = getOverlayCoords(entityIn, this.getWhiteOverlayProgress(entityIn, partialTicks));
+            getModel().render(entityIn, matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
                     entityIn.isFemale(), entityIn.isSlim(), 1.0F, 1.0F, 1.0F, 1.0F);
         }
 
         // render layers
         if (!entityIn.isSpectator()) {
-            for(LayerRenderer<T, M> layerrenderer : this.layerRenderers) {
-                layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, entityIn.limbSwing, entityIn.limbSwingAmount, partialTicks, entityIn.ticksExisted, entityIn.getRotationYawHead(), entityIn.getPitch(partialTicks));
+            for(LayerRenderer<T, M> layerrenderer : this.layers) {
+                layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, entityIn.animationPosition, entityIn.animationSpeed, partialTicks, entityIn.tickCount, entityIn.getYHeadRot(), entityIn.getViewXRot(partialTicks));
             }
         }
-        matrixStackIn.pop();
+        matrixStackIn.popPose();
 
         // render nametag
         net.minecraftforge.client.event.RenderNameplateEvent renderNameplateEvent = new net.minecraftforge.client.event.RenderNameplateEvent(entityIn, entityIn.getDisplayName(), this, matrixStackIn, bufferIn, packedLightIn, partialTicks);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(renderNameplateEvent);
-        if (renderNameplateEvent.getResult() != net.minecraftforge.eventbus.api.Event.Result.DENY && (renderNameplateEvent.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW || this.canRenderName(entityIn))) {
-            this.renderName(entityIn, renderNameplateEvent.getContent(), matrixStackIn, bufferIn, packedLightIn);
+        if (renderNameplateEvent.getResult() != net.minecraftforge.eventbus.api.Event.Result.DENY && (renderNameplateEvent.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW || this.shouldShowName(entityIn))) {
+            this.renderNameTag(entityIn, renderNameplateEvent.getContent(), matrixStackIn, bufferIn, packedLightIn);
         }
 
         // post-render event
@@ -117,17 +117,17 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
     }
 
     @Override
-    public boolean canRenderName(final AltarEntity entityIn) {
+    public boolean shouldShowName(final AltarEntity entityIn) {
         final Minecraft mc = Minecraft.getInstance();
-        if(mc.currentScreen instanceof AltarScreen) {
+        if(mc.screen instanceof AltarScreen) {
             return false;
         }
-        final Vector3d pos = entityIn.getPositionVec().add(0, entityIn.getType().getSize().height / 2D, 0);
+        final Vector3d pos = entityIn.position().add(0, entityIn.getType().getDimensions().height / 2D, 0);
         return isWithinDistanceToRenderName(pos, 6.0D);
     }
 
     @Override
-    public ResourceLocation getEntityTexture(final T entity) {
+    public ResourceLocation getTextureLocation(final T entity) {
         // return deity texture
         if(entity.getDeity().isPresent() && !entity.getDeity().get().toString().isEmpty()) {
             ResourceLocation deity = entity.getDeity().get();
@@ -137,9 +137,9 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         final GameProfile gameProfile = entity.getPlayerProfile();
         if(gameProfile != null) {
             Minecraft minecraft = Minecraft.getInstance();
-            Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraft.getSkinManager().loadSkinFromCache(gameProfile);
+            Map<MinecraftProfileTexture.Type, MinecraftProfileTexture> map = minecraft.getSkinManager().getInsecureSkinInformation(gameProfile);
             if(map.containsKey(MinecraftProfileTexture.Type.SKIN)) {
-                return minecraft.getSkinManager().loadSkin(map.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN);
+                return minecraft.getSkinManager().registerTexture(map.get(MinecraftProfileTexture.Type.SKIN), MinecraftProfileTexture.Type.SKIN);
             }
         }
         // return default texture
@@ -148,17 +148,17 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
     }
 
     @Override
-    protected RenderType func_230496_a_(final T entityIn, boolean isVisible, boolean isVisibleToPlayer, boolean isGlowing) {
+    protected RenderType getRenderType(final T entityIn, boolean isVisible, boolean isVisibleToPlayer, boolean isGlowing) {
         // TODO: optimize, allow for player skins, etc.
-        return super.func_230496_a_(entityIn, isVisible, isVisibleToPlayer, isGlowing);
+        return super.getRenderType(entityIn, isVisible, isVisibleToPlayer, isGlowing);
     }
 
     public boolean isWithinDistanceToRenderName(final Vector3d pos, final double dis) {
         final Minecraft mc = Minecraft.getInstance();
-        final EntityRendererManager renderManager = mc.getRenderManager();
-        return renderManager.getDistanceToCamera(pos.x, pos.y, pos.z) < (dis * dis)
-                && mc.objectMouseOver != null
-                && mc.objectMouseOver.getType() == RayTraceResult.Type.ENTITY
-                && mc.objectMouseOver.getHitVec().squareDistanceTo(pos) < Math.pow(0.9D, 2);
+        final EntityRendererManager renderManager = mc.getEntityRenderDispatcher();
+        return renderManager.distanceToSqr(pos.x, pos.y, pos.z) < (dis * dis)
+                && mc.hitResult != null
+                && mc.hitResult.getType() == RayTraceResult.Type.ENTITY
+                && mc.hitResult.getLocation().distanceToSqr(pos) < Math.pow(0.9D, 2);
     }
 }

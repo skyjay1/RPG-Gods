@@ -70,10 +70,10 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
     CompoundNBT tag = new CompoundNBT();
     for(final Entry<ModelPart, Vector3f> e : angles.entrySet()) {
       final CompoundNBT eTag = new CompoundNBT();
-      eTag.put("x", FloatNBT.valueOf(e.getValue().getX()));
-      eTag.put("y", FloatNBT.valueOf(e.getValue().getY()));
-      eTag.put("z", FloatNBT.valueOf(e.getValue().getZ()));
-      tag.put(e.getKey().getString(), eTag);
+      eTag.put("x", FloatNBT.valueOf(e.getValue().x()));
+      eTag.put("y", FloatNBT.valueOf(e.getValue().y()));
+      eTag.put("z", FloatNBT.valueOf(e.getValue().z()));
+      tag.put(e.getKey().getSerializedName(), eTag);
     }
     return tag;
   }
@@ -82,7 +82,7 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
   public void deserializeNBT(CompoundNBT nbt) {
     String key;
     for (final ModelPart m : ModelPart.values()) {
-      final CompoundNBT eTag = nbt.getCompound(m.getString());
+      final CompoundNBT eTag = nbt.getCompound(m.getSerializedName());
       float x = 0.0F;
       float y = 0.0F;
       float z = 0.0F;
@@ -100,7 +100,7 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
     final StringBuilder builder = new StringBuilder("AltarPose{\n");
     for(final Entry<ModelPart, Vector3f> entry : angles.entrySet()) {
       builder.append("  ");
-      builder.append(entry.getKey().getString());
+      builder.append(entry.getKey().getSerializedName());
       builder.append(" : ");
       builder.append(entry.getValue().toString());
       builder.append("\n");

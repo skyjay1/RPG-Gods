@@ -53,7 +53,7 @@ public class FavorRange {
      * @return true if this is a server world and the player matches this favor range
      */
     public boolean isInRange(final PlayerEntity player) {
-        if (!player.world.isRemote && player.isServerWorld() && player.getCapability(RPGGods.FAVOR).isPresent() && this != FavorRange.EMPTY) {
+        if (!player.level.isClientSide && player.isEffectiveAi() && player.getCapability(RPGGods.FAVOR).isPresent() && this != FavorRange.EMPTY) {
             return isInRange(player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()));
         }
         return false;

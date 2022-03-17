@@ -69,7 +69,7 @@ public class Altar {
         this.poseLocked = poseLocked;
 
         if(name.isPresent() && !name.get().isEmpty()) {
-            this.deity = Optional.ofNullable(ResourceLocation.tryCreate(name.get()));
+            this.deity = Optional.ofNullable(ResourceLocation.tryParse(name.get()));
         } else {
             this.deity = Optional.empty();
         }

@@ -159,10 +159,10 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         }
         setEnabled((!nbt.contains(ENABLED)) || nbt.getBoolean(ENABLED));
         if(nbt.contains(PATRON)) {
-            setPatron(Optional.ofNullable(ResourceLocation.tryCreate(nbt.getString(PATRON))));
+            setPatron(Optional.ofNullable(ResourceLocation.tryParse(nbt.getString(PATRON))));
         }
         CompoundNBT cooldown = nbt.getCompound(COOLDOWN);
-        for(String key : cooldown.keySet()) {
+        for(String key : cooldown.getAllKeys()) {
             setPerkCooldown(key, cooldown.getLong(key));
         }
         setCooldownTimestamp(nbt.getLong(TIMESTAMP));

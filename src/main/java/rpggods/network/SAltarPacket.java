@@ -40,7 +40,7 @@ public class SAltarPacket {
      */
     public static SAltarPacket fromBytes(final PacketBuffer buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readCompoundTag();
+        final CompoundNBT sNBT = buf.readNbt();
         final Optional<Altar> sEffect = RPGGods.ALTAR.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Altar from NBT for packet\n" + error));
         return new SAltarPacket(sName, sEffect.orElse(Altar.EMPTY));
@@ -56,7 +56,7 @@ public class SAltarPacket {
         DataResult<INBT> nbtResult = RPGGods.ALTAR.writeObject(msg.altar);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Altar to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.deityName);
-        buf.writeCompoundTag((CompoundNBT) tag);
+        buf.writeNbt((CompoundNBT) tag);
     }
 
     /**

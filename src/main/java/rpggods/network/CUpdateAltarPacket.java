@@ -57,10 +57,10 @@ public class CUpdateAltarPacket {
      */
     public static CUpdateAltarPacket fromBytes(final PacketBuffer buf) {
         final int id = buf.readInt();
-        final CompoundNBT nbt = buf.readCompoundTag();
+        final CompoundNBT nbt = buf.readNbt();
         final boolean female = buf.readBoolean();
         final boolean slim = buf.readBoolean();
-        final String textureName = buf.readString(NAME_LEN);
+        final String textureName = buf.readUtf(NAME_LEN);
         return new CUpdateAltarPacket(id, new AltarPose(nbt), female, slim, textureName);
     }
 
@@ -72,14 +72,14 @@ public class CUpdateAltarPacket {
      */
     public static void toBytes(final CUpdateAltarPacket msg, final PacketBuffer buf) {
         buf.writeInt(msg.entityId);
-        buf.writeCompoundTag(msg.pose.serializeNBT());
+        buf.writeNbt(msg.pose.serializeNBT());
         buf.writeBoolean(msg.female);
         buf.writeBoolean(msg.slim);
         String name = msg.textureName;
         if (name.length() > NAME_LEN) {
             name = name.substring(0, NAME_LEN);
         }
-        buf.writeString(name, NAME_LEN);
+        buf.writeUtf(name, NAME_LEN);
     }
 
     /**
@@ -93,9 +93,9 @@ public class CUpdateAltarPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.SERVER) {
             context.enqueueWork(() -> {
                 final ServerPlayerEntity player = context.getSender();
-                Entity entity = context.getSender().getEntityWorld().getEntityByID(message.entityId);
+                Entity entity = context.getSender().getCommandSenderWorld().getEntity(message.entityId);
                 double maxDistance = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
-                if (entity != null && entity instanceof AltarEntity && player.getDistanceSq(entity) < Math.pow(maxDistance, 2)) {
+                if (entity != null && entity instanceof AltarEntity && player.distanceToSqr(entity) < Math.pow(maxDistance, 2)) {
                     // update pose and name
                     AltarEntity altar = (AltarEntity) entity;
                     altar.setAltarPose(message.pose);

@@ -50,8 +50,8 @@ public class AltarContainer extends Container {
         this.entity = entity;
         this.altar = entity != null ? entity.createAltarProperties() : Altar.EMPTY;
         this.altarInv = altarInv;
-        assertInventorySize(altarInv, ALTAR_INV_SIZE);
-        altarInv.openInventory(playerInv.player);
+        checkContainerSize(altarInv, ALTAR_INV_SIZE);
+        altarInv.startOpen(playerInv.player);
         // add container inventory
         altarSlots = new ArrayList<>(ALTAR_INV_SIZE);
         int index = 0;
@@ -83,7 +83,7 @@ public class AltarContainer extends Container {
     }
 
     @Override
-    public boolean canInteractWith(final PlayerEntity playerIn) {
+    public boolean stillValid(final PlayerEntity playerIn) {
         return true; // TODO
     }
 
@@ -100,24 +100,24 @@ public class AltarContainer extends Container {
      * inventory and the other inventory(s).
      */
     @Override
-    public ItemStack transferStackInSlot(PlayerEntity playerIn, int index) {
+    public ItemStack quickMoveStack(PlayerEntity playerIn, int index) {
         ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.inventorySlots.get(index);
-        if (slot != null && slot.getHasStack()) {
-            ItemStack itemstack1 = slot.getStack();
+        Slot slot = this.slots.get(index);
+        if (slot != null && slot.hasItem()) {
+            ItemStack itemstack1 = slot.getItem();
             itemstack = itemstack1.copy();
             if (index < ALTAR_INV_SIZE) {
-                if (!this.mergeItemStack(itemstack1, ALTAR_INV_SIZE, this.inventorySlots.size(), false)) {
+                if (!this.moveItemStackTo(itemstack1, ALTAR_INV_SIZE, this.slots.size(), false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.mergeItemStack(itemstack1, 0, ALTAR_INV_SIZE, false)) {
+            } else if (!this.moveItemStackTo(itemstack1, 0, ALTAR_INV_SIZE, false)) {
                 return ItemStack.EMPTY;
             }
 
             if (itemstack1.isEmpty()) {
-                slot.putStack(ItemStack.EMPTY);
+                slot.set(ItemStack.EMPTY);
             } else {
-                slot.onSlotChanged();
+                slot.setChanged();
             }
         }
 
@@ -125,9 +125,9 @@ public class AltarContainer extends Container {
     }
 
     @Override
-    public void onContainerClosed(final PlayerEntity player) {
-        super.onContainerClosed(player);
-        this.altarInv.closeInventory(player);
+    public void removed(final PlayerEntity player) {
+        super.removed(player);
+        this.altarInv.stopOpen(player);
     }
 
     public static class AltarSlot extends Slot {
@@ -142,12 +142,12 @@ public class AltarContainer extends Container {
         }
 
         @Override
-        public boolean isEnabled() {
+        public boolean isActive() {
             return !isHidden();
         }
 
         @Override
-        public boolean canTakeStack(PlayerEntity playerIn) {
+        public boolean mayPickup(PlayerEntity playerIn) {
             return !isLocked();
         }
 
@@ -184,8 +184,8 @@ public class AltarContainer extends Container {
         }
 
         @Override
-        public boolean isItemValid(ItemStack stack) {
-            return getType().getSlotType() != EquipmentSlotType.Group.ARMOR || MobEntity.getSlotForItemStack(stack) == getType();
+        public boolean mayPlace(ItemStack stack) {
+            return getType().getType() != EquipmentSlotType.Group.ARMOR || MobEntity.getEquipmentSlotForItem(stack) == getType();
         }
 
         public EquipmentSlotType getType() {
@@ -194,8 +194,8 @@ public class AltarContainer extends Container {
 
         @Override
         @OnlyIn(Dist.CLIENT)
-        public Pair<ResourceLocation, ResourceLocation> getBackground() {
-            return Pair.of(PlayerContainer.LOCATION_BLOCKS_TEXTURE, ARMOR_SLOT_TEXTURES[getType().getSlotIndex() - 1]);
+        public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
+            return Pair.of(PlayerContainer.BLOCK_ATLAS, ARMOR_SLOT_TEXTURES[getType().getFilterFlag() - 1]);
         }
     }
 }

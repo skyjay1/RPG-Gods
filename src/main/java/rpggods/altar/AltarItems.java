@@ -42,7 +42,7 @@ public class AltarItems {
     }
 
     public ItemStack getItemStackFromSlot(EquipmentSlotType slotIn) {
-        switch(slotIn.getSlotType()) {
+        switch(slotIn.getType()) {
             case HAND:
                 return handItems.get(slotIn.getIndex());
             case ARMOR:

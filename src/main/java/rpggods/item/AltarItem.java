@@ -36,6 +36,8 @@ import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
+import net.minecraft.item.Item.Properties;
+
 public class AltarItem extends Item {
 
     public static final String KEY_ALTAR = "altar";
@@ -45,11 +47,11 @@ public class AltarItem extends Item {
     }
 
     @Override
-    public ITextComponent getDisplayName(ItemStack stack) {
+    public ITextComponent getName(ItemStack stack) {
         String sAltarId = stack.getOrCreateTag().getString(KEY_ALTAR);
         // create translation key using altar information
         if(sAltarId != null && !sAltarId.isEmpty()) {
-            ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+            ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             // determine if altar is a deity
             Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && altar.get().getDeity().isPresent()) {
@@ -58,15 +60,15 @@ public class AltarItem extends Item {
             }
         }
         // fallback when no altar information provided
-        return new TranslationTextComponent(this.getTranslationKey(stack));
+        return new TranslationTextComponent(this.getDescriptionId(stack));
     }
 
     @OnlyIn(Dist.CLIENT)
-    public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
+    public void appendHoverText(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
         String sAltarId = stack.getOrCreateTag().getString(KEY_ALTAR);
         // create translation key using altar information
         if(!sAltarId.isEmpty()) {
-            ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+            ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             // determine if altar is not a deity but has a name
             Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && !altar.get().getDeity().isPresent() && altar.get().getName().isPresent()) {
@@ -78,8 +80,8 @@ public class AltarItem extends Item {
 
 
     @Override
-    public void fillItemGroup(ItemGroup group, NonNullList<ItemStack> items) {
-        if (this.isInGroup(group)) {
+    public void fillItemCategory(ItemGroup group, NonNullList<ItemStack> items) {
+        if (this.allowdedIn(group)) {
             // add altar item stacks for each registered altar
             for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
                 ItemStack itemStack = new ItemStack(this);
@@ -90,43 +92,43 @@ public class AltarItem extends Item {
     }
 
     @Override
-    public ActionResultType onItemUse(ItemUseContext context) {
-        Direction direction = context.getFace();
+    public ActionResultType useOn(ItemUseContext context) {
+        Direction direction = context.getClickedFace();
         if (direction == Direction.DOWN) {
             return ActionResultType.FAIL;
         } else {
-            World world = context.getWorld();
+            World world = context.getLevel();
             BlockItemUseContext blockitemusecontext = new BlockItemUseContext(context);
-            BlockPos blockpos = blockitemusecontext.getPos();
-            ItemStack itemstack = context.getItem();
-            Vector3d vector3d = Vector3d.copyCenteredHorizontally(blockpos);
-            AxisAlignedBB axisalignedbb = RGRegistry.EntityReg.ALTAR.getSize().func_242285_a(vector3d.getX(), vector3d.getY(), vector3d.getZ());
-            if (world.hasNoCollisions((Entity)null, axisalignedbb, (entity) -> {
+            BlockPos blockpos = blockitemusecontext.getClickedPos();
+            ItemStack itemstack = context.getItemInHand();
+            Vector3d vector3d = Vector3d.atBottomCenterOf(blockpos);
+            AxisAlignedBB axisalignedbb = RGRegistry.EntityReg.ALTAR.getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
+            if (world.noCollision((Entity)null, axisalignedbb, (entity) -> {
                 return true;
-            }) && world.getEntitiesWithinAABBExcludingEntity((Entity)null, axisalignedbb).isEmpty()) {
+            }) && world.getEntities((Entity)null, axisalignedbb).isEmpty()) {
                 if (world instanceof ServerWorld) {
                     ServerWorld serverworld = (ServerWorld)world;
                     // determine altar properties to apply
-                    String sAltarId = context.getItem().getOrCreateTag().getString(KEY_ALTAR);
-                    ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+                    String sAltarId = context.getItemInHand().getOrCreateTag().getString(KEY_ALTAR);
+                    ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
                     Altar altar = Altar.EMPTY;
                     if(altarId != null) {
                         altar = RPGGods.ALTAR.get(altarId).orElse(Altar.EMPTY);
                     }
                     // crate altar entity
-                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getPlacementHorizontalFacing(), altar);
+                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getHorizontalDirection(), altar);
                     if (altarEntity == null) {
                         return ActionResultType.FAIL;
                     }
-                    serverworld.func_242417_l(altarEntity);
-                    float f = (float) MathHelper.floor((MathHelper.wrapDegrees(context.getPlacementYaw() - 180.0F) + 22.5F) / 45.0F) * 45.0F;
-                    altarEntity.setLocationAndAngles(altarEntity.getPosX(), altarEntity.getPosY(), altarEntity.getPosZ(), f, 0.0F);
-                    world.addEntity(altarEntity);
-                    world.playSound((PlayerEntity)null, altarEntity.getPosX(), altarEntity.getPosY(), altarEntity.getPosZ(), SoundEvents.ENTITY_ARMOR_STAND_PLACE, SoundCategory.BLOCKS, 0.75F, 0.8F);
+                    serverworld.addFreshEntityWithPassengers(altarEntity);
+                    float f = (float) MathHelper.floor((MathHelper.wrapDegrees(context.getRotation() - 180.0F) + 22.5F) / 45.0F) * 45.0F;
+                    altarEntity.moveTo(altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), f, 0.0F);
+                    world.addFreshEntity(altarEntity);
+                    world.playSound((PlayerEntity)null, altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundCategory.BLOCKS, 0.75F, 0.8F);
                 }
 
                 itemstack.shrink(1);
-                return ActionResultType.func_233537_a_(world.isRemote);
+                return ActionResultType.sidedSuccess(world.isClientSide);
             } else {
                 return ActionResultType.FAIL;
             }

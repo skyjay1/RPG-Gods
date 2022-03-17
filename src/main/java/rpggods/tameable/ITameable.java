@@ -34,7 +34,7 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
     default boolean setTamedBy(PlayerEntity player) {
         if(!getOwnerId().isPresent()) {
             this.setTamed(true);
-            this.setOwnerId(player.getUniqueID());
+            this.setOwnerId(player.getUUID());
             return true;
         }
         return false;
@@ -42,18 +42,18 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
 
     default Optional<LivingEntity> getOwner(World world) {
         Optional<UUID> uuid = this.getOwnerId();
-        return uuid.isPresent() ? Optional.ofNullable(world.getPlayerByUuid(uuid.get())) : Optional.empty();
+        return uuid.isPresent() ? Optional.ofNullable(world.getPlayerByUUID(uuid.get())) : Optional.empty();
     }
 
     default boolean isOwner(LivingEntity entity) {
-        return isTamed() && getOwnerId().isPresent() && getOwnerId().get().equals(entity.getUniqueID());
+        return isTamed() && getOwnerId().isPresent() && getOwnerId().get().equals(entity.getUUID());
     }
 
     @Override
     default CompoundNBT serializeNBT() {
         final CompoundNBT nbt = new CompoundNBT();
         if(getOwnerId().isPresent()) {
-            nbt.putUniqueId(OWNER, getOwnerId().get());
+            nbt.putUUID(OWNER, getOwnerId().get());
         }
         nbt.putBoolean(SITTING, isSitting());
         return nbt;
@@ -62,8 +62,8 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
     @Override
     default void deserializeNBT(final CompoundNBT nbt) {
         UUID uuid = null;
-        if (nbt.hasUniqueId(OWNER)) {
-            uuid = nbt.getUniqueId(OWNER);
+        if (nbt.hasUUID(OWNER)) {
+            uuid = nbt.getUUID(OWNER);
         }
 
         if (uuid != null) {

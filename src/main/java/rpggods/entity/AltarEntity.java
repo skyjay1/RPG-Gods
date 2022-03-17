@@ -56,11 +56,11 @@ import java.util.Optional;
 
 public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
 
-    private static final DataParameter<String> DEITY = EntityDataManager.createKey(AltarEntity.class, DataSerializers.STRING);
-    private static final DataParameter<Byte> FLAGS = EntityDataManager.createKey(AltarEntity.class, DataSerializers.BYTE);
-    private static final DataParameter<Byte> LOCKED = EntityDataManager.createKey(AltarEntity.class, DataSerializers.BYTE);
-    private static final DataParameter<CompoundNBT> POSE = EntityDataManager.createKey(AltarEntity.class, DataSerializers.COMPOUND_NBT);
-    private static final DataParameter<Optional<BlockState>> BLOCK = EntityDataManager.createKey(AltarEntity.class, DataSerializers.OPTIONAL_BLOCK_STATE);
+    private static final DataParameter<String> DEITY = EntityDataManager.defineId(AltarEntity.class, DataSerializers.STRING);
+    private static final DataParameter<Byte> FLAGS = EntityDataManager.defineId(AltarEntity.class, DataSerializers.BYTE);
+    private static final DataParameter<Byte> LOCKED = EntityDataManager.defineId(AltarEntity.class, DataSerializers.BYTE);
+    private static final DataParameter<CompoundNBT> POSE = EntityDataManager.defineId(AltarEntity.class, DataSerializers.COMPOUND_TAG);
+    private static final DataParameter<Optional<BlockState>> BLOCK = EntityDataManager.defineId(AltarEntity.class, DataSerializers.BLOCK_STATE);
 
     private static final String KEY_DEITY = "Deity";
     private static final String KEY_INVENTORY = "Inventory";
@@ -86,94 +86,94 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     public AltarEntity(final EntityType<? extends AltarEntity> entityType, final World world) {
         super(entityType, world);
-        this.stepHeight = 0.0F;
+        this.maxUpStep = 0.0F;
         initInventory();
     }
 
     public static AltarEntity createAltar(final World world, final BlockPos pos, Direction facing, final Altar altar) {
         AltarEntity entity = new AltarEntity(RGRegistry.EntityReg.ALTAR, world);
-        entity.setPositionAndRotation(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, facing.getHorizontalAngle(), 0F);
+        entity.absMoveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, facing.toYRot(), 0F);
         entity.applyAltarProperties(altar);
         return entity;
     }
 
     public static AttributeModifierMap.MutableAttribute registerAttributes() {
-        return LivingEntity.registerAttributes()
-                .createMutableAttribute(Attributes.MAX_HEALTH, 0.25F)
-                .createMutableAttribute(Attributes.KNOCKBACK_RESISTANCE, 1.0F);
+        return LivingEntity.createLivingAttributes()
+                .add(Attributes.MAX_HEALTH, 0.25F)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0F);
     }
 
     @Override
-    public void registerData() {
-        super.registerData();
-        this.getDataManager().register(DEITY, "");
-        this.getDataManager().register(FLAGS, (byte) 0);
-        this.getDataManager().register(LOCKED, (byte) 0);
-        this.getDataManager().register(POSE, new CompoundNBT());
-        this.getDataManager().register(BLOCK, Optional.of(Blocks.AIR.getDefaultState()));
+    public void defineSynchedData() {
+        super.defineSynchedData();
+        this.getEntityData().define(DEITY, "");
+        this.getEntityData().define(FLAGS, (byte) 0);
+        this.getEntityData().define(LOCKED, (byte) 0);
+        this.getEntityData().define(POSE, new CompoundNBT());
+        this.getEntityData().define(BLOCK, Optional.of(Blocks.AIR.defaultBlockState()));
     }
 
     @Override
-    public void notifyDataManagerChange(DataParameter<?> key) {
-        super.notifyDataManagerChange(key);
+    public void onSyncedDataUpdated(DataParameter<?> key) {
+        super.onSyncedDataUpdated(key);
         if(key.equals(DEITY)) {
-            String sDeityId = getDataManager().get(DEITY);
+            String sDeityId = getEntityData().get(DEITY);
             if(sDeityId != null && !sDeityId.isEmpty()) {
-                this.setDeity(Optional.ofNullable(ResourceLocation.tryCreate(sDeityId)));
+                this.setDeity(Optional.ofNullable(ResourceLocation.tryParse(sDeityId)));
             } else {
                 this.setDeity(Optional.empty());
             }
         }
         if(key.equals(POSE)) {
-            this.setAltarPose(new AltarPose(getDataManager().get(POSE)));
+            this.setAltarPose(new AltarPose(getEntityData().get(POSE)));
         }
         if(key.equals(BLOCK)) {
-            this.setBaseBlock(getDataManager().get(BLOCK).orElse(null));
+            this.setBaseBlock(getEntityData().get(BLOCK).orElse(null));
         }
     }
 
     @Override
-    public Iterable<ItemStack> getHeldEquipment() {
+    public Iterable<ItemStack> getHandSlots() {
         return Lists.newArrayList(
-                this.inventory.getStackInSlot(EquipmentSlotType.MAINHAND.getSlotIndex()),
-                this.inventory.getStackInSlot(EquipmentSlotType.OFFHAND.getSlotIndex())
+                this.inventory.getItem(EquipmentSlotType.MAINHAND.getFilterFlag()),
+                this.inventory.getItem(EquipmentSlotType.OFFHAND.getFilterFlag())
         );
     }
 
     @Override
-    public Iterable<ItemStack> getArmorInventoryList() {
+    public Iterable<ItemStack> getArmorSlots() {
         return Lists.newArrayList(
-                this.inventory.getStackInSlot(EquipmentSlotType.FEET.getSlotIndex()),
-                this.inventory.getStackInSlot(EquipmentSlotType.LEGS.getSlotIndex()),
-                this.inventory.getStackInSlot(EquipmentSlotType.CHEST.getSlotIndex()),
-                this.inventory.getStackInSlot(EquipmentSlotType.HEAD.getSlotIndex())
+                this.inventory.getItem(EquipmentSlotType.FEET.getFilterFlag()),
+                this.inventory.getItem(EquipmentSlotType.LEGS.getFilterFlag()),
+                this.inventory.getItem(EquipmentSlotType.CHEST.getFilterFlag()),
+                this.inventory.getItem(EquipmentSlotType.HEAD.getFilterFlag())
         );
     }
 
-    public ItemStack getItemStackFromSlot(EquipmentSlotType slotIn) {
-        return this.inventory.getStackInSlot(slotIn.getSlotIndex());
+    public ItemStack getItemBySlot(EquipmentSlotType slotIn) {
+        return this.inventory.getItem(slotIn.getFilterFlag());
     }
 
-    public void setItemStackToSlot(EquipmentSlotType slotIn, ItemStack stack) {
-        this.inventory.setInventorySlotContents(slotIn.getSlotIndex(), stack);
+    public void setItemSlot(EquipmentSlotType slotIn, ItemStack stack) {
+        this.inventory.setItem(slotIn.getFilterFlag(), stack);
     }
 
     @Override
-    public HandSide getPrimaryHand() {
+    public HandSide getMainArm() {
         return HandSide.RIGHT;
     }
 
     @Override
-    public boolean canBePushed() {
+    public boolean isPushable() {
         return false;
     }
 
     @Override
-    protected void collideWithEntity(Entity entityIn) {
+    protected void doPush(Entity entityIn) {
     }
 
     @Override
-    protected void collideWithNearbyEntities() {
+    protected void pushEntities() {
     }
 
     @Override
@@ -181,12 +181,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         return false;
     }
 
-    public EntitySize getSize(Pose poseIn) {
-        return (getBaseBlock() != null && getBaseBlock().getMaterial() != Material.AIR) ? this.getType().getSize() : smallSize;
+    public EntitySize getDimensions(Pose poseIn) {
+        return (getBaseBlock() != null && getBaseBlock().getMaterial() != Material.AIR) ? this.getType().getDimensions() : smallSize;
     }
 
-    public ActionResultType applyPlayerInteraction(PlayerEntity player, Vector3d vec, Hand hand) {
-        RPGGods.LOGGER.debug("Name: " + (hasCustomName() ? getCustomName().getUnformattedComponentText() : "<null>"));
+    public ActionResultType interactAt(PlayerEntity player, Vector3d vec, Hand hand) {
+        RPGGods.LOGGER.debug("Name: " + (hasCustomName() ? getCustomName().getContents() : "<null>"));
         RPGGods.LOGGER.debug("Deity: " + getDeity());
         if(getDeity().isPresent()) {
             RPGGods.LOGGER.debug("Deity data: " + RPGGods.DEITY.get(getDeity().get()));
@@ -201,12 +201,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                 if(favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
-                    ItemStack heldItem = player.getHeldItem(hand);
+                    ItemStack heldItem = player.getItemInHand(hand);
                     // apply offering
                     Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(deity, player, ifavor, heldItem);
                     // if item changed, update player inventory
                     if(offeringResult.isPresent()) {
-                        player.setHeldItem(hand, offeringResult.get());
+                        player.setItemInHand(hand, offeringResult.get());
                         return ActionResultType.CONSUME;
                     }
                     // open favor GUI
@@ -215,7 +215,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                                     new FavorContainer(id, inventory, ifavor, deity),
                                     StringTextComponent.EMPTY),
                             buf -> {
-                                buf.writeCompoundTag(ifavor.serializeNBT());
+                                buf.writeNbt(ifavor.serializeNBT());
                                 buf.writeResourceLocation(deity);
                             }
                     );
@@ -228,7 +228,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                                 new AltarContainer(id, inv, this.inventory, this),
                                 StringTextComponent.EMPTY),
                         buf -> {
-                            buf.writeInt(this.getEntityId());
+                            buf.writeInt(this.getId());
                         }
                 );
             }
@@ -238,8 +238,8 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     @Override
-    public void writeAdditional(CompoundNBT compound) {
-        super.writeAdditional(compound);
+    public void addAdditionalSaveData(CompoundNBT compound) {
+        super.addAdditionalSaveData(compound);
         // write deity
         if(getDeity().isPresent()) {
             compound.putString(KEY_DEITY, getDeity().get().toString());
@@ -247,12 +247,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         // write inventory
         ListNBT listNBT = new ListNBT();
         // write inventory slots to NBT
-        for (int i = 0; i < inventory.getSizeInventory(); i++) {
-            ItemStack stack = inventory.getStackInSlot(i);
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty()) {
                 CompoundNBT slotNBT = new CompoundNBT();
                 slotNBT.putByte(KEY_SLOT, (byte) i);
-                stack.write(slotNBT);
+                stack.save(slotNBT);
                 listNBT.add(slotNBT);
             }
         }
@@ -268,11 +268,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     @Override
-    public void readAdditional(CompoundNBT compound) {
-        super.readAdditional(compound);
+    public void readAdditionalSaveData(CompoundNBT compound) {
+        super.readAdditionalSaveData(compound);
         // read deity
         if(compound.contains(KEY_DEITY)) {
-            setDeity(Optional.of(ResourceLocation.tryCreate(compound.getString(KEY_DEITY))));
+            setDeity(Optional.of(ResourceLocation.tryParse(compound.getString(KEY_DEITY))));
         }
         // init inventory
         initInventory();
@@ -282,8 +282,8 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         for (int i = 0; i < list.size(); i++) {
             CompoundNBT slotNBT = list.getCompound(i);
             int slotNum = slotNBT.getByte(KEY_SLOT) & 0xFF;
-            if (slotNum >= 0 && slotNum < inventory.getSizeInventory()) {
-                inventory.setInventorySlotContents(slotNum, ItemStack.read(slotNBT));
+            if (slotNum >= 0 && slotNum < inventory.getContainerSize()) {
+                inventory.setItem(slotNum, ItemStack.of(slotNBT));
             }
         }
         // read flags
@@ -305,46 +305,46 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         this.inventory = new Inventory(INV_SIZE);
         if (simplecontainer != null) {
             simplecontainer.removeListener(this);
-            int i = Math.min(simplecontainer.getSizeInventory(), this.inventory.getSizeInventory());
+            int i = Math.min(simplecontainer.getContainerSize(), this.inventory.getContainerSize());
 
             for(int j = 0; j < i; ++j) {
-                ItemStack itemstack = simplecontainer.getStackInSlot(j);
+                ItemStack itemstack = simplecontainer.getItem(j);
                 if (!itemstack.isEmpty()) {
-                    this.inventory.setInventorySlotContents(j, itemstack.copy());
+                    this.inventory.setItem(j, itemstack.copy());
                 }
             }
         }
 
         this.inventory.addListener(this);
-        this.onInventoryChanged(this.inventory);
+        this.containerChanged(this.inventory);
     }
 
     @Override
-    public void onInventoryChanged(IInventory inv) {
-        ItemStack baseBlockItem = inv.getStackInSlot(INV_SIZE - 1);
+    public void containerChanged(IInventory inv) {
+        ItemStack baseBlockItem = inv.getItem(INV_SIZE - 1);
         Optional<BlockState> baseBlock = Optional.empty();
         if(baseBlockItem.getItem() instanceof BlockItem) {
-            baseBlock = Optional.of(((BlockItem)baseBlockItem.getItem()).getBlock().getDefaultState());
+            baseBlock = Optional.of(((BlockItem)baseBlockItem.getItem()).getBlock().defaultBlockState());
         }
         setBaseBlock(baseBlock);
     }
 
     @Override
-    protected void dropInventory() {
-        super.dropInventory();
+    protected void dropEquipment() {
+        super.dropEquipment();
         if (this.inventory != null) {
             if(!isHandsLocked()) {
-                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.MAINHAND.getSlotIndex()));
-                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.OFFHAND.getSlotIndex()));
+                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.MAINHAND.getFilterFlag()));
+                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.OFFHAND.getFilterFlag()));
             }
             if(!isArmorLocked()) {
-                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.FEET.getSlotIndex()));
-                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.LEGS.getSlotIndex()));
-                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.CHEST.getSlotIndex()));
-                this.entityDropItem(this.inventory.getStackInSlot(EquipmentSlotType.HEAD.getSlotIndex()));
+                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.FEET.getFilterFlag()));
+                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.LEGS.getFilterFlag()));
+                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.CHEST.getFilterFlag()));
+                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.HEAD.getFilterFlag()));
             }
             if(!isBlockLocked()) {
-                this.entityDropItem(this.inventory.getStackInSlot(INV_SIZE - 1));
+                this.spawnAtLocation(this.inventory.getItem(INV_SIZE - 1));
             }
         }
     }
@@ -365,9 +365,9 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         setAltarPose(altar.getPose());
         setAltarPoseLocked(altar.isPoseLocked());
         for(EquipmentSlotType slot : EquipmentSlotType.values()) {
-            setItemStackToSlot(slot, altar.getItems().getItemStackFromSlot(slot).copy());
+            setItemSlot(slot, altar.getItems().getItemStackFromSlot(slot).copy());
         }
-        this.inventory.setInventorySlotContents(INV_SIZE - 1, new ItemStack(altar.getBlock().getBlock().asItem()));
+        this.inventory.setItem(INV_SIZE - 1, new ItemStack(altar.getBlock().getBlock().asItem()));
     }
 
     /**
@@ -375,12 +375,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
      */
     public Altar createAltarProperties() {
         AltarItems items = new AltarItems(
-                getItemStackFromSlot(EquipmentSlotType.HEAD),
-                getItemStackFromSlot(EquipmentSlotType.CHEST),
-                getItemStackFromSlot(EquipmentSlotType.LEGS),
-                getItemStackFromSlot(EquipmentSlotType.FEET),
-                getItemStackFromSlot(EquipmentSlotType.MAINHAND),
-                getItemStackFromSlot(EquipmentSlotType.OFFHAND),
+                getItemBySlot(EquipmentSlotType.HEAD),
+                getItemBySlot(EquipmentSlotType.CHEST),
+                getItemBySlot(EquipmentSlotType.LEGS),
+                getItemBySlot(EquipmentSlotType.FEET),
+                getItemBySlot(EquipmentSlotType.MAINHAND),
+                getItemBySlot(EquipmentSlotType.OFFHAND),
                 isArmorLocked(), isHandsLocked());
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
@@ -403,7 +403,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             setCustomName(null);
         }
         // update data manager
-        getDataManager().set(DEITY, deityString);
+        getEntityData().set(DEITY, deityString);
     }
 
     public Optional<ResourceLocation> getDeity() {
@@ -415,7 +415,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     public BlockState getBaseBlock() {
-        return getDataManager().get(BLOCK).orElse(Blocks.AIR.getDefaultState());
+        return getEntityData().get(BLOCK).orElse(Blocks.AIR.defaultBlockState());
     }
 
     public void setBaseBlock(final BlockState block) {
@@ -423,8 +423,8 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     public void setBaseBlock(final Optional<BlockState> block) {
-        getDataManager().set(BLOCK, block);
-        recalculateSize();
+        getEntityData().set(BLOCK, block);
+        refreshDimensions();
     }
 
     private void setPlayerProfile(@Nullable GameProfile profile) {
@@ -433,7 +433,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     private void updatePlayerProfile() {
-        this.playerProfile = SkullTileEntity.updateGameProfile(this.playerProfile);
+        this.playerProfile = SkullTileEntity.updateGameprofile(this.playerProfile);
     }
 
     public boolean isArmorLocked() {
@@ -473,11 +473,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     private byte getLocked() {
-        return getDataManager().get(LOCKED).byteValue();
+        return getEntityData().get(LOCKED).byteValue();
     }
 
     private void setLocked(byte b) {
-        getDataManager().set(LOCKED, b);
+        getEntityData().set(LOCKED, b);
     }
 
     public void setFemale(boolean female) {
@@ -495,7 +495,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         super.setCustomName(name);
         // attempt to use custom name to set texture
         if(name != null && !getDeity().isPresent()) {
-            String sName = name.getUnformattedComponentText();
+            String sName = name.getContents();
             if(sName.length() <= 16) {
                 this.textureName = sName;
             }
@@ -511,11 +511,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     private byte getFlags() {
-        return getDataManager().get(FLAGS).byteValue();
+        return getEntityData().get(FLAGS).byteValue();
     }
 
     private void setFlags(byte b) {
-        getDataManager().set(FLAGS, b);
+        getEntityData().set(FLAGS, b);
     }
 
     public AltarPose getAltarPose() {
@@ -524,7 +524,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     public void setAltarPose(final AltarPose pose) {
         this.pose = pose;
-        this.getDataManager().set(POSE, this.pose.serializeNBT());
+        this.getEntityData().set(POSE, this.pose.serializeNBT());
     }
 
     @Nullable

@@ -36,9 +36,9 @@ public class PerkIcon {
         this.hidden = hidden;
         // unpack color from int
         final Vector3f colorVec = unpackColor(color);
-        this.colorRed = colorVec.getX();
-        this.colorGreen = colorVec.getY();
-        this.colorBlue = colorVec.getZ();
+        this.colorRed = colorVec.x();
+        this.colorGreen = colorVec.y();
+        this.colorBlue = colorVec.z();
     }
 
     public ItemStack getItem() {

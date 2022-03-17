@@ -16,6 +16,8 @@ import rpggods.item.AltarItem;
 
 import java.util.Optional;
 
+import net.minecraft.item.crafting.ShapelessRecipe.Serializer;
+
 public class AltarRecipe extends ShapelessRecipe {
 
     public static final String CATEGORY = "altar";
@@ -32,8 +34,8 @@ public class AltarRecipe extends ShapelessRecipe {
      * Returns an Item that is the result of this recipe
      */
     @Override
-    public ItemStack getCraftingResult(CraftingInventory inv) {
-        final ItemStack result = super.getCraftingResult(inv);
+    public ItemStack assemble(CraftingInventory inv) {
+        final ItemStack result = super.assemble(inv);
         if(getAltarId().isPresent()) {
             result.getOrCreateTag().putString(AltarItem.KEY_ALTAR, getAltarId().get().toString());
         }
@@ -52,35 +54,35 @@ public class AltarRecipe extends ShapelessRecipe {
     public static class Factory extends Serializer {
 
         @Override
-        public ShapelessRecipe read(ResourceLocation recipeId, JsonObject json) {
+        public ShapelessRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
             // read the recipe from shapeless recipe serializer
-            final ShapelessRecipe recipe = super.read(recipeId, json);
-            final String sAltarId = JSONUtils.getString(json, AltarItem.KEY_ALTAR, "");
+            final ShapelessRecipe recipe = super.fromJson(recipeId, json);
+            final String sAltarId = JSONUtils.getAsString(json, AltarItem.KEY_ALTAR, "");
             if(sAltarId.isEmpty()) {
-                return new AltarRecipe(recipeId, recipe.getRecipeOutput(), Optional.empty(), recipe.getIngredients());
+                return new AltarRecipe(recipeId, recipe.getResultItem(), Optional.empty(), recipe.getIngredients());
             }
             // attempt to read resource location
-            ResourceLocation altarId = ResourceLocation.tryCreate(sAltarId);
+            ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             if (null == altarId) {
                 RPGGods.LOGGER.error("Failed to parse altar ID \"" + sAltarId + "\" in recipe with id " + recipeId);
             }
-            return new AltarRecipe(recipeId, recipe.getRecipeOutput(), Optional.ofNullable(altarId), recipe.getIngredients());
+            return new AltarRecipe(recipeId, recipe.getResultItem(), Optional.ofNullable(altarId), recipe.getIngredients());
         }
 
         @Override
-        public ShapelessRecipe read(ResourceLocation recipeId, PacketBuffer buffer) {
-            final ShapelessRecipe recipe = super.read(recipeId, buffer);
+        public ShapelessRecipe fromNetwork(ResourceLocation recipeId, PacketBuffer buffer) {
+            final ShapelessRecipe recipe = super.fromNetwork(recipeId, buffer);
             final boolean hasAltar = buffer.readBoolean();
             ResourceLocation altarId = null;
             if(hasAltar) {
                 altarId = buffer.readResourceLocation();
             }
-            return new AltarRecipe(recipeId, recipe.getRecipeOutput(), Optional.ofNullable(altarId), recipe.getIngredients());
+            return new AltarRecipe(recipeId, recipe.getResultItem(), Optional.ofNullable(altarId), recipe.getIngredients());
         }
 
         @Override
-        public void write(PacketBuffer buffer, ShapelessRecipe recipeIn) {
-            super.write(buffer, recipeIn);
+        public void toNetwork(PacketBuffer buffer, ShapelessRecipe recipeIn) {
+            super.toNetwork(buffer, recipeIn);
             final AltarRecipe recipe = (AltarRecipe) recipeIn;
             final boolean hasAltar = recipe.getAltarId().isPresent();
             buffer.writeBoolean(hasAltar);

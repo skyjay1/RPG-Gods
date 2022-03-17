@@ -103,7 +103,7 @@ public class FavorChangedEvent extends PlayerEvent {
         }
 
         @Override
-        public String getString() {
+        public String getSerializedName() {
             return name;
         }
     }

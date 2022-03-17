@@ -1,5 +1,6 @@
 package rpggods;
 
+import com.google.common.collect.Lists;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -36,12 +37,14 @@ import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
+import rpggods.perk.PerkData;
 import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 import rpggods.util.GenericJsonReloadListener;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -63,7 +66,7 @@ public class RPGGods {
     // Map of Deity ID to Deity
     public static final Map<ResourceLocation, Deity> DEITY = new HashMap<>();
     // Map of Entity ID to Affinity
-    public static final Map<ResourceLocation, Map<Affinity.Type, Perk>> AFFINITY = new HashMap<>();
+    public static final Map<ResourceLocation, Map<Affinity.Type, List<Perk>>> AFFINITY = new HashMap<>();
     public static final GenericJsonReloadListener<Altar> ALTAR = new GenericJsonReloadListener<>("deity/altar", Altar.class, Altar.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()));
@@ -82,11 +85,18 @@ public class RPGGods {
     public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()));
-                // add Perk to Deity
-                e.getValue().ifPresent(p -> RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(p));
-                // add Perk to Affinity map if applicable
-                e.getValue().ifPresent(p -> p.getActions().forEach(d -> d.getAffinity().ifPresent(
-                        a -> RPGGods.AFFINITY.computeIfAbsent(a.getEntity(), id -> new EnumMap<>(Affinity.Type.class)).put(a.getType(), p))));
+                e.getValue().ifPresent(p -> {
+                    // add Perk to Deity
+                    RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(p);
+                    // add Perk to Affinity map if applicable
+                    for(PerkData action : p.getActions()) {
+                        if(action.getAffinity().isPresent()) {
+                            Affinity affinity = action.getAffinity().get();
+                            RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
+                                    .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(p);
+                        }
+                    }
+                });
             }));
 
     public static final Logger LOGGER = LogManager.getFormatterLogger(RPGGods.MODID);

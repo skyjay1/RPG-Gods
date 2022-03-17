@@ -41,7 +41,7 @@ public class SOfferingPacket {
      */
     public static SOfferingPacket fromBytes(final PacketBuffer buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readCompoundTag();
+        final CompoundNBT sNBT = buf.readNbt();
         final Optional<Offering> sEffect = RPGGods.OFFERING.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Offering from NBT for packet\n" + error));
         return new SOfferingPacket(sName, sEffect.orElse(Offering.EMPTY));
@@ -57,7 +57,7 @@ public class SOfferingPacket {
         DataResult<INBT> nbtResult = RPGGods.OFFERING.writeObject(msg.offering);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Offering to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.deityName);
-        buf.writeCompoundTag((CompoundNBT) tag);
+        buf.writeNbt((CompoundNBT) tag);
     }
 
     /**
