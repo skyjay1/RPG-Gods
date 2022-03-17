@@ -1,6 +1,9 @@
 package rpggods;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.passive.TameableEntity;
+import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraftforge.common.util.LazyOptional;
@@ -15,6 +18,8 @@ import rpggods.network.SAltarPacket;
 import rpggods.network.SOfferingPacket;
 import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
+import rpggods.tameable.ITameable;
+import rpggods.tameable.Tameable;
 
 public final class RGData {
 
@@ -41,6 +46,7 @@ public final class RGData {
     public static void onReloadListeners(final AddReloadListenerEvent event) {
         RPGGods.LOGGER.debug("onReloadListeners");
         RPGGods.DEITY.forEach((id, deity) -> deity.clear());
+        RPGGods.AFFINITY.clear();
         event.addListener(RPGGods.ALTAR);
         event.addListener(RPGGods.OFFERING);
         event.addListener(RPGGods.SACRIFICE);
@@ -55,6 +61,10 @@ public final class RGData {
     public static void onAttachCapabilities(final AttachCapabilitiesEvent<Entity> event) {
         if(event.getObject() instanceof PlayerEntity) {
             event.addCapability(IFavor.REGISTRY_NAME, new Favor.Provider());
+        } else if(event.getObject() instanceof MobEntity
+                && !(event.getObject() instanceof TameableEntity)
+                && !(event.getObject() instanceof AbstractHorseEntity)) {
+            event.addCapability(ITameable.REGISTRY_NAME, new Tameable.Provider());
         }
     }
 

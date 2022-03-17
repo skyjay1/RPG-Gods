@@ -8,6 +8,7 @@ import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 
 import java.util.Optional;
@@ -40,9 +41,9 @@ public class Affinity {
 
     public IFormattableTextComponent getDisplayName() {
         Optional<EntityType<?>> entityType = EntityType.byKey(getEntity().toString());
-        String entityName = entityType.isPresent() ? entityType.get().getName().getUnformattedComponentText() : getEntity().toString();
+        ITextComponent entityName = entityType.isPresent() ? entityType.get().getName() : new StringTextComponent(getEntity().toString());
         return new TranslationTextComponent("favor.affinity",
-                entityName, getType().getDisplayName().getUnformattedComponentText());
+                entityName, getType().getDisplayName());
     }
 
     public static enum Type implements IStringSerializable {

@@ -1,18 +1,21 @@
 package rpggods.event;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.material.Material;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.FunctionObject;
 import net.minecraft.entity.AgeableEntity;
+import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.monster.DrownedEntity;
@@ -25,21 +28,29 @@ import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.SpectralArrowEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.SwimmerPathNavigator;
 import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingSetAttackTargetEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -49,15 +60,19 @@ import rpggods.RPGGods;
 import rpggods.deity.Deity;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
+import rpggods.entity.ai.AffinityGoal;
 import rpggods.favor.IFavor;
+import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkData;
+import rpggods.tameable.ITameable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -311,8 +326,20 @@ public class FavorEventHandler {
                     && favor.getFavor(action.getId().get()).addFavor(player, action.getId().get(), action.getFavor().get(), FavorChangedEvent.Source.PERK)
                         != favor.getFavor(action.getId().get()).getFavor();
             case AFFINITY:
-                // TODO
-                break;
+                if(action.getAffinity().isPresent() && entity.isPresent() && data.isPresent() && action.getAffinity().get().getType() == Affinity.Type.TAME) {
+                    LazyOptional<ITameable> tameable = entity.get().getCapability(RPGGods.TAMEABLE);
+                    if(tameable.isPresent()) {
+                        if(tameable.orElse(null).setTamedBy(player)) {
+                            entity.get().setCustomName(entity.get().getDisplayName());
+                            if(entity.get().world instanceof ServerWorld) {
+                                Vector3d pos = entity.get().getEyePosition(1.0F);
+                                ((ServerWorld)entity.get().world).spawnParticle(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);
+                            }
+                            return true;
+                        }
+                    }
+                }
+                return false;
             case ARROW_DAMAGE:
                 if(entity.isPresent() && action.getMultiplier().isPresent() && entity.get() instanceof ArrowEntity) {
                     ArrowEntity arrow = (ArrowEntity) entity.get();
@@ -342,8 +369,9 @@ public class FavorEventHandler {
                         arrow2.pickupStatus = AbstractArrowEntity.PickupStatus.CREATIVE_ONLY;
                         arrow.world.addEntity(arrow2);
                     }
+                    return true;
                 }
-                break;
+                return false;
             case OFFSPRING:
                 if(action.getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof AgeableEntity
                         && object.isPresent() && object.get() instanceof BabyEntitySpawnEvent) {
@@ -363,8 +391,9 @@ public class FavorEventHandler {
                             }
                         }
                     }
+                    return true;
                 }
-                break;
+                return false;
             case CROP_GROWTH:
                 break;
             case CROP_HARVEST:
@@ -406,6 +435,7 @@ public class FavorEventHandler {
             case ENTITY_KILLED_PLAYER:
             case PLAYER_HURT_ENTITY:
             case PLAYER_KILLED_ENTITY:
+            case PLAYER_INTERACT_ENTITY:
                 Optional<ResourceLocation> id = condition.getId();
                 return id.isPresent() && data.isPresent() && id.get().equals(data.get());
         }
@@ -519,9 +549,30 @@ public class FavorEventHandler {
         }
 
         @SubscribeEvent
+        public static void onEntityInteract(final PlayerInteractEvent.EntityInteract event) {
+            if(!event.getPlayer().world.isRemote && event.getHand() == Hand.MAIN_HAND) {
+                // onPlayerInteractEntity
+                event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                    final ResourceLocation id = event.getTarget().getType().getRegistryName();
+                    if(triggerCondition(PerkCondition.Type.PLAYER_INTERACT_ENTITY, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.of(id), Optional.empty())) {
+                        event.setCancellationResult(ActionResultType.SUCCESS);
+                    }
+                });
+                // toggle sitting for tamed mobs
+                if(null == event.getCancellationResult() || !event.getCancellationResult().isSuccessOrConsume()) {
+                    event.getTarget().getCapability(RPGGods.TAMEABLE).ifPresent(t -> {
+                        if(t.isOwner(event.getPlayer())) {
+                            t.setSitting(!t.isSitting());
+                            event.setCancellationResult(ActionResultType.SUCCESS);
+                        }
+                    });
+                }
+            }
+        }
+
+        @SubscribeEvent
         public static void onEntityJoinWorld(final EntityJoinWorldEvent event) {
-            if((event.getEntity() instanceof ArrowEntity || event.getEntity() instanceof SpectralArrowEntity)
-                    && !event.getEntity().getEntityWorld().isRemote()) {
+            if(!event.getEntity().world.isRemote && (event.getEntity() instanceof ArrowEntity || event.getEntity() instanceof SpectralArrowEntity)) {
                 final AbstractArrowEntity arrow = (AbstractArrowEntity) event.getEntity();
                 final Entity thrower = arrow.getShooter();
                 if(thrower instanceof PlayerEntity) {
@@ -531,6 +582,70 @@ public class FavorEventHandler {
                         triggerPerks(PerkData.Type.ARROW_EFFECT, (PlayerEntity) thrower, f, Optional.of(arrow));
                         triggerPerks(PerkData.Type.ARROW_COUNT, (PlayerEntity) thrower, f, Optional.of(arrow));
                     });
+                }
+            }
+            if(!event.getEntity().world.isRemote && event.getEntity() instanceof MobEntity) {
+                MobEntity mob = (MobEntity) event.getEntity();
+                ResourceLocation id = event.getEntity().getType().getRegistryName();
+                // add tameable goals
+                if(event.getEntity().getCapability(RPGGods.TAMEABLE).isPresent()) {
+                    mob.goalSelector.addGoal(0, new AffinityGoal.SittingGoal(mob));
+                    mob.goalSelector.addGoal(0, new AffinityGoal.SittingResetGoal(mob));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.FollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtByTargetGoal(mob));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtTargetGoal(mob));
+                }
+                // add flee goal
+                if(event.getEntity() instanceof CreatureEntity) {
+                    mob.goalSelector.addGoal(1, new AffinityGoal.FleeGoal((CreatureEntity) mob));
+                }
+                // add hostile goal
+                mob.goalSelector.addGoal(4, new AffinityGoal.NearestAttackableGoal(mob, 0.1F));
+                // add target reset goal
+                mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
+            }
+        }
+
+        @SubscribeEvent
+        public static void onLivingTarget(final LivingSetAttackTargetEvent event) {
+            if(!event.getEntityLiving().world.isRemote && event.getEntityLiving() instanceof MobEntity
+                    && event.getTarget() instanceof PlayerEntity) {
+                // passive behavior based on tame status
+                LazyOptional<ITameable> tameable = event.getEntityLiving().getCapability(RPGGods.TAMEABLE);
+                if(tameable.isPresent()) {
+                    ITameable t = tameable.orElse(null);
+                    Optional<LivingEntity> owner = t.getOwner(event.getEntityLiving().world);
+                    // tamed entity should not attack owner or owner team
+                    if(t.isTamed() && t.getOwnerId().isPresent() && (t.getOwnerId().equals(event.getTarget().getUniqueID())
+                            || (owner.isPresent() && owner.get().isOnSameTeam(event.getTarget())))) {
+                        // cancel the event by clearing attack target
+                        ((MobEntity)event.getEntityLiving()).setAttackTarget(null);
+                        return;
+                    }
+                }
+                // passive behavior based on favor
+                if(event.getTarget() != event.getEntityLiving().getRevengeTarget()) {
+                    final ResourceLocation id = event.getEntityLiving().getType().getRegistryName();
+                    final Map<Affinity.Type, Perk> affinityMap = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of());
+                    LazyOptional<IFavor> favor = event.getTarget().getCapability(RPGGods.FAVOR);
+                    if(favor.isPresent()) {
+                        IFavor f = favor.orElse(null);
+                        // locate passive and hostile perks (to check for conflicts)
+                        Perk passivePerk = affinityMap.get(Affinity.Type.PASSIVE);
+                        Perk hostilePerk = affinityMap.get(Affinity.Type.HOSTILE);
+                        boolean isPassive = passivePerk != null && passivePerk.getRange().isInRange(f);
+                        boolean isHostile = hostilePerk != null && hostilePerk.getRange().isInRange(f);
+                        // passive entity should not attack unless another perk enables hostility
+                        if(isPassive && isHostile) {
+                            RPGGods.LOGGER.error("Conflicting affinity perks for " + id +
+                                    " ; Hostile is " + hostilePerk.getRange() + " and Passive is " + passivePerk.getRange());
+                        }
+                        // cancel the event by clearing attack target
+                        if(isPassive) {
+                            ((MobEntity) event.getEntityLiving()).setAttackTarget(null);
+                            return;
+                        }
+                    }
                 }
             }
         }

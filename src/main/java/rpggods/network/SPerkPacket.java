@@ -8,9 +8,13 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
+import rpggods.deity.Deity;
 import rpggods.deity.Sacrifice;
+import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
+import rpggods.perk.PerkData;
 
+import java.util.EnumMap;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -70,7 +74,18 @@ public class SPerkPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                RPGGods.PERK.put(message.deityName, message.perk);
+                Perk perk = message.perk;
+                RPGGods.PERK.put(message.deityName, perk);
+                // add Perk to Deity
+                RPGGods.DEITY.computeIfAbsent(perk.getDeity(), Deity::new).add(perk);
+                // add Perk to Affinity map if applicable
+                for(PerkData action : perk.getActions()) {
+                    if(action.getAffinity().isPresent()) {
+                        Affinity affinity = action.getAffinity().get();
+                        RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
+                                .put(affinity.getType(), perk);
+                    }
+                }
             });
         }
         context.setPacketHandled(true);

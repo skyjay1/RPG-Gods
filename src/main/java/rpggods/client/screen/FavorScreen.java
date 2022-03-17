@@ -130,6 +130,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     private ResourceLocation deity;
     private IFormattableTextComponent deityName = (IFormattableTextComponent) StringTextComponent.EMPTY;
     private IFormattableTextComponent deityFavor = (IFormattableTextComponent) StringTextComponent.EMPTY;
+    private long openTimestamp;
     private int tabGroupCount;
     private int tabGroup;
     private int tabCount;
@@ -173,6 +174,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         super(screenContainer, inv, titleIn);
         this.xSize = SCREEN_WIDTH;
         this.ySize = SCREEN_HEIGHT;
+        this.openTimestamp = inv.player.world.getGameTime();
         // add all deities to list
         final IFavor favor = screenContainer.getFavor();
         deityList.clear();
@@ -203,8 +205,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         sacrificeCount = SACRIFICE_COUNT;
         // add all perks to map
         perkMap.clear();
+        Perk perk;
         for(Optional<Perk> optional : RPGGods.PERK.getValues()) {
-            optional.ifPresent(perk -> {
+            if(optional.isPresent() && !optional.get().getIcon().isHidden()) {
+                perk = optional.get();
                 if(!perkMap.containsKey(perk.getDeity())) {
                     // add map with keys for all levels
                     FavorLevel favorLevel = favor.getFavor(perk.getDeity());
@@ -218,7 +222,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 int unlock = (perk.getRange().getMaxLevel() <= 0) ? perk.getRange().getMaxLevel() : perk.getRange().getMinLevel();
                 // actually add the perk to the map
                 perkMap.get(perk.getDeity()).get(unlock).add(perk);
-            });
+            }
         }
         // determine current page
         if(deityList.size() > 0) {
@@ -233,6 +237,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     public void init(Minecraft minecraft, int width, int height) {
         super.init(minecraft, width, height);
         this.playerInventoryTitleY = this.height;
+        // clear button lists and maps
+        perkButtonMap.clear();
+        perkLevelButtonMap.clear();
         // add tabs
         int startX = (this.xSize - (TAB_WIDTH * TAB_COUNT)) / 2;
         int startY;
@@ -295,9 +302,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 }
                 // add level number button
                 text = new StringTextComponent(perksAtLevel.getKey().toString()).mergeStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE);
-                perkLevelButtonMap.putIfAbsent(perksAtLevel.getKey(), this.addButton(
-                        new TextButton(this, startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X) + 4, startY - 12,
-                                PERK_WIDTH, PERK_HEIGHT, text)));
+                if(!perkLevelButtonMap.containsKey(perksAtLevel.getKey())) {
+                    perkLevelButtonMap.put(perksAtLevel.getKey(), this.addButton(
+                            new TextButton(this, startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X) + 4, startY - 12,
+                                    PERK_WIDTH, PERK_HEIGHT, text)));
+                }
             }
         }
         // determine current tab
@@ -342,12 +351,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         // draw widgets
         super.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw perk page UI elements AFTER widgets and on top of everything
-        matrixStack.push();
-        matrixStack.translate(0, 0, 300F);
         if(this.page == Page.PERKS) {
             renderPerksPage(matrixStack, mouseX, mouseY, partialTicks);
         }
-        matrixStack.pop();
         // draw hovering text LAST
         for(Widget b : this.buttons) {
             if(b.visible && b.isHovered()) {
@@ -359,6 +365,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     @Override
     public boolean isPauseScreen() {
         return true;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
     }
 
     @Override
@@ -410,7 +421,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
     private void renderSummaryPage(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         // draw title
-        this.font.drawText(matrixStack, deityTitle, this.guiLeft + TITLE_X, this.guiTop + TITLE_Y, 0xFFFFFF);
+        int startX = (this.width - this.font.getStringPropertyWidth(deityTitle)) / 2;
+        this.font.drawText(matrixStack, deityTitle, startX, this.guiTop + TITLE_Y, 0xFFFFFF);
         // draw preview pane
         this.minecraft.getTextureManager().bindTexture(SCREEN_WIDGETS);
         this.blit(matrixStack, this.guiLeft + PREVIEW_X, this.guiTop + PREVIEW_Y, 202, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
@@ -449,7 +461,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     }
 
     private void renderPerksPage(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+        matrixStack.push();
+        matrixStack.translate(0, 0, 250);
         // draw header frame
+        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         this.getMinecraft().getTextureManager().bindTexture(SCREEN_TEXTURE);
         this.blit(matrixStack, this.guiLeft + 23, this.guiTop + 13, 23, 13, 208, 28);
         // re-draw title and favor
@@ -463,12 +478,14 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         this.getMinecraft().getTextureManager().bindTexture(SCREEN_TEXTURE);
         this.blit(matrixStack, this.guiLeft, this.guiTop, 0, 0, 24, 170);
         this.blit(matrixStack, this.guiLeft + 232, this.guiTop, 232, 0, 24, 168);
-        // draw perk button tooltips
+        // draw perk button tooltip
+        matrixStack.translate(0, 0, 50);
         for(PerkButton b : perkButtonMap.computeIfAbsent(deity, key -> ImmutableList.of())) {
             if(b.visible && b.isHovered()) {
                 b.renderPerkTooltip(matrixStack, mouseX, mouseY);
             }
         }
+        matrixStack.pop();
     }
 
     private void renderFavorLevel(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
@@ -514,7 +531,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         switch (this.page) {
             case SUMMARY:
                 deityTitle = new TranslationTextComponent(Altar.createTranslationKey(deity) + ".title")
-                        .mergeStyle(TextFormatting.DARK_GRAY, TextFormatting.ITALIC);
+                        .mergeStyle(TextFormatting.BLACK, TextFormatting.ITALIC);
                 break;
             case OFFERINGS:
                 int offeringSize = offeringMap.getOrDefault(deity, ImmutableList.of()).size();
@@ -749,6 +766,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         private ITextComponent perkChance;
         private ITextComponent perkRange;
         private boolean enabled;
+        private int tooltipWidth;
 
         public PerkButton(final FavorScreen gui, final Perk perk, int x, int y) {
             super(x, y, PERK_WIDTH, PERK_HEIGHT, StringTextComponent.EMPTY, b -> {});
@@ -770,6 +788,24 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 this.blit(matrixStack, this.x, this.y, 22, 196, PERK_WIDTH, PERK_HEIGHT);
                 // draw item
                 FavorScreen.this.itemRenderer.renderItemIntoGUI(perk.getIcon().getItem(), this.x + (PERK_WIDTH - 16) / 2, this.y + (PERK_HEIGHT - 16) / 2);
+                // draw cooldown
+                long timeElapsed = openTimestamp - playerInventory.player.world.getGameTime();
+                long cooldown = getContainer().getFavor().getPerkCooldown(this.perk.getCategory()) - timeElapsed;
+                // render cooldown texture on top of item
+                if(cooldown > 0 && perk.getCooldown() > 0) {
+                    matrixStack.push();
+                    matrixStack.translate(0, 0, FavorScreen.this.itemRenderer.zLevel + 110);
+                    // determine v offset
+                    int vOffset = Math.round((1.0F - MathHelper.clamp((float)cooldown / (float)perk.getCooldown(), 0.0F, 1.0F)) * PERK_HEIGHT);
+                    // draw cooldown
+                    RenderSystem.enableBlend();
+                    RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
+                    FavorScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
+                    this.blit(matrixStack, this.x, this.y + vOffset, 44, 196 + vOffset, PERK_WIDTH, PERK_HEIGHT - vOffset);
+                    RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+                    RenderSystem.disableBlend();
+                    matrixStack.pop();
+                }
             }
         }
 
@@ -783,13 +819,26 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 // add all perk action titles
                 for(PerkData data : perk.getActions()) {
                     perkTypes.add(data.getDisplayName().mergeStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE));
-                    perkTypes.add(data.getDisplayDescription().mergeStyle(TextFormatting.DARK_GRAY));
+                    perkTypes.add(data.getDisplayDescription().mergeStyle(TextFormatting.BLUE));
                 }
-                // add all perk condition texts
+                // add perk condition texts
                 for(PerkCondition condition : perk.getConditions()) {
                     // do not show "random tick" conditions
                     if(condition.getType() != PerkCondition.Type.RANDOM_TICK) {
-                        perkConditions.add(condition.getDisplayName().mergeStyle(TextFormatting.DARK_GRAY, TextFormatting.ITALIC));
+                        perkConditions.add(condition.getDisplayName().mergeStyle(TextFormatting.DARK_GRAY));
+                    }
+                }
+                // add prefix to each condition based on plurality
+                if (perkConditions.size() > 0) {
+                    // add prefix to first condition
+                    ITextComponent t2 = new TranslationTextComponent("favor.perk.condition.single", perkConditions.get(0))
+                            .mergeStyle(TextFormatting.DARK_GRAY);
+                    perkConditions.set(0, t2);
+                    // add prefix to following conditions
+                    for (int i = 1, l = perkConditions.size(); i < l; i++) {
+                        t2 = new TranslationTextComponent("favor.perk.condition.multiple", perkConditions.get(i))
+                                .mergeStyle(TextFormatting.DARK_GRAY);
+                        perkConditions.set(i, t2);
                     }
                 }
                 // add text to display favor range
@@ -807,8 +856,12 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 String chanceString = String.format("%.2f", perk.getChance() * 100.0F).replaceAll("0*$", "").replaceAll("\\.$", "");
                 perkChance = new TranslationTextComponent("gui.favor.perk.chance", chanceString)
                         .mergeStyle(TextFormatting.BLACK);
-
             }
+            this.tooltipWidth = calculateWidth();
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
 
         public void move(final int moveX, final int moveY) {
@@ -824,51 +877,125 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         public void renderPerkTooltip(MatrixStack matrixStack, final int mouseX, final int mouseY) {
             int startX = mouseX + 10;
             int startY = mouseY - PERK_TOOLTIP_HEIGHT / 2;
-            // draw bg
-            RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-            FavorScreen.this.getMinecraft().getTextureManager().bindTexture(PERK_TOOLTIP);
-            this.blit(matrixStack, startX, startY, 0, 0, PERK_TOOLTIP_WIDTH, PERK_TOOLTIP_HEIGHT);
+            final int lineHeight = 11;
+            // determine background size
+            final int lines = perkTypes.size() + perkConditions.size() + 6;
+            renderPerkTooltipBackground(matrixStack, startX, startY, tooltipWidth + 14, lines * lineHeight + 6);
             startX += 6;
-            startY += 10;
+            startY += 14;
             // draw perk data
             int line = 0;
-            int lineWidth = 11;
             // draw title(s)
             for (ITextComponent t : perkTypes) {
-                FavorScreen.this.font.drawText(matrixStack, t, startX, startY + lineWidth * (line++), 0xFFFFFF);
+                FavorScreen.this.font.drawText(matrixStack, t, startX, startY + lineHeight * (line++), 0xFFFFFF);
             }
             // line space
             startY += 5;
-            // draw first condition
-            if (perkConditions.size() > 0) {
-                ITextComponent t2 = new TranslationTextComponent("favor.perk.condition.single", perkConditions.get(0))
-                        .mergeStyle(TextFormatting.DARK_GRAY);
-                FavorScreen.this.font.drawText(matrixStack, t2, startX, startY + lineWidth * (line++), 0xFFFFFF);
+            // draw conditions
+            for (ITextComponent t : perkConditions) {
+                FavorScreen.this.font.drawText(matrixStack, t, startX, startY + lineHeight * (line++), 0xFFFFFF);
             }
-            // draw other conditions
-            for (int i = 1; i < perkConditions.size(); i++) {
-                ITextComponent t2 = new TranslationTextComponent("favor.perk.condition.multiple", perkConditions.get(i))
-                        .mergeStyle(TextFormatting.DARK_GRAY);
-                FavorScreen.this.font.drawText(matrixStack, t2, startX, startY + lineWidth * (line++), 0xFFFFFF);
+            if(!perkConditions.isEmpty()) {
+                startY += 5;
             }
             // draw chance
-            FavorScreen.this.font.drawText(matrixStack, perkChance, startX, startY + lineWidth * (line++), 0xFFFFFF);
+            FavorScreen.this.font.drawText(matrixStack, perkChance, startX, startY + lineHeight * (line++), 0xFFFFFF);
             // line space
             startY += 5;
             // draw range
             ITextComponent unlock = new TranslationTextComponent("gui.favor.perk.unlock")
                     .mergeStyle(TextFormatting.BLACK);
-            FavorScreen.this.font.drawText(matrixStack, unlock, startX, startY + lineWidth * (line++), 0xFFFFFF);
-            FavorScreen.this.font.drawText(matrixStack, perkRange, startX, startY + lineWidth * (line++), 0xFFFFFF);
+            FavorScreen.this.font.drawText(matrixStack, unlock, startX, startY + lineHeight * (line++), 0xFFFFFF);
+            FavorScreen.this.font.drawText(matrixStack, perkRange, startX, startY + lineHeight * (line++), 0xFFFFFF);
         }
 
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
+        /**
+         * Renders a scroll background for a tooltip with the given position and size
+         * @param matrixStack the render stack
+         * @param startX the x position of upper left corner
+         * @param startY the y position of upper left corner
+         * @param sizeX the width of the scroll
+         * @param sizeY the height of the scroll
+         */
+        private void renderPerkTooltipBackground(MatrixStack matrixStack, final float startX, final float startY,
+                                                 float sizeX, float sizeY) {
+            // minimum size of tooltip
+            sizeX = Math.max(42, sizeX);
+            sizeY = Math.max(50, sizeY);
+            // u and v coordinates of background
+            int u = 31;
+            int v = 132;
+            // corner pieces (width and height)
+            int cWidth = 16;
+            int cHeight = 20;
+            // middle piece (width and height)
+            int mWidth = 8;
+            int mHeight = 8;
+            // local x and y scale
+            float scaleX = (sizeX - (cWidth * 2)) / (float)mWidth;
+            float scaleY = (sizeY - (cHeight * 2)) / (float)mHeight;
+            matrixStack.push();
+            matrixStack.translate(startX, startY, 0);
+            // prepare to render
+            RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+            FavorScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
+            // draw upper left corner
+            this.blit(matrixStack, 0, 0, u, v, cWidth, cHeight);
+            // draw upper middle
+            matrixStack.scale(scaleX, 1, 1);
+            matrixStack.translate(cWidth / scaleX, 0, 0);
+            this.blit(matrixStack, 0, 0, u + cWidth, v, mWidth, cHeight);
+            // draw upper right
+            matrixStack.scale(1 / scaleX, 1, 1);
+            matrixStack.translate(mWidth * scaleX, 0, 0);
+            this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v, cWidth, cHeight);
+            // draw middle left
+            matrixStack.translate(-(cWidth + (mWidth * scaleX)), cHeight, 0);
+            matrixStack.scale(1, scaleY, 1);
+            this.blit(matrixStack, 0, 0, u, v + cHeight, cWidth, mHeight);
+            // draw middle
+            matrixStack.translate(cWidth, 0, 0);
+            matrixStack.scale(scaleX, 1, 1);
+            this.blit(matrixStack, 0, 0, u + cWidth, v + cHeight, mWidth, mHeight);
+            // draw middle right
+            matrixStack.scale(1 / scaleX, 1, 1);
+            matrixStack.translate(mWidth * scaleX, 0, 0);
+            this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v + cHeight, cWidth, mHeight);
+            // draw lower left
+            matrixStack.scale(1, 1 / scaleY, 1);
+            matrixStack.translate(-(cWidth + (mWidth * scaleX)), (mHeight * scaleY), 0);
+            this.blit(matrixStack, 0, 0, u, v + cHeight + mHeight, cWidth, cHeight);
+            // draw lower middle
+            matrixStack.scale(scaleX, 1, 1);
+            matrixStack.translate(cWidth / scaleX, 0, 0);
+            this.blit(matrixStack, 0, 0, u + cWidth, v + cHeight + mHeight, mWidth, cHeight);
+            // draw upper right
+            matrixStack.scale(1 / scaleX, 1, 1);
+            matrixStack.translate(mWidth * scaleX, 0, 0);
+            this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v + cHeight + mHeight, cWidth, cHeight);
+            matrixStack.pop();
+        }
+
+        /**
+         * Iterates through all text components attached to this button's tooltip
+         * @return the maximum width of this button's text components
+         */
+        private int calculateWidth() {
+            int maxWidth = 0;
+            for(ITextComponent t : perkTypes) {
+                maxWidth = Math.max(maxWidth, FavorScreen.this.font.getStringPropertyWidth(t));
+            }
+            for(ITextComponent t : perkConditions) {
+                maxWidth = Math.max(maxWidth, FavorScreen.this.font.getStringPropertyWidth(t));
+            }
+            maxWidth = Math.max(maxWidth, FavorScreen.this.font.getStringPropertyWidth(perkChance));
+            maxWidth = Math.max(maxWidth, FavorScreen.this.font.getStringPropertyWidth(perkRange));
+            return maxWidth;
         }
     }
 
     protected class TradeButton extends OfferingButton {
-        protected static final int ARROW_WIDTH = 10;
+        protected static final int ARROW_WIDTH = 12;
         protected static final int ARROW_HEIGHT = 9;
         protected ITextComponent tradeTooltip;
         protected ITextComponent unlockText;
@@ -894,7 +1021,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 // draw arrow
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
                 FavorScreen.this.getMinecraft().getTextureManager().bindTexture(SCREEN_WIDGETS);
-                this.blit(matrixStack, this.x + 18, this.y + textY, 115, 130, ARROW_WIDTH, ARROW_HEIGHT);
+                this.blit(matrixStack, this.x + 18, this.y + textY, 113, 130, ARROW_WIDTH, ARROW_HEIGHT);
             }
         }
 

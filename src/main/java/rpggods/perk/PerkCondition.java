@@ -104,7 +104,8 @@ public class PerkCondition {
                 return d.contains(":")
                     ? new TranslationTextComponent("biome." + rl.getNamespace() + "." + rl.getPath())
                     : new StringTextComponent(d);
-            case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER: case ENTITY_KILLED_PLAYER:
+            case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
+            case ENTITY_KILLED_PLAYER: case PLAYER_INTERACT_ENTITY:
                 // read data as Entity ID
                 Optional<EntityType<?>> entityType = EntityType.byKey(d);
                 return entityType.isPresent()
@@ -125,6 +126,7 @@ public class PerkCondition {
         ENTITY_KILLED_PLAYER("entity_killed_player"),
         PLAYER_HURT_ENTITY("player_hurt_entity"),
         PLAYER_KILLED_ENTITY("player_killed_entity"),
+        PLAYER_INTERACT_ENTITY("player_interact_entity"),
         ENTER_COMBAT("enter_combat");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getString).stable();

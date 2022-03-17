@@ -34,9 +34,13 @@ import rpggods.network.SAltarPacket;
 import rpggods.network.SOfferingPacket;
 import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
+import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
+import rpggods.tameable.ITameable;
+import rpggods.tameable.Tameable;
 import rpggods.util.GenericJsonReloadListener;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -48,12 +52,18 @@ public class RPGGods {
     @CapabilityInject(IFavor.class)
     public static final Capability<IFavor> FAVOR = null;
 
+    @CapabilityInject(ITameable.class)
+    public static final Capability<ITameable> TAMEABLE = null;
+
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, "channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
 
+    // Map of Deity ID to Deity
     public static final Map<ResourceLocation, Deity> DEITY = new HashMap<>();
+    // Map of Entity ID to Affinity
+    public static final Map<ResourceLocation, Map<Affinity.Type, Perk>> AFFINITY = new HashMap<>();
     public static final GenericJsonReloadListener<Altar> ALTAR = new GenericJsonReloadListener<>("deity/altar", Altar.class, Altar.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()));
@@ -72,7 +82,11 @@ public class RPGGods {
     public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()));
+                // add Perk to Deity
                 e.getValue().ifPresent(p -> RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(p));
+                // add Perk to Affinity map if applicable
+                e.getValue().ifPresent(p -> p.getActions().forEach(d -> d.getAffinity().ifPresent(
+                        a -> RPGGods.AFFINITY.computeIfAbsent(a.getEntity(), id -> new EnumMap<>(Affinity.Type.class)).put(a.getType(), p))));
             }));
 
     public static final Logger LOGGER = LogManager.getFormatterLogger(RPGGods.MODID);
@@ -104,5 +118,6 @@ public class RPGGods {
     public static void setup(final FMLCommonSetupEvent event) {
         // register capability
         CapabilityManager.INSTANCE.register(IFavor.class, new Favor.Storage(), Favor::new);
+        CapabilityManager.INSTANCE.register(ITameable.class, new Tameable.Storage(), Tameable::new);
     }
 }

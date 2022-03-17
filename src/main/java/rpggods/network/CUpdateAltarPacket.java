@@ -94,13 +94,12 @@ public class CUpdateAltarPacket {
             context.enqueueWork(() -> {
                 final ServerPlayerEntity player = context.getSender();
                 Entity entity = context.getSender().getEntityWorld().getEntityByID(message.entityId);
-                RPGGods.LOGGER.debug("Updating entity id " + message.entityId + ": " + (entity != null ? entity.toString() : "NOT FOUND"));
                 double maxDistance = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
-                if(entity != null && entity instanceof AltarEntity && player.getDistanceSq(entity) < Math.pow(maxDistance, 2)) {
+                if (entity != null && entity instanceof AltarEntity && player.getDistanceSq(entity) < Math.pow(maxDistance, 2)) {
                     // update pose and name
                     AltarEntity altar = (AltarEntity) entity;
                     altar.setAltarPose(message.pose);
-                    if(message.textureName != null && !message.textureName.isEmpty()) {
+                    if (message.textureName != null && !message.textureName.isEmpty()) {
                         altar.setCustomName(new StringTextComponent(message.textureName));
                     }
                 }
