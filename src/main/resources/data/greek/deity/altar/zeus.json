@@ -3,7 +3,6 @@
   "name": "greek:zeus",
   "female": false,
   "slim": false,
-  "block": "minecraft:quartz_slab",
   "icon": {
     "id": "minecraft:feather",
     "Count": 1
@@ -13,8 +12,10 @@
       "id": "minecraft:iron_sword",
       "Count": 1
     },
+    "block": "minecraft:quartz_slab",
     "armor_locked": false,
-    "hands_locked": true
+    "hands_locked": true,
+    "block_locked": false
   },
   "pose": {
     "head": {

@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.FloatNBT;
 import net.minecraft.util.math.vector.Vector3f;
 import net.minecraftforge.common.util.INBTSerializable;
+import rpggods.deity.Altar;
 
 import java.util.EnumMap;
 import java.util.Map.Entry;
@@ -13,9 +14,51 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
 
   public static final AltarPose EMPTY = new AltarPose();
 
+  public static final AltarPose WALKING = new AltarPose()
+          .set(ModelPart.HEAD, 5, 0, 0)
+          .set(ModelPart.LEFT_ARM, 30, 0, -2.5F)
+          .set(ModelPart.RIGHT_ARM, -30, 0, 2.5F)
+          .set(ModelPart.LEFT_LEG, -20, 0, -2)
+          .set(ModelPart.RIGHT_LEG, 20, 0, 2);
+
+  public static final AltarPose STANDING_HOLDING = new AltarPose()
+          .set(ModelPart.HEAD, 5, 0, 0)
+          .set(ModelPart.LEFT_ARM, 0, 0, -2.5F)
+          .set(ModelPart.RIGHT_ARM, -30, 0, 2.5F)
+          .set(ModelPart.LEFT_LEG, 0, 0, -2)
+          .set(ModelPart.RIGHT_LEG, 0, 0, 2);
+
+  public static final AltarPose STANDING_HOLDING_DRAMATIC = new AltarPose()
+          .set(ModelPart.HEAD, -5, 0, 0)
+          .set(ModelPart.LEFT_ARM, 0, 0, -2.5F)
+          .set(ModelPart.RIGHT_ARM, -90, 0, 2.5F)
+          .set(ModelPart.LEFT_LEG, 0, 0, -2)
+          .set(ModelPart.RIGHT_LEG, 0, 0, 2);
+
+  public static final AltarPose STANDING_RAISED = new AltarPose()
+          .set(ModelPart.HEAD, -20, 0, 0)
+          .set(ModelPart.LEFT_ARM, 0, -90F, -130F)
+          .set(ModelPart.RIGHT_ARM, 0, 90F, 130F)
+          .set(ModelPart.LEFT_LEG, 0, 0, -2)
+          .set(ModelPart.RIGHT_LEG, 0, 0, 2);
+
+  public static final AltarPose WEEPING = new AltarPose()
+          .set(ModelPart.HEAD, 12, 0, 0)
+          .set(ModelPart.LEFT_ARM, -125F, 0, -45F)
+          .set(ModelPart.RIGHT_ARM, -125F, 0, 45F)
+          .set(ModelPart.LEFT_LEG, 4, 0, -2)
+          .set(ModelPart.RIGHT_LEG, -4, 0, 2);
+
+  public static final AltarPose DAB = new AltarPose()
+          .set(ModelPart.HEAD, 38, 0, 0)
+          .set(ModelPart.LEFT_ARM, -100F, 45F, 0)
+          .set(ModelPart.RIGHT_ARM, -108F, 64F, 0)
+          .set(ModelPart.LEFT_LEG, 0, 0, -4)
+          .set(ModelPart.RIGHT_LEG, 0, 0, 4);
+
+
   public static final Codec<AltarPose> CODEC = CompoundNBT.CODEC.xmap(AltarPose::new, AltarPose::serializeNBT);
 
-  private static final String KEY_ANGLES = "angles";
   private final EnumMap<ModelPart, Vector3f> angles = new EnumMap<>(ModelPart.class);
   
   public AltarPose() {
@@ -33,24 +76,24 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
   }
   
   /**
-   * Adds a model rotation to the statuePose using degrees
+   * Adds a model rotation to the AltarPose using degrees
    * @param p the model part
    * @param x the x rotation in degrees
    * @param y the y rotation in degrees
    * @param z the z rotation in degrees
-   * @return the StatuePose for chaining instances
+   * @return the AltarPose for chaining instances
    **/
   public AltarPose set(final ModelPart p, final float x, final float y, final float z) {
     return setRadians(p, (float)Math.toRadians(x), (float)Math.toRadians(y), (float)Math.toRadians(z));
   }
   
   /**
-   * Adds a model rotation to the statuePose using radians
+   * Adds a model rotation to the AltarPose using radians
    * @param p the model part
    * @param x the x rotation in radians
    * @param y the y rotation in radians
    * @param z the z rotation in radians
-   * @return the StatuePose for chaining instances
+   * @return the AltarPose for chaining instances
    **/
   public AltarPose setRadians(final ModelPart p, final float x, final float y, final float z) {
     angles.put(p, new Vector3f(x, y, z));

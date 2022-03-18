@@ -22,7 +22,7 @@ public class Perk {
                     .xmap(either -> either.map(ImmutableList::of, Function.identity()),
                             list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list))
                     .optionalFieldOf("condition", Lists.newArrayList()).forGetter(Perk::getConditions),
-            FavorRange.CODEC.fieldOf("range").forGetter(Perk::getRange),
+            FavorRange.CODEC.optionalFieldOf("range", FavorRange.EMPTY).forGetter(Perk::getRange),
             Codec.either(PerkData.CODEC, PerkData.CODEC.listOf())
                     .xmap(either -> either.map(ImmutableList::of, Function.identity()),
                             list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list))

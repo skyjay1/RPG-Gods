@@ -3,18 +3,25 @@ package rpggods.altar;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.NonNullList;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.registry.Registry;
+import net.minecraftforge.registries.ForgeRegistries;
+import rpggods.deity.Altar;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public class AltarItems {
 
     public static final AltarItems EMPTY = new AltarItems(ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
-            ItemStack.EMPTY, ItemStack.EMPTY, false, false);
+            ItemStack.EMPTY, ItemStack.EMPTY, Blocks.AIR, false, false, false);
 
     public static final Codec<AltarItems> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemStack.CODEC.optionalFieldOf("head", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.HEAD)),
@@ -23,22 +30,28 @@ public class AltarItems {
             ItemStack.CODEC.optionalFieldOf("feet", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.FEET)),
             ItemStack.CODEC.optionalFieldOf("mainhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.MAINHAND)),
             ItemStack.CODEC.optionalFieldOf("offhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.OFFHAND)),
-            Codec.BOOL.optionalFieldOf("armor_locked", true).forGetter(AltarItems::isArmorLocked),
-            Codec.BOOL.optionalFieldOf("hands_locked", true).forGetter(AltarItems::isHandsLocked)
-    ).apply(instance, AltarItems::new));
+            Registry.BLOCK.optionalFieldOf("block", Blocks.SMOOTH_STONE_SLAB).forGetter(AltarItems::getBlock),
+            Codec.BOOL.optionalFieldOf("armor_locked", false).forGetter(AltarItems::isArmorLocked),
+            Codec.BOOL.optionalFieldOf("hands_locked", false).forGetter(AltarItems::isHandsLocked),
+            Codec.BOOL.optionalFieldOf("block_locked", false).forGetter(AltarItems::isBlockLocked)
+            ).apply(instance, AltarItems::new));
 
     private final ImmutableList<ItemStack> handItems;
     private final ImmutableList<ItemStack> armorItems;
+    private final Block block;
     private final boolean armorLocked;
     private final boolean handsLocked;
+    private final boolean blockLocked;
 
     public AltarItems(ItemStack head, ItemStack chest, ItemStack legs, ItemStack feet,
-                      ItemStack mainhand, ItemStack offhand,
-                      boolean armorLocked, boolean handsLocked) {
+                      ItemStack mainhand, ItemStack offhand, Block block,
+                      boolean armorLocked, boolean handsLocked, boolean blockLocked) {
         this.handItems = ImmutableList.of(mainhand, offhand);
         this.armorItems = ImmutableList.of(head, chest, legs, feet);
+        this.block = block;
         this.armorLocked = armorLocked;
         this.handsLocked = handsLocked;
+        this.blockLocked = blockLocked;
     }
 
     public ItemStack getItemStackFromSlot(EquipmentSlotType slotIn) {
@@ -59,6 +72,14 @@ public class AltarItems {
         return armorItems;
     }
 
+    public Block getBlock() {
+        return block;
+    }
+
+    public boolean isBlockLocked() {
+        return blockLocked;
+    }
+
     public boolean isArmorLocked() {
         return armorLocked;
     }
@@ -72,8 +93,10 @@ public class AltarItems {
         final StringBuilder b = new StringBuilder("AltarItems:");
         b.append(" hands[").append(handItems.toString()).append("]");
         b.append(" armor[").append(armorItems.toString()).append("]");
+        b.append(" block[").append(block.getRegistryName().toString()).append("]");
         b.append(" armor_locked[").append(armorLocked).append("]");
         b.append(" hands_locked[").append(handsLocked).append("]");
+        b.append(" block_locked[").append(blockLocked).append("]");
         return b.toString();
     }
 }

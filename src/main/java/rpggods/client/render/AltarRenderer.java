@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
@@ -20,6 +21,8 @@ import net.minecraft.client.renderer.entity.layers.LayerRenderer;
 import net.minecraft.client.renderer.entity.model.ArmorStandArmorModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.entity.Entity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.RayTraceResult;
@@ -28,6 +31,7 @@ import net.minecraft.util.math.vector.Vector3f;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.model.data.EmptyModelData;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.altar.AltarPose;
 import rpggods.altar.ModelPart;
@@ -63,14 +67,17 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
 
         // render base
         float baseHeight = -0.5F;
-        final BlockState base = entityIn.getBaseBlock();
-        if(base != null && base.getMaterial() != Material.AIR) {
-            baseHeight = 0.0F;
-            matrixStackIn.pushPose();
-            matrixStackIn.translate(-0.5D, 0.0D, -0.5D);
-            Minecraft.getInstance().getBlockRenderer().renderBlock(base,
-                    matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY, EmptyModelData.INSTANCE);
-            matrixStackIn.popPose();
+        ItemStack blockItem = entityIn.getInventory().getItem(AltarEntity.INV_SIZE - 1);
+        if(!blockItem.isEmpty()) {
+            final Block block = ForgeRegistries.BLOCKS.getValue(blockItem.getItem().getRegistryName());
+            if(block != null) {
+                baseHeight = 0.0F;
+                matrixStackIn.pushPose();
+                matrixStackIn.translate(-0.5D, 0.0D, -0.5D);
+                Minecraft.getInstance().getBlockRenderer().renderBlock(block.defaultBlockState(),
+                        matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY, EmptyModelData.INSTANCE);
+                matrixStackIn.popPose();
+            }
         }
 
         // prepare to render model

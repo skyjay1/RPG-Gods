@@ -6,6 +6,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import rpggods.RPGGods;
 
+import java.util.Objects;
+
 public class FavorRange {
 
     public static final FavorRange EMPTY = new FavorRange(new ResourceLocation(RPGGods.MODID, "null"), 0, 0);
@@ -80,6 +82,19 @@ public class FavorRange {
         } else {
             return favorLevel <= minLevel && favorLevel >= maxLevel;
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FavorRange that = (FavorRange) o;
+        return minLevel == that.minLevel && maxLevel == that.maxLevel && deity.equals(that.deity);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(deity, minLevel, maxLevel);
     }
 
     @Override

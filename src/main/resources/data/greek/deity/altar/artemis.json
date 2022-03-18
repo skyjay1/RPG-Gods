@@ -3,18 +3,17 @@
   "name": "greek:artemis",
   "female": true,
   "slim": true,
-  "block":  "minecraft:birch_slab",
   "icon": {
     "id": "minecraft:arrow",
     "Count": 1
   },
   "items": {
     "head": {
-      "id": "minecraft:gold_helmet",
+      "id": "minecraft:golden_helmet",
       "Count": 1
     },
     "chest": {
-      "id": "minecraft:gold_chestplate",
+      "id": "minecraft:golden_chestplate",
       "Count": 1
     },
     "legs": {
@@ -29,8 +28,10 @@
       "id": "minecraft:bow",
       "Count": 1
     },
+    "block": "minecraft:birch_slab",
     "armor_locked": true,
-    "hands_locked": true
+    "hands_locked": true,
+    "block_locked": false
   },
   "pose": {
     "head": {

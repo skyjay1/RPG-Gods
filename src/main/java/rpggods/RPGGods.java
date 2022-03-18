@@ -109,6 +109,7 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.AttributesReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ContainerReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.RecipeReg.class);
+        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.LootModifierReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         // Required for data pack sync and favor capability

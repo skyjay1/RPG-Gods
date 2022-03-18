@@ -12,9 +12,9 @@ public class Sacrifice {
             new ResourceLocation("null"), 0, Optional.empty());
 
     public static final Codec<Sacrifice> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.fieldOf("deity").forGetter(Sacrifice::getDeity),
-            ResourceLocation.CODEC.fieldOf("entity").forGetter(Sacrifice::getEntity),
-            Codec.INT.fieldOf("favor").forGetter(Sacrifice::getFavor),
+            ResourceLocation.CODEC.optionalFieldOf("deity", new ResourceLocation("null")).forGetter(Sacrifice::getDeity),
+            ResourceLocation.CODEC.optionalFieldOf("entity", new ResourceLocation("null")).forGetter(Sacrifice::getEntity),
+            Codec.INT.optionalFieldOf("favor", 0).forGetter(Sacrifice::getFavor),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Sacrifice::getFunction)
     ).apply(instance, Sacrifice::new));
 

@@ -16,6 +16,7 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.common.extensions.IForgeContainerType;
+import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -27,6 +28,8 @@ import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
+import rpggods.loot.AutosmeltOrCobbleModifier;
+import rpggods.loot.CropMultiplierModifier;
 import rpggods.recipe.AltarRecipe;
 
 import java.util.Optional;
@@ -112,6 +115,16 @@ public final class RGRegistry {
             });
             event.getRegistry().register(altarContainer.setRegistryName(RPGGods.MODID, "altar_container"));
             event.getRegistry().register(favorContainer.setRegistryName(RPGGods.MODID, "favor_container"));
+        }
+    }
+
+    public static final class LootModifierReg {
+        @SubscribeEvent
+        public static void registerLootModifiers(final RegistryEvent.Register<GlobalLootModifierSerializer<?>> event) {
+            event.getRegistry().registerAll(
+                    new AutosmeltOrCobbleModifier.Serializer().setRegistryName(RPGGods.MODID, "autosmelt_or_cobble"),
+                    new CropMultiplierModifier.Serializer().setRegistryName(RPGGods.MODID, "crop_multiplier")
+            );
         }
     }
 

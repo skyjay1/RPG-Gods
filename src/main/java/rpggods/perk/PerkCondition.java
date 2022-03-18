@@ -1,5 +1,6 @@
 package rpggods.perk;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -18,10 +19,11 @@ import net.minecraftforge.common.BiomeDictionary;
 import rpggods.deity.Altar;
 
 import java.util.Optional;
+import java.util.function.Function;
 
 public class PerkCondition {
 
-//    public static final Codec<PerkCondition> LOSSY_CODEC = Codec.STRING.comapFlatMap(PerkCondition::fromString, p -> p.getType().getString()).stable();
+//    public static final Codec<PerkCondition> LOSSY_CODEC = PerkCondition.Type.CODEC.comapFlatMap(PerkCondition::fromType, PerkCondition::getType).stable();
 
     public static final Codec<PerkCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkCondition.Type.CODEC.fieldOf("type").forGetter(PerkCondition::getType),
@@ -78,12 +80,8 @@ public class PerkCondition {
         return true;
     }
 
-    public static DataResult<PerkCondition> fromString(String id) {
-        Optional<Type> type = Type.fromString(id).result();
-        if(type.isPresent()) {
-            return DataResult.success(new PerkCondition(type.get(), Optional.empty()));
-        }
-        return DataResult.error("Failed to parse perk condition '" + id + "'");
+    public static DataResult<PerkCondition> fromType(PerkCondition.Type type) {
+        return DataResult.success(new PerkCondition(type, Optional.empty()));
     }
 
     @Override

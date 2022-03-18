@@ -3,7 +3,9 @@ package rpggods.event;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.IGrowable;
 import net.minecraft.block.material.Material;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.FunctionObject;
@@ -28,11 +30,14 @@ import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.SpectralArrowEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.SwimmerPathNavigator;
 import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.state.IntegerProperty;
+import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
@@ -57,11 +62,13 @@ import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Deity;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
+import rpggods.entity.AltarEntity;
 import rpggods.entity.ai.AffinityGoal;
 import rpggods.favor.IFavor;
 import rpggods.perk.Affinity;
@@ -91,7 +98,7 @@ public class FavorEventHandler {
      * @param item the item being offered
      * @return the ItemStack to replace the one provided, if any
      */
-    public static Optional<ItemStack> onOffering(final ResourceLocation deity, final PlayerEntity player, final IFavor favor, final ItemStack item) {
+    public static Optional<ItemStack> onOffering(final Optional<AltarEntity> entity, final ResourceLocation deity, final PlayerEntity player, final IFavor favor, final ItemStack item) {
         if(favor.isEnabled() && !item.isEmpty()) {
             // find first matching offering for the given deity
             Offering offering = null;
@@ -114,6 +121,12 @@ public class FavorEventHandler {
                 // process trade, if any
                 if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() >= offering.getTradeMinLevel()) {
                     player.addItem(offering.getTrade().get().copy());
+                }
+                // particles
+                if(entity.isPresent() && player.level instanceof ServerWorld) {
+                    Vector3d pos = Vector3d.atBottomCenterOf(entity.get().blockPosition().above());
+                    IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+                    ((ServerWorld)player.level).sendParticles(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);
                 }
                 return Optional.of(item);
             }
@@ -381,6 +394,10 @@ public class FavorEventHandler {
                     if(childCount < 1) {
                         // number of babies is zero, so cancel the event
                         ((BabyEntitySpawnEvent)object.get()).setCanceled(true);
+                        if(entity.get().level instanceof ServerWorld) {
+                            Vector3d pos = entity.get().getEyePosition(1.0F);
+                            ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 6, 0.5D, 0.5D, 0.5D, 0);
+                        }
                     } else if(childCount > 1) {
                         // number of babies is more than one, so spawn additional mobs
                         AgeableEntity parent = (AgeableEntity) entity.get();
@@ -390,6 +407,10 @@ public class FavorEventHandler {
                                 bonusChild.copyPosition(parent);
                                 bonusChild.setBaby(true);
                                 parent.level.addFreshEntity(bonusChild);
+                                if(parent.level instanceof ServerWorld) {
+                                    Vector3d pos = bonusChild.getEyePosition(1.0F);
+                                    ((ServerWorld)parent.level).sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
+                                }
                             }
                         }
                     }
@@ -397,13 +418,17 @@ public class FavorEventHandler {
                 }
                 return false;
             case CROP_GROWTH:
-                break;
+                if(action.getMultiplier().isPresent()) {
+                    return growCropsNearPlayer(player, favor, Math.round(action.getMultiplier().get()));
+                }
+                return false;
             case CROP_HARVEST:
-                break;
+                // This is handled using loot table modifiers
+                return action.getMultiplier().isPresent();
             case AUTOSMELT:
-                break;
             case UNSMELT:
-                break;
+                // These are handled using loot table modifiers
+                return true;
             case SPECIAL_PRICE:
                 break;
             case XP:
@@ -483,6 +508,60 @@ public class FavorEventHandler {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Checks random blocks in a radius until either a growable crop has been found
+     * and changed, or no crops were found in a limited number of attempts.
+     * @param player the player
+     * @param favor the player's favor
+     * @param amount the amount of growth to add (can be negative to remove growth)
+     * @return whether a crop was found and its age was changed
+     **/
+    public static boolean growCropsNearPlayer(final PlayerEntity player, final IFavor favor, final int amount) {
+        if(amount == 0) {
+            return false;
+        }
+        final IntegerProperty[] AGES = new IntegerProperty[] {
+                BlockStateProperties.AGE_1, BlockStateProperties.AGE_15, BlockStateProperties.AGE_2,
+                BlockStateProperties.AGE_3, BlockStateProperties.AGE_5, BlockStateProperties.AGE_7
+        };
+        final Random rand = player.level.getRandom();
+        final int maxAttempts = 10;
+        final int variationY = 1;
+        final int radius = 5;
+        int attempts = 0;
+        // if there are effects that should change growth states, find a crop to affect
+        while (attempts++ <= maxAttempts) {
+            // get random block in radius
+            final int x1 = rand.nextInt(radius * 2) - radius;
+            final int y1 = rand.nextInt(variationY * 2) - variationY + 1;
+            final int z1 = rand.nextInt(radius * 2) - radius;
+            final BlockPos blockpos = player.blockPosition().offset(x1, y1, z1);
+            final BlockState state = player.level.getBlockState(blockpos);
+            // if the block can be grown, grow it and return
+            if (state.getBlock() instanceof IGrowable) {
+                // determine which age property applies to this state
+                for(final IntegerProperty AGE : AGES) {
+                    if(state.hasProperty(AGE)) {
+                        // attempt to update the age (add or subtract)
+                        int oldAge = state.getValue(AGE);
+                        int newAge = Math.max(0, oldAge + amount);
+                        if(AGE.getPossibleValues().contains(Integer.valueOf(newAge))) {
+                            // update the blockstate age
+                            player.level.setBlock(blockpos, state.setValue(AGE, newAge), 2);
+                            // spawn particles
+                            if(player.level instanceof ServerWorld) {
+                                IParticleData particle = (amount > 0) ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+                                ((ServerWorld)player.level).sendParticles(particle, blockpos.getX() + 0.5D, blockpos.getY() + 0.25D, blockpos.getZ() + 0.5D, 10, 0.5D, 0.5D, 0.5D, 0);
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public static class ModEvents {
@@ -588,8 +667,7 @@ public class FavorEventHandler {
             }
             if(!event.getEntity().level.isClientSide && event.getEntity() instanceof MobEntity) {
                 MobEntity mob = (MobEntity) event.getEntity();
-                addAffinityGoals(mob);
-                ResourceLocation id = event.getEntity().getType().getRegistryName();
+                //addAffinityGoals(mob);
                 // add tameable goals
                 if(event.getEntity().getCapability(RPGGods.TAMEABLE).isPresent()) {
                     mob.goalSelector.addGoal(0, new AffinityGoal.SittingGoal(mob));

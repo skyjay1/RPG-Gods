@@ -32,6 +32,7 @@ import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.FavorLevel;
+import rpggods.favor.FavorRange;
 import rpggods.favor.IFavor;
 import rpggods.gui.FavorContainer;
 import rpggods.perk.Perk;
@@ -189,8 +190,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         tradeMap.clear();
         for(Optional<Offering> optional : RPGGods.OFFERING.getValues()) {
             optional.ifPresent(offering -> {
-                Map<ResourceLocation, List<Offering>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
-                map.computeIfAbsent(offering.getDeity(), id -> Lists.newArrayList()).add(offering);
+                if(offering.getFavor() != 0 || offering.getFunction().isPresent()) {
+                    Map<ResourceLocation, List<Offering>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
+                    map.computeIfAbsent(offering.getDeity(), id -> Lists.newArrayList()).add(offering);
+                }
             });
         }
         offeringCount = OFFERING_COUNT;
@@ -199,7 +202,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         sacrificeMap.clear();
         for(Optional<Sacrifice> optional : RPGGods.SACRIFICE.getValues()) {
             optional.ifPresent(sacrifice -> {
-                sacrificeMap.computeIfAbsent(sacrifice.getDeity(), id -> Lists.newArrayList()).add(sacrifice);
+                if(sacrifice.getFavor() != 0 || sacrifice.getFunction().isPresent()) {
+                    sacrificeMap.computeIfAbsent(sacrifice.getDeity(), id -> Lists.newArrayList()).add(sacrifice);
+                }
             });
         }
         sacrificeCount = SACRIFICE_COUNT;
@@ -207,7 +212,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         perkMap.clear();
         Perk perk;
         for(Optional<Perk> optional : RPGGods.PERK.getValues()) {
-            if(optional.isPresent() && !optional.get().getIcon().isHidden()) {
+            if(optional.isPresent() && !optional.get().getIcon().isHidden() && !FavorRange.EMPTY.equals(optional.get().getRange())) {
                 perk = optional.get();
                 if(!perkMap.containsKey(perk.getDeity())) {
                     // add map with keys for all levels
@@ -330,7 +335,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             renderFavorLevel(matrixStack, mouseX, mouseY, partialTicks);
         }
         // draw name
-        this.font.draw(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
+        this.font.drawShadow(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
         // draw favor
         this.font.draw(matrixStack, deityFavor, this.leftPos + FAVOR_X, this.topPos + FAVOR_Y, 0xFFFFFF);
         // render page-specific items
@@ -467,8 +472,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos + 23, this.topPos + 13, 23, 13, 208, 28);
-        // re-draw title and favor
-        this.font.draw(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
+        // re-draw name and favor
+        this.font.drawShadow(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
         this.font.draw(matrixStack, deityFavor, this.leftPos + FAVOR_X, this.topPos + FAVOR_Y, 0xFFFFFF);
         // re-draw level buttons
         for(TextButton b : perkLevelButtonMap.values()) {
@@ -520,7 +525,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         this.deity = deity;
         // update deity name and favor text for header
         deityName = new TranslationTextComponent(Altar.createTranslationKey(deity))
-                .withStyle(TextFormatting.BLACK);
+                .withStyle(TextFormatting.WHITE);
         final FavorLevel favorLevel = getMenu().getFavor().getFavor(deity);
         deityFavor = new StringTextComponent(favorLevel.getLevel() + " / " + favorLevel.getMax())
                 .withStyle(TextFormatting.DARK_PURPLE);
@@ -853,9 +858,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                             perk.getRange().getMinLevel(), perk.getRange().getMaxLevel()).withStyle(color);
                 }
                 // add perk chance (formatted as 2 or fewer decimals)
-                String chanceString = String.format("%.2f", perk.getChance() * 100.0F).replaceAll("0*$", "").replaceAll("\\.$", "");
-                perkChance = new TranslationTextComponent("gui.favor.perk.chance", chanceString)
-                        .withStyle(TextFormatting.BLACK);
+                if(perk.getChance() < 0.999999F) {
+                    String chanceString = String.format("%.2f", perk.getChance() * 100.0F).replaceAll("0*$", "").replaceAll("\\.$", "");
+                    perkChance = new TranslationTextComponent("gui.favor.perk.chance", chanceString)
+                            .withStyle(TextFormatting.BLACK);
+                }
             }
             this.tooltipWidth = calculateWidth();
         }
@@ -879,7 +886,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             int startY = mouseY - PERK_TOOLTIP_HEIGHT / 2;
             final int lineHeight = 11;
             // determine background size
-            final int lines = perkTypes.size() + perkConditions.size() + 6;
+            int lines = perkTypes.size() + perkConditions.size() + 6;
+            if(perkChance.equals(StringTextComponent.EMPTY)) {
+                lines--;
+            }
             renderPerkTooltipBackground(matrixStack, startX, startY, tooltipWidth + 14, lines * lineHeight + 6);
             startX += 6;
             startY += 14;
@@ -899,9 +909,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 startY += 5;
             }
             // draw chance
-            FavorScreen.this.font.draw(matrixStack, perkChance, startX, startY + lineHeight * (line++), 0xFFFFFF);
-            // line space
-            startY += 5;
+            if(!perkChance.equals(StringTextComponent.EMPTY)) {
+                FavorScreen.this.font.draw(matrixStack, perkChance, startX, startY + lineHeight * (line++), 0xFFFFFF);
+                // line space
+                startY += 5;
+            }
             // draw range
             ITextComponent unlock = new TranslationTextComponent("gui.favor.perk.unlock")
                     .withStyle(TextFormatting.BLACK);

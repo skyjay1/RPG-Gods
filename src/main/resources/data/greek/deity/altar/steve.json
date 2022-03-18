@@ -1,38 +1,11 @@
 {
   "female": false,
   "slim": false,
-  "block": "minecraft:sandstone_slab",
   "items": {
-    "mainhand": {
-      "id": "minecraft:iron_sword",
-      "Count": 1
-    },
-    "offhand": {
-      "id": "minecraft:shield",
-      "Count": 1
-    },
+    "block": "minecraft:smooth_stone_slab",
     "armor_locked": false,
-    "hands_locked": true
-  },
-  "pose": {
-    "head": {
-      "x": 0.174533
-    },
-    "left_arm": {
-      "x": -0.20944,
-      "y": 0,
-      "z": -0.0872665
-    },
-    "right_arm": {
-      "x": -0.20944,
-      "z": -0.174533
-    },
-    "left_leg": {
-      "z": -0.0349066
-    },
-    "right_leg": {
-      "z": 0.0349066
-    }
+    "hands_locked": false,
+    "block_locked": false
   },
   "pose_locked": false
 }

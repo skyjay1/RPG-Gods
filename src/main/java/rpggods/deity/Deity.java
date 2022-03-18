@@ -1,11 +1,13 @@
 package rpggods.deity;
 
 import net.minecraft.util.ResourceLocation;
+import rpggods.favor.FavorRange;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkData;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +26,9 @@ public class Deity {
     /** Map of Entity ID to Sacrifice(s) **/
     public final Map<ResourceLocation, List<Sacrifice>> sacrificeMap = new HashMap<>();
     /** Map of PerkCondition.Type to Perk(s). May contain multiple instances of the same Perk. **/
-    public final Map<PerkCondition.Type, List<Perk>> perkByConditionMap = new HashMap<>();
+    public final Map<PerkCondition.Type, List<Perk>> perkByConditionMap = new EnumMap<>(PerkCondition.Type.class);
     /** Map of PerkData.Type to Perk(s) **/
-    public final Map<PerkData.Type, List<Perk>> perkByTypeMap = new HashMap<>();
+    public final Map<PerkData.Type, List<Perk>> perkByTypeMap = new EnumMap<>(PerkData.Type.class);
     /** List of all Perks **/
     public final List<Perk> perkList = new ArrayList<>();
 
@@ -55,6 +57,9 @@ public class Deity {
      * @param offering the Offering to add
      */
     public void add(final Offering offering) {
+        if(offering.getFavor() == 0 && !offering.getFunction().isPresent()) {
+            return;
+        }
         ResourceLocation id = offering.getAccept().getItem().getRegistryName();
         offeringMap.computeIfAbsent(id, r -> new ArrayList<>()).add(offering);
     }
@@ -64,6 +69,9 @@ public class Deity {
      * @param sacrifice the Sacrifice to add
      */
     public void add(final Sacrifice sacrifice) {
+        if(sacrifice.getFavor() == 0 && !sacrifice.getFunction().isPresent()) {
+            return;
+        }
         ResourceLocation id = sacrifice.getEntity();
         sacrificeMap.computeIfAbsent(id, r -> new ArrayList<>()).add(sacrifice);
     }
@@ -73,6 +81,9 @@ public class Deity {
      * @param perk the Perk to add
      */
     public void add(final Perk perk) {
+        if(FavorRange.EMPTY.equals(perk.getRange()) || perk.getActions().isEmpty()) {
+            return;
+        }
         // add to list
         perkList.add(perk);
         // add to perkByCondition map
