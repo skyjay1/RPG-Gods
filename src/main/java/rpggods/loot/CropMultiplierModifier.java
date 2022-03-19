@@ -45,7 +45,7 @@ public class CropMultiplierModifier extends LootModifier {
 
         Entity entity = context.getParamOrNull(LootParameters.THIS_ENTITY);
         // determine which of the mining effects can activate
-        List<Perk> cropHarvest = Lists.newArrayList();
+        List<ResourceLocation> cropHarvest = Lists.newArrayList();
         for (Deity deity : RPGGods.DEITY.values()) {
             cropHarvest.addAll(deity.perkByTypeMap.getOrDefault(PerkData.Type.CROP_HARVEST, ImmutableList.of()));
         }
@@ -62,7 +62,9 @@ public class CropMultiplierModifier extends LootModifier {
                 ArrayList<ItemStack> replacement = new ArrayList<>();
                 // attempt to add or remove crops
                 Collections.shuffle(cropHarvest);
-                for (Perk perk : cropHarvest) {
+                Perk perk;
+                for (ResourceLocation id : cropHarvest) {
+                    perk = RPGGods.PERK.get(id).orElse(null);
                     if (FavorEventHandler.runPerk(perk, player, f)) {
                         float multiplier = 0;
                         for(PerkData action : perk.getActions()) {

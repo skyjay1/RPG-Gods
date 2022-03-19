@@ -41,27 +41,29 @@ import rpggods.entity.AltarEntity;
 
 import java.util.Map;
 
-public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> extends LivingRenderer<T, M> {
+public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
 
     private static final ResourceLocation TEXTURE = new ResourceLocation("greek", "textures/altar/zeus.png");
     protected static final ResourceLocation STEVE_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/steve.png");
     protected static final ResourceLocation ALEX_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/alex.png");
 
+
+
     public AltarRenderer(final EntityRendererManager renderManagerIn) {
-        super(renderManagerIn, (M) new AltarModel<T>(0.0F, 0.0F), 0.5F);
+        super(renderManagerIn, new AltarModel(0.0F, 0.0F), 0.5F);
         // TODO: fix armor layer
-        //this.addLayer(new BipedArmorLayer<T, AltarArmorModel<T>, AltarArmorModel<T>>(this, new AltarArmorModel(0.5F), new AltarArmorModel(1.0F)));
+        this.addLayer(new BipedArmorLayer(this, new AltarArmorModel(0.5F), new AltarArmorModel(1.0F)));
         this.addLayer(new HeldItemLayer<>(this));
         this.addLayer(new ElytraLayer<>(this));
         this.addLayer(new HeadLayer<>(this));
     }
 
     @Override
-    public void render(T entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
+    public void render(AltarEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
                        IRenderTypeBuffer bufferIn, int packedLightIn) {
         // intentional omission of super call
         // pre-render event
-        if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre<T, M>(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
+        if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
             return;
         }
 
@@ -99,14 +101,13 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(180.0F));
         if (rendertype != null) {
             IVertexBuilder ivertexbuilder = bufferIn.getBuffer(rendertype);
-            int i = getOverlayCoords(entityIn, this.getWhiteOverlayProgress(entityIn, partialTicks));
             getModel().render(entityIn, matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
                     entityIn.isFemale(), entityIn.isSlim(), 1.0F, 1.0F, 1.0F, 1.0F);
         }
 
         // render layers
         if (!entityIn.isSpectator()) {
-            for(LayerRenderer<T, M> layerrenderer : this.layers) {
+            for(LayerRenderer layerrenderer : this.layers) {
                 layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, entityIn.animationPosition, entityIn.animationSpeed, partialTicks, entityIn.tickCount, entityIn.getYHeadRot(), entityIn.getViewXRot(partialTicks));
             }
         }
@@ -120,7 +121,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
         }
 
         // post-render event
-        MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Post<T, M>(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn));
+        MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Post(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn));
     }
 
     @Override
@@ -134,7 +135,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
     }
 
     @Override
-    public ResourceLocation getTextureLocation(final T entity) {
+    public ResourceLocation getTextureLocation(final AltarEntity entity) {
         // return deity texture
         if(entity.getDeity().isPresent() && !entity.getDeity().get().toString().isEmpty()) {
             ResourceLocation deity = entity.getDeity().get();
@@ -155,7 +156,7 @@ public class AltarRenderer<T extends AltarEntity, M extends AltarModel<T>> exten
     }
 
     @Override
-    protected RenderType getRenderType(final T entityIn, boolean isVisible, boolean isVisibleToPlayer, boolean isGlowing) {
+    protected RenderType getRenderType(final AltarEntity entityIn, boolean isVisible, boolean isVisibleToPlayer, boolean isGlowing) {
         // TODO: optimize, allow for player skins, etc.
         return super.getRenderType(entityIn, isVisible, isVisibleToPlayer, isGlowing);
     }

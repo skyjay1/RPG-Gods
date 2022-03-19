@@ -4,17 +4,13 @@ import net.minecraft.client.gui.ScreenManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.crafting.IRecipeSerializer;
+import net.minecraft.item.crafting.ShapedRecipe;
 import net.minecraft.item.crafting.ShapelessRecipe;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.common.extensions.IForgeContainerType;
 import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
 import net.minecraftforge.event.RegistryEvent;
@@ -30,10 +26,8 @@ import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
 import rpggods.loot.AutosmeltOrCobbleModifier;
 import rpggods.loot.CropMultiplierModifier;
-import rpggods.recipe.AltarRecipe;
-
-import java.util.Optional;
-import java.util.UUID;
+import rpggods.recipe.ShapedAltarRecipe;
+import rpggods.recipe.ShapelessAltarRecipe;
 
 public final class RGRegistry {
 
@@ -77,13 +71,17 @@ public final class RGRegistry {
 
     @ObjectHolder(RPGGods.MODID)
     public static final class RecipeReg {
-        @ObjectHolder(AltarRecipe.CATEGORY)
-        public static final IRecipeSerializer<ShapelessRecipe> ALTAR_RECIPE_SERIALIZER = null;
+        @ObjectHolder(ShapelessAltarRecipe.NAME)
+        public static final IRecipeSerializer<ShapelessRecipe> SHAPELESS_ALTAR_RECIPE_SERIALIZER = null;
+
+        @ObjectHolder(ShapedAltarRecipe.NAME)
+        public static final IRecipeSerializer<ShapedRecipe> SHAPED_ALTAR_RECIPE_SERIALIZER = null;
 
         @SubscribeEvent
         public static void registerRecipeSerializers(final RegistryEvent.Register<IRecipeSerializer<?>> event) {
             RPGGods.LOGGER.debug("registerRecipeSerializers");
-            event.getRegistry().register(new AltarRecipe.Factory().setRegistryName(RPGGods.MODID, AltarRecipe.CATEGORY));
+            event.getRegistry().register(new ShapelessAltarRecipe.Factory().setRegistryName(RPGGods.MODID, ShapelessAltarRecipe.NAME));
+            event.getRegistry().register(new ShapedAltarRecipe.Factory().setRegistryName(RPGGods.MODID, ShapedAltarRecipe.NAME));
         }
 
     }

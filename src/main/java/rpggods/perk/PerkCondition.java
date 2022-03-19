@@ -120,11 +120,13 @@ public class PerkCondition {
         DAY("day"),
         NIGHT("night"),
         RANDOM_TICK("random_tick"),
+        MAINHAND_ITEM("mainhand_item"),
         ENTITY_HURT_PLAYER("entity_hurt_player"),
         ENTITY_KILLED_PLAYER("entity_killed_player"),
         PLAYER_HURT_ENTITY("player_hurt_entity"),
         PLAYER_KILLED_ENTITY("player_killed_entity"),
         PLAYER_INTERACT_ENTITY("player_interact_entity"),
+        PLAYER_RIDE_ENTITY("player_ride_entity"),
         ENTER_COMBAT("enter_combat");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();

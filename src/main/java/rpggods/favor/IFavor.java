@@ -1,11 +1,15 @@
 package rpggods.favor;
 
+import com.google.common.collect.Iterables;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.deity.Offering;
+import rpggods.deity.Sacrifice;
+import rpggods.util.Cooldown;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -15,17 +19,19 @@ import java.util.stream.Collectors;
 
 public interface IFavor extends INBTSerializable<CompoundNBT> {
 
-    public static final ResourceLocation REGISTRY_NAME = new ResourceLocation(RPGGods.MODID, "favor");
+    ResourceLocation REGISTRY_NAME = new ResourceLocation(RPGGods.MODID, "favor");
 
-    static final String ENABLED = "Enabled";
-    static final String FAVOR_LEVELS = "FavorLevels";
-    static final String PATRON = "Patron";
-    static final String NAME = "Name";
-    static final String FAVOR = "Favor";
-    static final String COOLDOWN = "Cooldown";
-    static final String TIMESTAMP = "Timestamp";
+    String ENABLED = "Enabled";
+    String FAVOR_LEVELS = "FavorLevels";
+    String PATRON = "Patron";
+    String NAME = "Name";
+    String FAVOR = "Favor";
+    String PERK_COOLDOWN = "PerkCooldown";
+    String OFFERING_COOLDOWN = "OfferingCooldown";
+    String SACRIFICE_COOLDOWN = "SacrificeCooldown";
+    String TIMESTAMP = "Timestamp";
 
-    public static final long MIN_FAVOR = 10;
+    long MIN_FAVOR = 10;
 
     /**
      * Gets the FavorLevel for the given Deity
@@ -52,6 +58,10 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
      * @return a map of all cooldown categories and amounts
      */
     Map<String, Long> getPerkCooldownMap();
+
+    Map<ResourceLocation, Cooldown> getOfferingCooldownMap();
+
+    Map<ResourceLocation, Cooldown> getSacrificeCooldownMap();
 
     /**
      * @return true if favor is enabled for this player
@@ -97,6 +107,12 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         getPerkCooldownMap().put(key, cooldown);
     }
 
+    default void clearAllCooldown() {
+        getPerkCooldownMap().clear();
+        getOfferingCooldownMap().clear();
+        getSacrificeCooldownMap().clear();
+    }
+
     /**
      * @param key the perk category
      * @return true if the time is greater than the timestamp+cooldown
@@ -106,15 +122,57 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
     }
 
     /**
-     * Reduces all perk cooldown categories by the given amount
+     * Sets the cooldown for a given offering
+     * @param id the offering id
+     * @param cooldown the cooldown to apply
+     */
+    default void setOfferingCooldown(final ResourceLocation id, final Cooldown cooldown) {
+        getOfferingCooldownMap().put(id, cooldown);
+    }
+
+    /**
+     * @param id the offering id
+     * @return the cooldown tracker for the given offering
+     **/
+    default Cooldown getOfferingCooldown(final ResourceLocation id) {
+        return getOfferingCooldownMap().computeIfAbsent(id, r -> RPGGods.OFFERING.get(r).orElse(Offering.EMPTY).createCooldown());
+    }
+
+    /**
+     * Sets the cooldown for a given sacrifice
+     * @param id the sacrifice id
+     * @param cooldown the cooldown to apply
+     */
+    default void setSacrificeCooldown(final ResourceLocation id, final Cooldown cooldown) {
+        getSacrificeCooldownMap().put(id, cooldown);
+    }
+
+    /**
+     * @param id the sacrifice id
+     * @return the cooldown tracker for the given offering
+     **/
+    default Cooldown getSacrificeCooldown(final ResourceLocation id) {
+        return getSacrificeCooldownMap().computeIfAbsent(id, r -> RPGGods.SACRIFICE.get(r).orElse(Sacrifice.EMPTY).createCooldown());
+    }
+
+    /**
+     * Reduces all perk, offering, and sacrifice cooldown categories by the given amount
      * @param currentTime the current time in ticks
      */
-    default void tickPerkCooldown(final long currentTime) {
+    default void tickCooldown(final long currentTime) {
         long timeSinceLastTick = currentTime - getCooldownTimestamp();
         setCooldownTimestamp(currentTime);
+        // iterate over perk cooldown map
         for(Entry<String, Long> entry : getPerkCooldownMap().entrySet()) {
             if(entry.getValue() > 0) {
                 entry.setValue(entry.getValue() - timeSinceLastTick);
+            }
+        }
+        // iterate over offering and sacrifice cooldown maps
+        Iterable<Cooldown> cooldowns = Iterables.concat(getOfferingCooldownMap().values(), getSacrificeCooldownMap().values());
+        for(Cooldown cooldown : cooldowns) {
+            if(cooldown.getCooldown() > 0) {
+                cooldown.addCooldown(-timeSinceLastTick);
             }
         }
     }
@@ -135,12 +193,24 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         getPatron().ifPresent(p -> nbt.putString(PATRON, p.toString()));
         // write enabled
         nbt.putBoolean(ENABLED, isEnabled());
-        // write cooldowns
-        CompoundNBT cooldown = new CompoundNBT();
+        // write perk cooldowns
+        CompoundNBT perkCooldowns = new CompoundNBT();
         for(Entry<String, Long> entry : getPerkCooldownMap().entrySet()) {
-            cooldown.putLong(entry.getKey(), entry.getValue());
+            perkCooldowns.putLong(entry.getKey(), entry.getValue());
         }
-        nbt.put(COOLDOWN, cooldown);
+        nbt.put(PERK_COOLDOWN, perkCooldowns);
+        // write offering cooldowns
+        CompoundNBT offeringCooldowns = new CompoundNBT();
+        for(Entry<ResourceLocation, Cooldown> entry : getOfferingCooldownMap().entrySet()) {
+            offeringCooldowns.put(entry.getKey().toString(), entry.getValue().serializeNBT());
+        }
+        nbt.put(OFFERING_COOLDOWN, offeringCooldowns);
+        // write sacrifice cooldowns
+        CompoundNBT sacrificeCooldowns = new CompoundNBT();
+        for(Entry<ResourceLocation, Cooldown> entry : getOfferingCooldownMap().entrySet()) {
+            sacrificeCooldowns.put(entry.getKey().toString(), entry.getValue().serializeNBT());
+        }
+        nbt.put(SACRIFICE_COOLDOWN, sacrificeCooldowns);
         // write cooldown timestamp
         nbt.putLong(TIMESTAMP, getCooldownTimestamp());
         return nbt;
@@ -161,10 +231,22 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         if(nbt.contains(PATRON)) {
             setPatron(Optional.ofNullable(ResourceLocation.tryParse(nbt.getString(PATRON))));
         }
-        CompoundNBT cooldown = nbt.getCompound(COOLDOWN);
-        for(String key : cooldown.getAllKeys()) {
-            setPerkCooldown(key, cooldown.getLong(key));
+        // read perk cooldowns
+        CompoundNBT perks = nbt.getCompound(PERK_COOLDOWN);
+        for(String key : perks.getAllKeys()) {
+            setPerkCooldown(key, perks.getLong(key));
         }
+        // read offering cooldowns
+        CompoundNBT offerings = nbt.getCompound(OFFERING_COOLDOWN);
+        for(String key : offerings.getAllKeys()) {
+            setOfferingCooldown(ResourceLocation.tryParse(key), new Cooldown(offerings.getCompound(key)));
+        }
+        // read sacrifice cooldowns
+        CompoundNBT sacrifices = nbt.getCompound(SACRIFICE_COOLDOWN);
+        for(String key : sacrifices.getAllKeys()) {
+            setSacrificeCooldown(ResourceLocation.tryParse(key), new Cooldown(sacrifices.getCompound(key)));
+        }
+        // read timestamp
         setCooldownTimestamp(nbt.getLong(TIMESTAMP));
     }
 }

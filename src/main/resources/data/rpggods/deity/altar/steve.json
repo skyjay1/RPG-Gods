@@ -1,0 +1,32 @@
+{
+  "female": false,
+  "slim": false,
+  "items": {
+    "block": "minecraft:smooth_stone_slab",
+    "armor_locked": false,
+    "hands_locked": false,
+    "block_locked": false
+  },
+  "pose": {
+    "head": {
+      "x": 0.087266
+    },
+    "left_arm": {
+      "x": 0.523599,
+      "z": -0.043633
+    },
+    "right_arm": {
+      "x": -0.523599,
+      "z": 0.043633
+    },
+    "left_leg": {
+      "x": -0.349066,
+      "z": -0.034907
+    },
+    "right_leg": {
+      "x": 0.349066,
+      "z": 0.034907
+    }
+  },
+  "pose_locked": false
+}

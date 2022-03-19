@@ -6,7 +6,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
-import net.minecraft.client.gui.screen.inventory.InventoryScreen;
 import net.minecraft.client.gui.widget.AbstractSlider;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.Widget;
@@ -31,11 +30,7 @@ import rpggods.entity.AltarEntity;
 import rpggods.gui.AltarContainer;
 import rpggods.network.CUpdateAltarPacket;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-
-import net.minecraft.client.gui.widget.button.Button.IPressable;
 
 public class AltarScreen extends ContainerScreen<AltarContainer> {
 
@@ -265,6 +260,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     public void removed() {
         super.removed();
         this.minecraft.keyboardHandler.setSendRepeatsToGui(false);
+        this.menu.setChanged();
         // send update packet to server
         RPGGods.CHANNEL.sendToServer(new CUpdateAltarPacket(this.menu.getEntity().getId(), this.pose, this.female, this.slim, this.name.orElse("")));
     }

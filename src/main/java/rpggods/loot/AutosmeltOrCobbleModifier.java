@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import net.minecraft.block.Block;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
@@ -49,9 +51,14 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
     @Override
     public List<ItemStack> doApply(List<ItemStack> generatedLoot, LootContext context) {
         Entity entity = context.getParamOrNull(LootParameters.THIS_ENTITY);
+        ItemStack itemStack = context.getParamOrNull(LootParameters.TOOL);
+        // do not apply when using silk touch tool
+        if(EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, itemStack) > 0) {
+            return generatedLoot;
+        }
         // determine which of the mining effects can activate
-        List<Perk> autosmelt = Lists.newArrayList();
-        List<Perk> unsmelt = Lists.newArrayList();
+        List<ResourceLocation> autosmelt = Lists.newArrayList();
+        List<ResourceLocation> unsmelt = Lists.newArrayList();
         for (Deity deity : RPGGods.DEITY.values()) {
             autosmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkData.Type.AUTOSMELT, ImmutableList.of()));
             unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkData.Type.UNSMELT, ImmutableList.of()));
@@ -69,7 +76,9 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
                 ArrayList<ItemStack> replacement = new ArrayList<>();
                 // attempt to autosmelt
                 Collections.shuffle(autosmelt);
-                for(Perk perk : autosmelt) {
+                Perk perk;
+                for(ResourceLocation id : autosmelt) {
+                    perk = RPGGods.PERK.get(id).orElse(null);
                     if(FavorEventHandler.runPerk(perk, player, f)) {
                         generatedLoot.forEach((stack) -> replacement.add(smelt(stack, context)));
                         return replacement;
@@ -77,7 +86,8 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
                 }
                 // if no autosmelt occurred, attempt to unsmelt
                 Collections.shuffle(unsmelt);
-                for(Perk perk : unsmelt) {
+                for(ResourceLocation id : unsmelt) {
+                    perk = RPGGods.PERK.get(id).orElse(null);
                     if(FavorEventHandler.runPerk(perk, player, f)) {
                         replacement.add(new ItemStack(stone.asItem()));
                         return replacement;

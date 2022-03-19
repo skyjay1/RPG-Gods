@@ -18,6 +18,7 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.Tuple;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.IFormattableTextComponent;
@@ -92,21 +93,21 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
     // Offerings page
     private static final int OFFERING_X = 32;
-    private static final int OFFERING_Y = 38;
+    private static final int OFFERING_Y = 50;
     private static final int OFFERING_WIDTH = 18 * 3;
     private static final int OFFERING_HEIGHT = 18;
     private static final int TRADE_X = 140;
     private static final int TRADE_Y = OFFERING_Y;
     private static final int TRADE_WIDTH = 18 * 4;
-    private static final int OFFERING_COUNT = 14;
-    private static final int TRADE_COUNT = 7;
+    private static final int OFFERING_COUNT = 12;
+    private static final int TRADE_COUNT = 6;
 
     // Sacrifices page
     private static final int SACRIFICE_X = 32;
-    private static final int SACRIFICE_Y = 40;
+    private static final int SACRIFICE_Y = 50;
     private static final int SACRIFICE_WIDTH = 18 * 9;
     private static final int SACRIFICE_HEIGHT = 16;
-    private static final int SACRIFICE_COUNT = 8;
+    private static final int SACRIFICE_COUNT = 7;
 
     // Perks page
     private static final int PERK_WIDTH = 22;
@@ -123,9 +124,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     // Data
     private static final List<ResourceLocation> deityList = new ArrayList<>();
     private static final Map<ResourceLocation, AltarEntity> entityMap = new HashMap<>();
-    private static final Map<ResourceLocation, List<Offering>> offeringMap = new HashMap();
-    private static final Map<ResourceLocation, List<Offering>> tradeMap = new HashMap();
-    private static final Map<ResourceLocation, List<Sacrifice>> sacrificeMap = new HashMap();
+    private static final Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> offeringMap = new HashMap();
+    private static final Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> tradeMap = new HashMap();
+    private static final Map<ResourceLocation, List<Tuple<ResourceLocation, Sacrifice>>> sacrificeMap = new HashMap();
     // Key: deity ID; Value: Map of perk level to list of available perks
     private static final Map<ResourceLocation, Map<Integer, List<Perk>>> perkMap = new HashMap();
     private ResourceLocation deity;
@@ -188,11 +189,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         // add all offerings to map
         offeringMap.clear();
         tradeMap.clear();
-        for(Optional<Offering> optional : RPGGods.OFFERING.getValues()) {
-            optional.ifPresent(offering -> {
+        for(Map.Entry<ResourceLocation, Optional<Offering>> entry : RPGGods.OFFERING.getEntries()) {
+            entry.getValue().ifPresent(offering -> {
                 if(offering.getFavor() != 0 || offering.getFunction().isPresent()) {
-                    Map<ResourceLocation, List<Offering>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
-                    map.computeIfAbsent(offering.getDeity(), id -> Lists.newArrayList()).add(offering);
+                    Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
+                    map.computeIfAbsent(offering.getDeity(), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), offering));
                 }
             });
         }
@@ -200,10 +201,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         tradeCount = TRADE_COUNT;
         // add all sacrifices to map
         sacrificeMap.clear();
-        for(Optional<Sacrifice> optional : RPGGods.SACRIFICE.getValues()) {
-            optional.ifPresent(sacrifice -> {
+        for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
+            entry.getValue().ifPresent(sacrifice -> {
                 if(sacrifice.getFavor() != 0 || sacrifice.getFunction().isPresent()) {
-                    sacrificeMap.computeIfAbsent(sacrifice.getDeity(), id -> Lists.newArrayList()).add(sacrifice);
+                    sacrificeMap.computeIfAbsent(sacrifice.getDeity(), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), sacrifice));
                 }
             });
         }
@@ -330,10 +331,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         // draw background image
         this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos, this.topPos, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        // draw favor boundary
-        if(this.page == Page.PERKS) {
-            renderFavorLevel(matrixStack, mouseX, mouseY, partialTicks);
-        }
         // draw name
         this.font.drawShadow(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
         // draw favor
@@ -472,6 +469,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos + 23, this.topPos + 13, 23, 13, 208, 28);
+        // draw favor level
+        renderFavorLevel(matrixStack, mouseX, mouseY, partialTicks);
         // re-draw name and favor
         this.font.drawShadow(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
         this.font.draw(matrixStack, deityFavor, this.leftPos + FAVOR_X, this.topPos + FAVOR_Y, 0xFFFFFF);
@@ -500,9 +499,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         float sizeX = Math.min(PERK_BOUNDS_WIDTH, (level + 1) * (PERK_WIDTH + PERK_SPACE_X) + this.dx - 9);
         if(sizeX > 0) {
             float scaleX = sizeX / 8.0F;
-            float scaleY = PERK_BOUNDS_HEIGHT / 8.0F;
+            float scaleY = 14.0F / 8.0F;
             matrixStack.scale(scaleX, scaleY, 1);
-            matrixStack.translate((this.leftPos + PERK_BOUNDS_X) / scaleX, (this.topPos + PERK_BOUNDS_Y) / scaleY, 0);
+            matrixStack.translate((this.leftPos + PERK_BOUNDS_X) / scaleX, (this.topPos + PERK_BOUNDS_Y - 14) / scaleY, 0);
             RenderSystem.enableBlend();
             RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
             this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
@@ -762,6 +761,83 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         RenderSystem.disableRescaleNormal();
         RenderSystem.popMatrix();
     }
+    /**
+     * Renders a scroll background for a tooltip with the given position and size
+     * @param matrixStack the render stack
+     * @param startX the x position of upper left corner
+     * @param startY the y position of upper left corner
+     * @param sizeX the width of the scroll
+     * @param sizeY the height of the scroll
+     */
+    private void renderPerkTooltipBackground(MatrixStack matrixStack, final float startX, final float startY,
+                                             float sizeX, float sizeY) {
+        // minimum size of tooltip
+        sizeX = Math.max(42, sizeX);
+        sizeY = Math.max(50, sizeY);
+        // u and v coordinates of background
+        int u = 31;
+        int v = 132;
+        // corner pieces (width and height)
+        int cWidth = 16;
+        int cHeight = 20;
+        // middle piece (width and height)
+        int mWidth = 8;
+        int mHeight = 8;
+        // local x and y scale
+        float scaleX = (sizeX - (cWidth * 2)) / (float)mWidth;
+        float scaleY = (sizeY - (cHeight * 2)) / (float)mHeight;
+        matrixStack.pushPose();
+        matrixStack.translate(startX, startY, 0);
+        // prepare to render
+        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+        this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+        // draw upper left corner
+        this.blit(matrixStack, 0, 0, u, v, cWidth, cHeight);
+        // draw upper middle
+        matrixStack.scale(scaleX, 1, 1);
+        matrixStack.translate(cWidth / scaleX, 0, 0);
+        this.blit(matrixStack, 0, 0, u + cWidth, v, mWidth, cHeight);
+        // draw upper right
+        matrixStack.scale(1 / scaleX, 1, 1);
+        matrixStack.translate(mWidth * scaleX, 0, 0);
+        this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v, cWidth, cHeight);
+        // draw middle left
+        matrixStack.translate(-(cWidth + (mWidth * scaleX)), cHeight, 0);
+        matrixStack.scale(1, scaleY, 1);
+        this.blit(matrixStack, 0, 0, u, v + cHeight, cWidth, mHeight);
+        // draw middle
+        matrixStack.translate(cWidth, 0, 0);
+        matrixStack.scale(scaleX, 1, 1);
+        this.blit(matrixStack, 0, 0, u + cWidth, v + cHeight, mWidth, mHeight);
+        // draw middle right
+        matrixStack.scale(1 / scaleX, 1, 1);
+        matrixStack.translate(mWidth * scaleX, 0, 0);
+        this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v + cHeight, cWidth, mHeight);
+        // draw lower left
+        matrixStack.scale(1, 1 / scaleY, 1);
+        matrixStack.translate(-(cWidth + (mWidth * scaleX)), (mHeight * scaleY), 0);
+        this.blit(matrixStack, 0, 0, u, v + cHeight + mHeight, cWidth, cHeight);
+        // draw lower middle
+        matrixStack.scale(scaleX, 1, 1);
+        matrixStack.translate(cWidth / scaleX, 0, 0);
+        this.blit(matrixStack, 0, 0, u + cWidth, v + cHeight + mHeight, mWidth, cHeight);
+        // draw upper right
+        matrixStack.scale(1 / scaleX, 1, 1);
+        matrixStack.translate(mWidth * scaleX, 0, 0);
+        this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v + cHeight + mHeight, cWidth, cHeight);
+        matrixStack.popPose();
+    }
+
+    private void renderStrikethrough(final MatrixStack matrixStack, final int x, final int y, final int width) {
+        matrixStack.pushPose();
+        float scale = (float)width / 18.0F;
+        matrixStack.scale(scale, 1, 1);
+        matrixStack.translate(x / scale, y, this.itemRenderer.blitOffset + 101);
+        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+        this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+        this.blit(matrixStack, 0,0, 0, 230, 18, 2);
+        matrixStack.popPose();
+    }
 
     protected class PerkButton extends Button {
 
@@ -922,73 +998,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         }
 
         /**
-         * Renders a scroll background for a tooltip with the given position and size
-         * @param matrixStack the render stack
-         * @param startX the x position of upper left corner
-         * @param startY the y position of upper left corner
-         * @param sizeX the width of the scroll
-         * @param sizeY the height of the scroll
-         */
-        private void renderPerkTooltipBackground(MatrixStack matrixStack, final float startX, final float startY,
-                                                 float sizeX, float sizeY) {
-            // minimum size of tooltip
-            sizeX = Math.max(42, sizeX);
-            sizeY = Math.max(50, sizeY);
-            // u and v coordinates of background
-            int u = 31;
-            int v = 132;
-            // corner pieces (width and height)
-            int cWidth = 16;
-            int cHeight = 20;
-            // middle piece (width and height)
-            int mWidth = 8;
-            int mHeight = 8;
-            // local x and y scale
-            float scaleX = (sizeX - (cWidth * 2)) / (float)mWidth;
-            float scaleY = (sizeY - (cHeight * 2)) / (float)mHeight;
-            matrixStack.pushPose();
-            matrixStack.translate(startX, startY, 0);
-            // prepare to render
-            RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-            FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
-            // draw upper left corner
-            this.blit(matrixStack, 0, 0, u, v, cWidth, cHeight);
-            // draw upper middle
-            matrixStack.scale(scaleX, 1, 1);
-            matrixStack.translate(cWidth / scaleX, 0, 0);
-            this.blit(matrixStack, 0, 0, u + cWidth, v, mWidth, cHeight);
-            // draw upper right
-            matrixStack.scale(1 / scaleX, 1, 1);
-            matrixStack.translate(mWidth * scaleX, 0, 0);
-            this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v, cWidth, cHeight);
-            // draw middle left
-            matrixStack.translate(-(cWidth + (mWidth * scaleX)), cHeight, 0);
-            matrixStack.scale(1, scaleY, 1);
-            this.blit(matrixStack, 0, 0, u, v + cHeight, cWidth, mHeight);
-            // draw middle
-            matrixStack.translate(cWidth, 0, 0);
-            matrixStack.scale(scaleX, 1, 1);
-            this.blit(matrixStack, 0, 0, u + cWidth, v + cHeight, mWidth, mHeight);
-            // draw middle right
-            matrixStack.scale(1 / scaleX, 1, 1);
-            matrixStack.translate(mWidth * scaleX, 0, 0);
-            this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v + cHeight, cWidth, mHeight);
-            // draw lower left
-            matrixStack.scale(1, 1 / scaleY, 1);
-            matrixStack.translate(-(cWidth + (mWidth * scaleX)), (mHeight * scaleY), 0);
-            this.blit(matrixStack, 0, 0, u, v + cHeight + mHeight, cWidth, cHeight);
-            // draw lower middle
-            matrixStack.scale(scaleX, 1, 1);
-            matrixStack.translate(cWidth / scaleX, 0, 0);
-            this.blit(matrixStack, 0, 0, u + cWidth, v + cHeight + mHeight, mWidth, cHeight);
-            // draw upper right
-            matrixStack.scale(1 / scaleX, 1, 1);
-            matrixStack.translate(mWidth * scaleX, 0, 0);
-            this.blit(matrixStack, 0, 0, u + cWidth + mWidth, v + cHeight + mHeight, cWidth, cHeight);
-            matrixStack.popPose();
-        }
-
-        /**
          * Iterates through all text components attached to this button's tooltip
          * @return the maximum width of this button's text components
          */
@@ -1024,7 +1033,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 FavorScreen.this.itemRenderer.renderGuiItem(offering.getAccept(), this.x, this.y);
                 // draw trade
                 FavorScreen.this.itemRenderer.renderGuiItem(offering.getTrade().get(), this.x + 18 + ARROW_WIDTH, this.y);
-                // draw favor text
+                // draw unlock text
                 FavorScreen.this.font.draw(matrixStack, unlockText, this.x + 18 * 2 + ARROW_WIDTH + 4, this.y + textY, 0xFFFFFF);
                 // draw function text
                 if(offering != null && offering.getFunction().isPresent()) {
@@ -1034,24 +1043,30 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
                 FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x + 18, this.y + textY, 113, 130, ARROW_WIDTH, ARROW_HEIGHT);
+                // draw strikethrough
+                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                if(this.cooldown - timeElapsed > 1) {
+                    FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 2);
+                }
             }
         }
 
         @Override
         public void updateOffering(final ResourceLocation deity, final int startIndex) {
             final int offeringId = startIndex * 2 + id;
-            final List<Offering> offerings = FavorScreen.this.tradeMap.getOrDefault(deity, ImmutableList.of());
+            final List<Tuple<ResourceLocation, Offering>> offerings = FavorScreen.this.tradeMap.getOrDefault(deity, ImmutableList.of());
             if(offeringId < offerings.size()) {
                 this.visible = true;
-                updateOffering(offerings.get(offeringId));
+                Tuple<ResourceLocation, Offering> tuple = offerings.get(offeringId);
+                updateOffering(tuple.getA(), tuple.getB());
             } else {
                 this.visible = false;
             }
         }
 
         @Override
-        protected void updateOffering(final Offering offering) {
-            super.updateOffering(offering);
+        protected void updateOffering(final ResourceLocation offeringId, final Offering offering) {
+            super.updateOffering(offeringId, offering);
             // determine item tooltip
             if(offering.getTrade().isPresent()) {
                 this.tradeTooltip = offering.getTrade().get().getHoverName();
@@ -1070,6 +1085,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     return Optional.of(unlockTooltip);
                 }
                 if(offering.getTrade().isPresent() && mouseX >= (this.x + 18 + ARROW_WIDTH) && mouseX <= (this.x + 18 * 2 + ARROW_WIDTH)) {
+                    if(offering.getTrade().get().isEmpty() && offering.getFunction().isPresent()) {
+                        return Optional.of(functionTooltip);
+                    }
                     return Optional.of(tradeTooltip);
                 }
                 if(mouseX <= (this.x + 18)) {
@@ -1084,10 +1102,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         protected final int textY = 5;
         protected int id;
         protected Offering offering;
+        protected long cooldown;
         protected ITextComponent itemTooltip;
         protected ITextComponent favorText;
         protected final ITextComponent functionText;
-        protected final ITextComponent functionTooltip;
+        protected ITextComponent functionTooltip;
 
         public OfferingButton(final FavorScreen gui, final int index, final int x, final int y) {
             this(gui, index, x, y, OFFERING_WIDTH, OFFERING_HEIGHT);
@@ -1100,7 +1119,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             this.itemTooltip = StringTextComponent.EMPTY;
             this.favorText = StringTextComponent.EMPTY;
             this.functionText = new StringTextComponent(" \u2605 ").withStyle(TextFormatting.BLUE);
-            this.functionTooltip = new TranslationTextComponent("gui.favor.offering.function.tooltip");
+            this.functionTooltip = StringTextComponent.EMPTY;
         }
 
         @Override
@@ -1114,22 +1133,29 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 if(offering != null && offering.getFunction().isPresent()) {
                     FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 2 - 2, this.y + textY, 0xFFFFFF);
                 }
+                // draw strikethrough
+                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                if(this.cooldown - timeElapsed > 1) {
+                    FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 4);
+                }
             }
         }
 
         public void updateOffering(final ResourceLocation deity, final int startIndex) {
             final int offeringId = startIndex * 2 + id;
-            final List<Offering> offerings = FavorScreen.this.offeringMap.getOrDefault(deity, ImmutableList.of());
+            final List<Tuple<ResourceLocation, Offering>> offerings = FavorScreen.this.offeringMap.getOrDefault(deity, ImmutableList.of());
             if(offeringId < offerings.size()) {
                 this.visible = true;
-                updateOffering(offerings.get(offeringId));
+                Tuple<ResourceLocation, Offering> tuple = offerings.get(offeringId);
+                updateOffering(tuple.getA(), tuple.getB());
             } else {
                 this.visible = false;
             }
         }
 
-        protected void updateOffering(final Offering offering) {
+        protected void updateOffering(final ResourceLocation offeringId, final Offering offering) {
             this.offering = offering;
+            this.cooldown = FavorScreen.this.getMenu().getFavor().getOfferingCooldown(offeringId).getCooldown();
             // determine item tooltip
             this.itemTooltip = offering.getAccept().getHoverName();
             // determine favor text
@@ -1144,6 +1170,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 color = TextFormatting.DARK_RED;
             }
             this.favorText = new StringTextComponent(favorString).withStyle(color);
+            if(offering.getFunctionText().isPresent()) {
+                this.functionTooltip = new TranslationTextComponent(offering.getFunctionText().get());
+            } else {
+                this.functionTooltip = new TranslationTextComponent("gui.favor.offering.function.tooltip");
+            }
         }
 
         protected Optional<ITextComponent> getTooltip(final int mouseX, final int mouseY) {
@@ -1159,12 +1190,13 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
     protected class SacrificeButton extends Button {
 
-        private int id;
-        private Sacrifice sacrifice;
+        protected int id;
+        protected Sacrifice sacrifice;
+        protected long cooldown;
         protected ITextComponent entityText;
         protected ITextComponent favorText;
         protected final ITextComponent functionText;
-        protected final ITextComponent functionTooltip;
+        protected ITextComponent functionTooltip;
 
         public SacrificeButton(final FavorScreen gui, final int index, int x, int y) {
             super(x, y, SACRIFICE_WIDTH, SACRIFICE_HEIGHT, StringTextComponent.EMPTY, b -> {},
@@ -1173,7 +1205,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             this.entityText = StringTextComponent.EMPTY;
             this.favorText = StringTextComponent.EMPTY;
             this.functionText = new StringTextComponent(" \u2605 ").withStyle(TextFormatting.BLUE);
-            this.functionTooltip = new TranslationTextComponent("gui.favor.sacrifice.function.tooltip");
+            this.functionTooltip = StringTextComponent.EMPTY;
         }
 
         @Override
@@ -1187,22 +1219,29 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 if(sacrifice != null && sacrifice.getFunction().isPresent()) {
                     FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 8, this.y, 0xFFFFFF);
                 }
+                // draw strikethrough
+                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                if(this.cooldown - timeElapsed > 1) {
+                    FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 2);
+                }
             }
         }
 
         public void updateSacrifice(final ResourceLocation deity, final int startIndex) {
             final int sacrificeId = startIndex * 2 + id;
-            final List<Sacrifice> sacrifices = FavorScreen.this.sacrificeMap.getOrDefault(deity, ImmutableList.of());
+            final List<Tuple<ResourceLocation, Sacrifice>> sacrifices = FavorScreen.this.sacrificeMap.getOrDefault(deity, ImmutableList.of());
             if(sacrificeId < sacrifices.size()) {
                 this.visible = true;
-                updateSacrifice(sacrifices.get(sacrificeId));
+                Tuple<ResourceLocation, Sacrifice> tuple = sacrifices.get(sacrificeId);
+                updateSacrifice(tuple.getA(), tuple.getB());
             } else {
                 this.visible = false;
             }
         }
 
-        protected void updateSacrifice(final Sacrifice sacrifice) {
+        protected void updateSacrifice(final ResourceLocation sacrificeId, final Sacrifice sacrifice) {
             this.sacrifice = sacrifice;
+            this.cooldown = FavorScreen.this.getMenu().getFavor().getSacrificeCooldown(sacrificeId).getCooldown();
             // determine entity text
             EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(sacrifice.getEntity());
             if(entityType != null) {
@@ -1220,6 +1259,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 color = TextFormatting.DARK_RED;
             }
             this.favorText = new StringTextComponent(favorString).withStyle(color);
+            if(sacrifice.getFunctionText().isPresent()) {
+                this.functionTooltip = new TranslationTextComponent(sacrifice.getFunctionText().get());
+            } else {
+                this.functionTooltip = new TranslationTextComponent("gui.favor.sacrifice.function.tooltip");
+            }
         }
 
         protected Optional<ITextComponent> getTooltip(final int mouseX, final int mouseY) {

@@ -53,6 +53,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingSetAttackTargetEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
@@ -76,6 +77,7 @@ import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkData;
 import rpggods.tameable.ITameable;
+import rpggods.util.Cooldown;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -101,18 +103,22 @@ public class FavorEventHandler {
     public static Optional<ItemStack> onOffering(final Optional<AltarEntity> entity, final ResourceLocation deity, final PlayerEntity player, final IFavor favor, final ItemStack item) {
         if(favor.isEnabled() && !item.isEmpty()) {
             // find first matching offering for the given deity
+            ResourceLocation offeringId = null;
             Offering offering = null;
-            for(Offering o : RPGGods.DEITY.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
+            for(ResourceLocation id : RPGGods.DEITY.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
+                Offering o = RPGGods.OFFERING.get(id).orElse(null);
                 if(o != null && item.getCount() >= o.getAccept().getCount()
                         && ItemStack.isSame(item, o.getAccept())
                         && ItemStack.tagMatches(item, o.getAccept())) {
+                    offeringId = id;
                     offering = o;
                     break;
                 }
             }
             // process the offering
-            if(offering != null) {
+            if(offering != null && offeringId != null && favor.getOfferingCooldown(offeringId).canUse()) {
                 favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
+                favor.getOfferingCooldown(offeringId).addUse();
                 offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
                 // shrink item stack
                 if(!player.isCreative()) {
@@ -120,13 +126,15 @@ public class FavorEventHandler {
                 }
                 // process trade, if any
                 if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() >= offering.getTradeMinLevel()) {
-                    player.addItem(offering.getTrade().get().copy());
+                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), offering.getTrade().get().copy());
+                    itemEntity.setNoPickUpDelay();
+                    player.level.addFreshEntity(itemEntity);
                 }
                 // particles
                 if(entity.isPresent() && player.level instanceof ServerWorld) {
                     Vector3d pos = Vector3d.atBottomCenterOf(entity.get().blockPosition().above());
                     IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
-                    ((ServerWorld)player.level).sendParticles(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);
+                    ((ServerWorld)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
                 }
                 return Optional.of(item);
             }
@@ -146,18 +154,22 @@ public class FavorEventHandler {
     public static boolean onSacrifice(final PlayerEntity player, final IFavor favor, final LivingEntity entity) {
         boolean success = false;
         if(favor.isEnabled()) {
-            // find all matching sacrifices
-            List<Sacrifice> sacrificeList = new ArrayList<>();
+            // find and process all matching sacrifices
             ResourceLocation entityId = entity.getType().getRegistryName();
-            for(Optional<Sacrifice> sacrifice : RPGGods.SACRIFICE.getValues()) {
-                if(sacrifice != null && sacrifice.isPresent() && entityId.equals(sacrifice.get().getEntity())) {
-                    sacrificeList.add(sacrifice.get());
+            Sacrifice sacrifice;
+            Cooldown cooldown;
+            for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
+                if(entry.getValue() != null && entry.getValue().isPresent()) {
+                    sacrifice = entry.getValue().get();
+                    if(sacrifice != null && entityId.equals(sacrifice.getEntity())) {
+                        cooldown = favor.getSacrificeCooldown(entry.getKey());
+                        if(cooldown.canUse()) {
+                            cooldown.addUse();
+                            favor.getFavor(sacrifice.getDeity()).addFavor(player, sacrifice.getDeity(), sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
+                            sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                        }
+                    }
                 }
-            }
-            // process all matching sacrifices
-            for(Sacrifice sacrifice : sacrificeList) {
-                favor.getFavor(sacrifice.getDeity()).addFavor(player, sacrifice.getDeity(), sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
-                sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
             }
         }
         return success;
@@ -169,15 +181,17 @@ public class FavorEventHandler {
         boolean success = false;
         if(favor.isEnabled()) {
             // find matching perks (use set to ensure no duplicates)
-            Set<Perk> perks = new HashSet<>();
+            Set<ResourceLocation> perks = new HashSet<>();
             for(Deity deity : RPGGods.DEITY.values()) {
                 perks.addAll(deity.perkByConditionMap.getOrDefault(type, ImmutableList.of()));
             }
             // shuffle perks
-            List<Perk> perkList = Lists.newArrayList(perks);
+            List<ResourceLocation> perkList = Lists.newArrayList(perks);
             Collections.shuffle(perkList);
             // run each perk
-            for(Perk perk : perkList) {
+            Perk perk;
+            for(ResourceLocation id : perkList) {
+                perk = RPGGods.PERK.get(id).orElse(null);
                 success |= runPerk(perk, player, favor, entity, data, object);
             }
         }
@@ -212,14 +226,16 @@ public class FavorEventHandler {
         boolean success = false;
         if(favor.isEnabled()) {
             // find matching perks
-            List<Perk> perks = new ArrayList<>();
+            List<ResourceLocation> perks = new ArrayList<>();
             for(Deity deity : RPGGods.DEITY.values()) {
                 perks.addAll(deity.perkByTypeMap.getOrDefault(type, ImmutableList.of()));
             }
             // shuffle perks
             Collections.shuffle(perks);
             // run each perk
-            for(Perk perk : perks) {
+            Perk perk;
+            for(ResourceLocation id : perks) {
+                perk = RPGGods.PERK.get(id).orElse(null);
                 success |= runPerk(perk, player, favor, entity, data, object);
             }
         }
@@ -278,7 +294,7 @@ public class FavorEventHandler {
     public static boolean runPerk(final Perk perk, final PlayerEntity player, final IFavor favor, final Optional<Entity> entity,
                                   final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         // check favor range, perk cooldown, and random chance
-        if(!player.level.isClientSide && perk.getRange().isInRange(favor)
+        if(perk != null && !player.level.isClientSide && perk.getRange().isInRange(favor)
                 && favor.hasNoPerkCooldown(perk.getCategory()) && Math.random() < perk.getChance()) {
             // check perk conditions
             for(final PerkCondition condition : perk.getConditions()) {
@@ -455,9 +471,13 @@ public class FavorEventHandler {
             case PATRON: return favor.getPatron().isPresent() && deity.equals(favor.getPatron().get());
             case BIOME: return condition.isInBiome(player.level, player.blockPosition());
             case DAY: return player.level.isDay();
-            case NIGHT: return !player.level.isDay();
+            case NIGHT: return player.level.isNight();
             case RANDOM_TICK: return true;
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < COMBAT_TIMER;
+            case MAINHAND_ITEM: return data.isPresent() && data.get().equals(player.getMainHandItem().getItem().getRegistryName());
+            case PLAYER_RIDE_ENTITY: return player.isPassenger() && player.getVehicle() != null
+                    && data.isPresent() && data.equals(player.getVehicle().getType().getRegistryName());
+            // match data to perk condition data
             case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER:
             case PLAYER_HURT_ENTITY:
@@ -722,18 +742,24 @@ public class FavorEventHandler {
 
         @SubscribeEvent
         public static void onPlayerTick(final TickEvent.PlayerTickEvent event) {
-            if(!event.isCanceled() && !event.player.level.isClientSide() && event.player.isEffectiveAi() && event.player.isAlive() && canTickFavor(event.player)) {
+            if(!event.isCanceled() && !event.player.level.isClientSide() && event.player.isEffectiveAi()
+                    && event.player.isAlive() && canTickFavor(event.player)) {
                 event.player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                     // trigger perks
-                    triggerCondition(PerkCondition.Type.RANDOM_TICK, event.player, f, Optional.empty(),
-                            Optional.empty(), Optional.of(event));
+                    if(Math.random() < RANDOM_TICK_CHANCE) {
+                        // onRandomTick
+                        triggerCondition(PerkCondition.Type.RANDOM_TICK, event.player, f, Optional.empty(),
+                                Optional.empty(), Optional.empty());
+                    }
                     // reduce cooldowns
-                    f.tickPerkCooldown(event.player.level.getGameTime());
+                    f.tickCooldown(event.player.level.getGameTime());
                 });
             }
         }
 
+        // TODO: add to config
         public static final int TICK_RATE = 20;
+        public static final float RANDOM_TICK_CHANCE = 0.6F;
 
         public static boolean canTickFavor(final LivingEntity entity) {
             return (entity.tickCount + entity.getId()) % TICK_RATE == 0;

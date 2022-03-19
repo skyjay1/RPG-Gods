@@ -10,7 +10,6 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
 import rpggods.deity.Deity;
-import rpggods.deity.Sacrifice;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkData;
@@ -26,15 +25,15 @@ import java.util.function.Supplier;
  **/
 public class SPerkPacket {
 
-    protected ResourceLocation deityName;
+    protected ResourceLocation perkName;
     protected Perk perk;
 
     /**
-     * @param deityNameIn the ResourceLocation ID of the Deity
+     * @param perkNameIn the ResourceLocation ID of the Deity
      * @param perkIn     the Perk
      **/
-    public SPerkPacket(final ResourceLocation deityNameIn, final Perk perkIn) {
-        this.deityName = deityNameIn;
+    public SPerkPacket(final ResourceLocation perkNameIn, final Perk perkIn) {
+        this.perkName = perkNameIn;
         this.perk = perkIn;
     }
 
@@ -61,7 +60,7 @@ public class SPerkPacket {
     public static void toBytes(final SPerkPacket msg, final PacketBuffer buf) {
         DataResult<INBT> nbtResult = RPGGods.PERK.writeObject(msg.perk);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Perk to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.deityName);
+        buf.writeResourceLocation(msg.perkName);
         buf.writeNbt((CompoundNBT) tag);
     }
 
@@ -76,15 +75,15 @@ public class SPerkPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 Perk perk = message.perk;
-                RPGGods.PERK.put(message.deityName, perk);
+                RPGGods.PERK.put(message.perkName, perk);
                 // add Perk to Deity
-                RPGGods.DEITY.computeIfAbsent(perk.getDeity(), Deity::new).add(perk);
+                RPGGods.DEITY.computeIfAbsent(perk.getDeity(), Deity::new).add(message.perkName, perk);
                 // add Perk to Affinity map if applicable
                 for(PerkData action : perk.getActions()) {
                     if(action.getAffinity().isPresent()) {
                         Affinity affinity = action.getAffinity().get();
                         RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(perk);
+                                .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(message.perkName);
                     }
                 }
             });

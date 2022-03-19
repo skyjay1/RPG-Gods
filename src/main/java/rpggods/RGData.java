@@ -9,10 +9,12 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
 import rpggods.favor.Favor;
+import rpggods.favor.FavorCommand;
 import rpggods.favor.IFavor;
 import rpggods.network.SAltarPacket;
 import rpggods.network.SOfferingPacket;
@@ -22,6 +24,11 @@ import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 
 public final class RGData {
+
+    @SubscribeEvent
+    public static void onAddCommands(final RegisterCommandsEvent event) {
+        FavorCommand.register(event.getDispatcher());
+    }
 
     /**
      * Used to sync datapack data from the server to each client

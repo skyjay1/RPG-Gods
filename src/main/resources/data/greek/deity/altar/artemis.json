@@ -8,49 +8,36 @@
     "Count": 1
   },
   "items": {
-    "head": {
-      "id": "minecraft:golden_helmet",
-      "Count": 1
-    },
-    "chest": {
-      "id": "minecraft:golden_chestplate",
-      "Count": 1
-    },
-    "legs": {
-      "id": "minecraft:diamond_leggings",
-      "Count": 1
-    },
-    "feet": {
-      "id": "minecraft:diamond_boots",
-      "Count": 1
-    },
     "mainhand": {
+      "id": "minecraft:iron_sword",
+      "Count": 1
+    },
+    "offhand": {
       "id": "minecraft:bow",
       "Count": 1
     },
     "block": "minecraft:birch_slab",
     "armor_locked": true,
     "hands_locked": true,
-    "block_locked": false
+    "block_locked": true
   },
   "pose": {
     "head": {
-      "x": 0.174533
+      "x": -0.174533
     },
     "left_arm": {
-      "x": -0.20944,
-      "y": 0,
-      "z": -0.0872665
+      "x": 0.05236,
+      "y": 0.10472
     },
     "right_arm": {
-      "x": -2.61799,
-      "z": -0.174533
+      "x": -1.675516,
+      "y": 0.174533
     },
     "left_leg": {
-      "z": -0.0349066
+      "z": -0.069813
     },
     "right_leg": {
-      "z": 0.0349066
+      "z": 0.069813
     }
   },
   "pose_locked": true

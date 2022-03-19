@@ -2,6 +2,7 @@ package rpggods.entity;
 
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
+import com.mojang.serialization.DataResult;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.material.Material;
@@ -22,13 +23,16 @@ import net.minecraft.inventory.container.SimpleNamedContainerProvider;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.INBT;
 import net.minecraft.nbt.ListNBT;
+import net.minecraft.nbt.NBTDynamicOps;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.tileentity.SkullTileEntity;
 import net.minecraft.util.ActionResultType;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
@@ -38,6 +42,7 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkHooks;
@@ -51,6 +56,7 @@ import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
+import rpggods.item.AltarItem;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -150,8 +156,14 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         return this.inventory.getItem(slotIn.getFilterFlag());
     }
 
+    public ItemStack getBlockBySlot() { return this.inventory.getItem(INV_SIZE - 1); }
+
     public void setItemSlot(EquipmentSlotType slotIn, ItemStack stack) {
         this.inventory.setItem(slotIn.getFilterFlag(), stack);
+    }
+
+    public void setBlockSlot(ItemStack stack) {
+        this.inventory.setItem(INV_SIZE - 1, stack);
     }
 
     @Override
@@ -177,47 +189,54 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         return false;
     }
 
+    public boolean hurt(DamageSource source, float amount) {
+        return super.hurt(source.bypassArmor(), amount);
+    }
+
     public EntitySize getDimensions(Pose poseIn) {
-        return (getInventory().getItem(INV_SIZE - 1).isEmpty()) ? smallSize : this.getType().getDimensions();
+        return (getBlockBySlot().isEmpty()) ? smallSize : this.getType().getDimensions();
     }
 
     public ActionResultType interactAt(PlayerEntity player, Vector3d vec, Hand hand) {
-        RPGGods.LOGGER.debug("Name: " + (hasCustomName() ? getCustomName().getContents() : "<null>"));
-        RPGGods.LOGGER.debug("Deity: " + getDeity());
+        // TODO: remove debug
         if(getDeity().isPresent()) {
             RPGGods.LOGGER.debug("Deity data: " + RPGGods.DEITY.get(getDeity().get()));
         }
 
         // open container
         // open the container GUI
-        if(player instanceof ServerPlayerEntity) {
+        if(player instanceof ServerPlayerEntity && hand == Hand.MAIN_HAND) {
             // attempt to process favor capability
             if(getDeity().isPresent()) {
                 LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
                 if(favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
+                    // detect item in mainhand
                     ItemStack heldItem = player.getItemInHand(hand);
-                    // apply offering
-                    Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
-                    // if item changed, update player inventory
-                    if(offeringResult.isPresent()) {
-                        player.setItemInHand(hand, offeringResult.get());
-                        return ActionResultType.CONSUME;
+                    if(heldItem.isEmpty()) {
+                        // open favor GUI
+                        NetworkHooks.openGui((ServerPlayerEntity)player,
+                                new SimpleNamedContainerProvider((id, inventory, p) ->
+                                        new FavorContainer(id, inventory, ifavor, deity),
+                                        StringTextComponent.EMPTY),
+                                buf -> {
+                                    buf.writeNbt(ifavor.serializeNBT());
+                                    buf.writeResourceLocation(deity);
+                                }
+                        );
+                        return ActionResultType.SUCCESS;
+                    } else {
+                        // apply offering
+                        Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
+                        // if item changed, update player inventory
+                        if(offeringResult.isPresent()) {
+                            player.setItemInHand(hand, offeringResult.get());
+                            return ActionResultType.CONSUME;
+                        }
                     }
-                    // open favor GUI
-                    NetworkHooks.openGui((ServerPlayerEntity)player,
-                            new SimpleNamedContainerProvider((id, inventory, p) ->
-                                    new FavorContainer(id, inventory, ifavor, deity),
-                                    StringTextComponent.EMPTY),
-                            buf -> {
-                                buf.writeNbt(ifavor.serializeNBT());
-                                buf.writeResourceLocation(deity);
-                            }
-                    );
                 }
-
-            } else if(!isLocked()) {
+            } else if(!(isArmorLocked() && isHandsLocked() && isBlockLocked() && isAltarPoseLocked())) {
                 // open altar GUI
                 NetworkHooks.openGui((ServerPlayerEntity)player,
                         new SimpleNamedContainerProvider((id, inv, p) ->
@@ -227,10 +246,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                             buf.writeInt(this.getId());
                         }
                 );
+                return ActionResultType.SUCCESS;
             }
         }
 
-        return ActionResultType.SUCCESS;
+        return ActionResultType.PASS;
     }
 
     @Override
@@ -280,6 +300,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                 inventory.setItem(slotNum, ItemStack.of(slotNBT));
             }
         }
+        this.inventory.setChanged();
         // read flags
         setFlags(compound.getByte(KEY_FLAGS));
         // read locked flags
@@ -313,24 +334,31 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     @Override
     public void containerChanged(IInventory inv) {
-
+        this.refreshDimensions();
     }
 
     @Override
     protected void dropEquipment() {
-        if (this.inventory != null) {
+        final boolean keepInventory = level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY);
+        // drop altar
+        final ItemStack altarItem = new ItemStack(RGRegistry.ItemReg.ALTAR);
+        final DataResult<INBT> altarTag = Altar.CODEC.encodeStart(NBTDynamicOps.INSTANCE, createAltarProperties(keepInventory));
+        altarTag.result().ifPresent(nbt -> altarItem.getOrCreateTag().put(AltarItem.KEY_ALTAR, nbt));
+        this.spawnAtLocation(altarItem);
+        // drop inventory
+        if (!keepInventory && this.inventory != null) {
             if(!isHandsLocked()) {
-                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.MAINHAND.getFilterFlag()));
-                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.OFFHAND.getFilterFlag()));
+                this.spawnAtLocation(getItemBySlot(EquipmentSlotType.MAINHAND));
+                this.spawnAtLocation(getItemBySlot(EquipmentSlotType.OFFHAND));
             }
             if(!isArmorLocked()) {
-                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.FEET.getFilterFlag()));
-                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.LEGS.getFilterFlag()));
-                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.CHEST.getFilterFlag()));
-                this.spawnAtLocation(this.inventory.getItem(EquipmentSlotType.HEAD.getFilterFlag()));
+                this.spawnAtLocation(getItemBySlot(EquipmentSlotType.FEET));
+                this.spawnAtLocation(getItemBySlot(EquipmentSlotType.LEGS));
+                this.spawnAtLocation(getItemBySlot(EquipmentSlotType.CHEST));
+                this.spawnAtLocation(getItemBySlot(EquipmentSlotType.HEAD));
             }
             if(!isBlockLocked()) {
-                this.spawnAtLocation(this.inventory.getItem(INV_SIZE - 1));
+                this.spawnAtLocation(getBlockBySlot());
             }
         }
     }
@@ -353,22 +381,31 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         for(EquipmentSlotType slot : EquipmentSlotType.values()) {
             setItemSlot(slot, altar.getItems().getItemStackFromSlot(slot).copy());
         }
-        this.inventory.setItem(INV_SIZE - 1, new ItemStack(altar.getItems().getBlock().asItem()));
+        setBlockSlot(new ItemStack(altar.getItems().getBlock().asItem()));
+    }
+
+    public Altar createAltarProperties() {
+        return createAltarProperties(true);
     }
 
     /**
      * Creates a new Altar instance with the same properties as found in this entity.
      */
-    public Altar createAltarProperties() {
-        AltarItems items = new AltarItems(
-                getItemBySlot(EquipmentSlotType.HEAD),
-                getItemBySlot(EquipmentSlotType.CHEST),
-                getItemBySlot(EquipmentSlotType.LEGS),
-                getItemBySlot(EquipmentSlotType.FEET),
-                getItemBySlot(EquipmentSlotType.MAINHAND),
-                getItemBySlot(EquipmentSlotType.OFFHAND),
-                ForgeRegistries.BLOCKS.getValue(inventory.getItem(INV_SIZE - 1).getItem().getRegistryName()),
-                isArmorLocked(), isHandsLocked(), isBlockLocked());
+    public Altar createAltarProperties(boolean keepInventory) {
+        AltarItems items;
+        if(keepInventory) {
+            items = new AltarItems(
+                    getItemBySlot(EquipmentSlotType.HEAD),
+                    getItemBySlot(EquipmentSlotType.CHEST),
+                    getItemBySlot(EquipmentSlotType.LEGS),
+                    getItemBySlot(EquipmentSlotType.FEET),
+                    getItemBySlot(EquipmentSlotType.MAINHAND),
+                    getItemBySlot(EquipmentSlotType.OFFHAND),
+                    ForgeRegistries.BLOCKS.getValue(getBlockBySlot().getItem().getRegistryName()),
+                    isArmorLocked(), isHandsLocked(), isBlockLocked());
+        } else {
+            items = AltarItems.EMPTY;
+        }
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
         ResourceLocation material = Altar.MATERIAL; // TODO
@@ -408,11 +445,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     private void updatePlayerProfile() {
         this.playerProfile = SkullTileEntity.updateGameprofile(this.playerProfile);
-    }
-
-    /** @return True if all fields are locked (armor, hands, block, pose) **/
-    public boolean isLocked() {
-        return (getLocked() & (0x01 | 0x02 | 0x04 | 0x08)) > 0;
     }
 
     public boolean isArmorLocked() {
@@ -508,25 +540,4 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     @Nullable
     public GameProfile getPlayerProfile() { return this.playerProfile; }
-
-    /*
-    public void initInventory() {
-        Inventory simplecontainer = this.inventory;
-        this.inventory = new Inventory(INV_SIZE);
-        if (simplecontainer != null) {
-            simplecontainer.removeListener(this);
-            int i = Math.min(simplecontainer.getSizeInventory(), this.inventory.getSizeInventory());
-
-            for(int j = 0; j < i; ++j) {
-                ItemStack itemstack = simplecontainer.getStackInSlot(j);
-                if (!itemstack.isEmpty()) {
-                    this.inventory.setInventorySlotContents(j, itemstack.copy());
-                }
-            }
-        }
-
-        this.inventory.addListener(this);
-        this.onInventoryChanged(this.inventory);
-    }
-     */
 }

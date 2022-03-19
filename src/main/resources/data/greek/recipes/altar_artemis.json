@@ -1,5 +1,5 @@
 {
-  "type": "rpggods:altar",
+  "type": "rpggods:altar_shapeless",
   "ingredients": [
     {
       "item": "rpggods:altar"

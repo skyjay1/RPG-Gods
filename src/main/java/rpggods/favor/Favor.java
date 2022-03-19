@@ -9,8 +9,8 @@ import net.minecraftforge.common.capabilities.Capability.IStorage;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
+import rpggods.util.Cooldown;
 
-import javax.swing.text.html.Option;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -18,7 +18,9 @@ import java.util.Optional;
 public class Favor implements IFavor {
 
     protected final Map<ResourceLocation, FavorLevel> favorMap = new HashMap<>();
-    protected final Map<String, Long> cooldownMap = new HashMap<>();
+    protected final Map<String, Long> perkCooldownMap = new HashMap<>();
+    protected final Map<ResourceLocation, Cooldown> offeringCooldownMap = new HashMap<>();
+    protected final Map<ResourceLocation, Cooldown> sacrificeCooldownMap = new HashMap<>();
     private Optional<ResourceLocation> patron = Optional.empty();
     private boolean enabled = true;
     private long timestamp = 0L;
@@ -43,7 +45,17 @@ public class Favor implements IFavor {
 
     @Override
     public Map<String, Long> getPerkCooldownMap() {
-        return cooldownMap;
+        return perkCooldownMap;
+    }
+
+    @Override
+    public Map<ResourceLocation, Cooldown> getOfferingCooldownMap() {
+        return offeringCooldownMap;
+    }
+
+    @Override
+    public Map<ResourceLocation, Cooldown> getSacrificeCooldownMap() {
+        return sacrificeCooldownMap;
     }
 
     @Override

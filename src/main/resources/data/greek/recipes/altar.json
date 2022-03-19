@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "rpggods:altar_shaped",
   "pattern": [
     "O",
     "O",
@@ -12,5 +12,6 @@
   "result": {
     "item": "rpggods:altar",
     "count": 1
-  }
+  },
+  "altar": "rpggods:steve"
 }

@@ -1,7 +1,6 @@
 package rpggods.gui;
 
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.block.CarvedPumpkinBlock;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -11,14 +10,11 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.inventory.container.PlayerContainer;
 import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import rpggods.RGRegistry;
-import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
@@ -95,6 +91,10 @@ public class AltarContainer extends Container {
 
     public List<Slot> getAltarSlots() { return altarSlots; }
 
+    public void setChanged() {
+        this.altarInv.setChanged();
+    }
+
     /**
      * Handle when the stack in slot {@code index} is shift-clicked. Normally this moves the stack between the player
      * inventory and the other inventory(s).
@@ -138,6 +138,7 @@ public class AltarContainer extends Container {
 
         public AltarSlot(IInventory inventoryIn, int index, int xPosition, int yPosition, boolean locked) {
             super(inventoryIn, index, xPosition, yPosition);
+            this.locked = locked;
             this.posY = yPosition;
         }
 
@@ -148,6 +149,11 @@ public class AltarContainer extends Container {
 
         @Override
         public boolean mayPickup(PlayerEntity playerIn) {
+            return !isLocked();
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack p_75214_1_) {
             return !isLocked();
         }
 
@@ -185,7 +191,7 @@ public class AltarContainer extends Container {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return getType().getType() != EquipmentSlotType.Group.ARMOR || MobEntity.getEquipmentSlotForItem(stack) == getType();
+            return super.mayPlace(stack) && (getType().getType() != EquipmentSlotType.Group.ARMOR || MobEntity.getEquipmentSlotForItem(stack) == getType());
         }
 
         public EquipmentSlotType getType() {

@@ -66,34 +66,35 @@ public class RPGGods {
     // Map of Deity ID to Deity
     public static final Map<ResourceLocation, Deity> DEITY = new HashMap<>();
     // Map of Entity ID to Affinity
-    public static final Map<ResourceLocation, Map<Affinity.Type, List<Perk>>> AFFINITY = new HashMap<>();
+    public static final Map<ResourceLocation, Map<Affinity.Type, List<ResourceLocation>>> AFFINITY = new HashMap<>();
+    // Reloadable data resource listeners
     public static final GenericJsonReloadListener<Altar> ALTAR = new GenericJsonReloadListener<>("deity/altar", Altar.class, Altar.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(a -> a.getDeity().ifPresent(d -> RPGGods.DEITY.computeIfAbsent(d, Deity::new).add(a)));
+                e.getValue().ifPresent(a -> a.getDeity().ifPresent(d -> RPGGods.DEITY.computeIfAbsent(d, Deity::new).add(e.getKey(), a)));
             }));
     public static final GenericJsonReloadListener<Offering> OFFERING = new GenericJsonReloadListener<>("deity/offering", Offering.class, Offering.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SOfferingPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(o -> RPGGods.DEITY.computeIfAbsent(o.getDeity(), Deity::new).add(o));
+                e.getValue().ifPresent(o -> RPGGods.DEITY.computeIfAbsent(o.getDeity(), Deity::new).add(e.getKey(), o));
             }));
     public static final GenericJsonReloadListener<Sacrifice> SACRIFICE = new GenericJsonReloadListener<>("deity/sacrifice", Sacrifice.class, Sacrifice.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SSacrificePacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(s -> RPGGods.DEITY.computeIfAbsent(s.getDeity(), Deity::new).add(s));
+                e.getValue().ifPresent(s -> RPGGods.DEITY.computeIfAbsent(s.getDeity(), Deity::new).add(e.getKey(), s));
             }));
     public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()));
                 e.getValue().ifPresent(p -> {
                     // add Perk to Deity
-                    RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(p);
+                    RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(e.getKey(), p);
                     // add Perk to Affinity map if applicable
                     for(PerkData action : p.getActions()) {
                         if(action.getAffinity().isPresent()) {
                             Affinity affinity = action.getAffinity().get();
                             RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                    .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(p);
+                                    .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(e.getKey());
                         }
                     }
                 });

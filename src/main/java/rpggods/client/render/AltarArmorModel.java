@@ -11,7 +11,7 @@ import rpggods.entity.AltarEntity;
 import java.util.Collection;
 import java.util.Map;
 
-public class AltarArmorModel<T extends AltarEntity> extends BipedModel<T> {
+public class AltarArmorModel extends BipedModel<AltarEntity> {
 
     public AltarArmorModel(float modelSize) {
         this(modelSize, 64, 32);
@@ -25,7 +25,7 @@ public class AltarArmorModel<T extends AltarEntity> extends BipedModel<T> {
      * Sets this entity's model rotation angles
      */
     @Override
-    public void setupAnim(T entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(AltarEntity entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         final AltarPose pose = entityIn.getAltarPose();
 
         Vector3f rot = pose.get(ModelPart.HEAD);

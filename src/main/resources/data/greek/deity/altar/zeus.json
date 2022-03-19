@@ -13,9 +13,9 @@
       "Count": 1
     },
     "block": "minecraft:quartz_slab",
-    "armor_locked": false,
+    "armor_locked": true,
     "hands_locked": true,
-    "block_locked": false
+    "block_locked": true
   },
   "pose": {
     "head": {
@@ -23,11 +23,10 @@
     },
     "left_arm": {
       "x": -0.20944,
-      "y": 0,
-      "z": -0.0872665
+      "z": -0.087266
     },
     "right_arm": {
-      "x": -2.61799,
+      "x": -2.617994,
       "z": -0.174533
     },
     "left_leg": {

@@ -30,5 +30,7 @@
   "deity.greek.poseidon": "Poseidon",
   "deity.greek.poseidon.title": "Lord of the Sea",
   "deity.greek.zeus": "Zeus",
-  "deity.greek.zeus.title": "God of Thunder"
+  "deity.greek.zeus.title": "God of Thunder",
+  "perk.function.set_storming": "Create a thunderstorm",
+  "perk.function.set_clear": "Create clear weather"
 }
