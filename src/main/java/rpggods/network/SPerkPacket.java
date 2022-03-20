@@ -12,7 +12,7 @@ import rpggods.RPGGods;
 import rpggods.deity.Deity;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 
 import java.util.EnumMap;
 import java.util.Optional;
@@ -79,7 +79,7 @@ public class SPerkPacket {
                 // add Perk to Deity
                 RPGGods.DEITY.computeIfAbsent(perk.getDeity(), Deity::new).add(message.perkName, perk);
                 // add Perk to Affinity map if applicable
-                for(PerkData action : perk.getActions()) {
+                for(PerkAction action : perk.getActions()) {
                     if(action.getAffinity().isPresent()) {
                         Affinity affinity = action.getAffinity().get();
                         RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))

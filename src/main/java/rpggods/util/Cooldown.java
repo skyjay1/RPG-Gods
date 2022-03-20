@@ -83,6 +83,17 @@ public class Cooldown implements INBTSerializable<CompoundNBT> {
     }
 
     @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Cooldown: [");
+        sb.append(" uses=").append(uses);
+        sb.append(" maxuses=").append(maxUses);
+        sb.append(" cooldown=").append(cooldown);
+        sb.append(" maxcooldown=").append(maxCooldown);
+        sb.append("]");
+        return sb.toString();
+    }
+
+    @Override
     public CompoundNBT serializeNBT() {
         CompoundNBT tag = new CompoundNBT();
         tag.putInt(MAX_USES, maxUses);

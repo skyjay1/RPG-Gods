@@ -22,7 +22,7 @@ import rpggods.deity.Deity;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +47,7 @@ public class CropMultiplierModifier extends LootModifier {
         // determine which of the mining effects can activate
         List<ResourceLocation> cropHarvest = Lists.newArrayList();
         for (Deity deity : RPGGods.DEITY.values()) {
-            cropHarvest.addAll(deity.perkByTypeMap.getOrDefault(PerkData.Type.CROP_HARVEST, ImmutableList.of()));
+            cropHarvest.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.CROP_HARVEST, ImmutableList.of()));
         }
         // make sure this is an ore mined by a non-creative player
         if (entity instanceof PlayerEntity && context.hasParam(LootParameters.BLOCK_STATE)
@@ -67,8 +67,8 @@ public class CropMultiplierModifier extends LootModifier {
                     perk = RPGGods.PERK.get(id).orElse(null);
                     if (FavorEventHandler.runPerk(perk, player, f)) {
                         float multiplier = 0;
-                        for(PerkData action : perk.getActions()) {
-                            if(action.getType() == PerkData.Type.CROP_HARVEST && action.getMultiplier().isPresent()) {
+                        for(PerkAction action : perk.getActions()) {
+                            if(action.getType() == PerkAction.Type.CROP_HARVEST && action.getMultiplier().isPresent()) {
                                 multiplier += action.getMultiplier().get();
                             }
                         }

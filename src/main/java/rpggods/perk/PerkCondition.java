@@ -121,6 +121,7 @@ public class PerkCondition {
         NIGHT("night"),
         RANDOM_TICK("random_tick"),
         MAINHAND_ITEM("mainhand_item"),
+        EFFECT_START("effect_start"),
         ENTITY_HURT_PLAYER("entity_hurt_player"),
         ENTITY_KILLED_PLAYER("entity_killed_player"),
         PLAYER_HURT_ENTITY("player_hurt_entity"),

@@ -102,7 +102,7 @@ public final class RGRegistry {
                 final int entityId = data.readInt();
                 Entity entity = inv.player.level.getEntity(entityId);
                 AltarEntity altarEntity = (AltarEntity) entity;
-                return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity); // TODO
+                return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity);
             });
             // Favor screen requires Favor as a Compound Tag and Deity ID as a ResourceLocation
             ContainerType<FavorContainer> favorContainer = IForgeContainerType.create((windowId, inv, data) -> {

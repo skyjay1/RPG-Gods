@@ -199,8 +199,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         this.nameField.setBordered(true);
         this.nameField.setMaxLength(35);
         this.nameField.setResponder(s -> name = (s != null && s.length() > 0) ? Optional.of(s) : Optional.empty());
-        // TODO disable when deity is present
-        //this.nameField.setEnabled(!getContainer().getAltar().getDeity().isPresent());
+        this.nameField.setEditable(!getMenu().getAltar().getDeity().isPresent());
         this.children.add(this.nameField);
         // update
         this.updateSliders();

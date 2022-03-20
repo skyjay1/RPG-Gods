@@ -17,25 +17,25 @@ import rpggods.event.FavorEventHandler;
 
 import java.util.Optional;
 
-public class PerkData {
+public class PerkAction {
 
-    public static final PerkData EMPTY = new PerkData(PerkData.Type.FAVOR, Optional.empty(),
+    public static final PerkAction EMPTY = new PerkAction(PerkAction.Type.FAVOR, Optional.empty(),
             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
             Optional.empty(), Optional.empty(), true);
 
-    public static final Codec<PerkData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            PerkData.Type.CODEC.fieldOf("type").forGetter(PerkData::getType),
-            Codec.STRING.optionalFieldOf("data").forGetter(PerkData::getString),
-            ResourceLocation.CODEC.optionalFieldOf("id").forGetter(PerkData::getId),
-            CompoundNBT.CODEC.optionalFieldOf("tag").forGetter(PerkData::getTag),
-            ItemStack.CODEC.optionalFieldOf("item").forGetter(PerkData::getItem),
-            Codec.LONG.optionalFieldOf("favor").forGetter(PerkData::getFavor),
-            Codec.FLOAT.optionalFieldOf("multiplier").forGetter(PerkData::getMultiplier),
-            Affinity.CODEC.optionalFieldOf("affinity").forGetter(PerkData::getAffinity),
-            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkData::isHidden)
-    ).apply(instance, PerkData::new));
+    public static final Codec<PerkAction> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            PerkAction.Type.CODEC.fieldOf("type").forGetter(PerkAction::getType),
+            Codec.STRING.optionalFieldOf("data").forGetter(PerkAction::getString),
+            ResourceLocation.CODEC.optionalFieldOf("id").forGetter(PerkAction::getId),
+            CompoundNBT.CODEC.optionalFieldOf("tag").forGetter(PerkAction::getTag),
+            ItemStack.CODEC.optionalFieldOf("item").forGetter(PerkAction::getItem),
+            Codec.LONG.optionalFieldOf("favor").forGetter(PerkAction::getFavor),
+            Codec.FLOAT.optionalFieldOf("multiplier").forGetter(PerkAction::getMultiplier),
+            Affinity.CODEC.optionalFieldOf("affinity").forGetter(PerkAction::getAffinity),
+            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkAction::isHidden)
+    ).apply(instance, PerkAction::new));
 
-    private final PerkData.Type type;
+    private final PerkAction.Type type;
     private final Optional<String> string;
     private final Optional<ResourceLocation> id;
     private final Optional<CompoundNBT> tag;
@@ -46,9 +46,9 @@ public class PerkData {
     private final boolean hidden;
     private IFormattableTextComponent descriptionTranslationKey;
 
-    public PerkData(Type type, Optional<String> string, Optional<ResourceLocation> id, Optional<CompoundNBT> tag,
-                    Optional<ItemStack> item, Optional<Long> favor, Optional<Float> multiplier,
-                    Optional<Affinity> affinity, boolean hidden) {
+    public PerkAction(Type type, Optional<String> string, Optional<ResourceLocation> id, Optional<CompoundNBT> tag,
+                      Optional<ItemStack> item, Optional<Long> favor, Optional<Float> multiplier,
+                      Optional<Affinity> affinity, boolean hidden) {
         this.type = type;
         this.string = string;
         this.id = id;
@@ -194,7 +194,7 @@ public class PerkData {
         SPECIAL_PRICE("special_price"),
         XP("xp");
 
-        private static final Codec<PerkData.Type> CODEC = Codec.STRING.comapFlatMap(PerkData.Type::fromString, PerkData.Type::getSerializedName).stable();
+        private static final Codec<PerkAction.Type> CODEC = Codec.STRING.comapFlatMap(PerkAction.Type::fromString, PerkAction.Type::getSerializedName).stable();
 
         private final String name;
 
@@ -202,8 +202,8 @@ public class PerkData {
             name = id;
         }
 
-        public static DataResult<PerkData.Type> fromString(String id) {
-            for(final PerkData.Type t : values()) {
+        public static DataResult<PerkAction.Type> fromString(String id) {
+            for(final PerkAction.Type t : values()) {
                 if(t.getSerializedName().equals(id)) {
                     return DataResult.success(t);
                 }

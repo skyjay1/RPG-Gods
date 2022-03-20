@@ -1,6 +1,7 @@
 package rpggods.favor;
 
 import com.google.common.collect.Iterables;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.util.ResourceLocation;
@@ -9,6 +10,7 @@ import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
+import rpggods.event.FavorChangedEvent;
 import rpggods.util.Cooldown;
 
 import java.util.Map;
@@ -107,7 +109,13 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         getPerkCooldownMap().put(key, cooldown);
     }
 
-    default void clearAllCooldown() {
+    default void reset() {
+        getAllFavor().clear();
+        setPatron(Optional.empty());
+        resetCooldowns();
+    }
+
+    default void resetCooldowns() {
         getPerkCooldownMap().clear();
         getOfferingCooldownMap().clear();
         getSacrificeCooldownMap().clear();
@@ -174,6 +182,13 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
             if(cooldown.getCooldown() > 0) {
                 cooldown.addCooldown(-timeSinceLastTick);
             }
+        }
+    }
+
+    default void depleteFavor(final PlayerEntity player) {
+        final int amount = RPGGods.CONFIG.getFavorDecayAmount();
+        for(Entry<ResourceLocation, FavorLevel> entry : getAllFavor().entrySet()) {
+            entry.getValue().depleteFavor(player, entry.getKey(), amount, FavorChangedEvent.Source.DECAY, false);
         }
     }
 

@@ -29,7 +29,6 @@ import rpggods.favor.FavorRange;
 import rpggods.favor.IFavor;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
-import rpggods.perk.PerkData;
 import rpggods.tameable.ITameable;
 
 import java.util.EnumSet;
@@ -38,8 +37,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import net.minecraft.entity.ai.goal.Goal.Flag;
 
 public class AffinityGoal {
 
@@ -186,12 +183,6 @@ public class AffinityGoal {
 
         public FleeGoal(final CreatureEntity owner, float distanceIn) {
             super(owner, PlayerEntity.class, distanceIn, 1.30D, 1.20D, createAvoidPredicate(owner));
-        }
-
-        @Override
-        public void start() {
-            super.start();
-            // TODO: cooldown?
         }
 
         private static Predicate<LivingEntity> createAvoidPredicate(final CreatureEntity creature) {

@@ -1,0 +1,27 @@
+{
+  "item": {
+    "id": "minecraft:bow",
+    "Count": 1,
+    "tag": {
+      "Enchantments": [
+        {
+          "id": "minecraft:unbreaking",
+          "lvl": 1
+        }
+      ]
+    }
+  },
+  "trade": {
+    "id": "minecraft:bow",
+    "Count": 1,
+    "tag": {
+      "Enchantments": [
+        {
+          "id": "minecraft:unbreaking",
+          "lvl": 3
+        }
+      ]
+    }
+  },
+  "minlevel": 3
+}

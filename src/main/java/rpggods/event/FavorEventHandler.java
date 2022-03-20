@@ -17,7 +17,6 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.monster.DrownedEntity;
@@ -53,17 +52,14 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingSetAttackTargetEvent;
+import net.minecraftforge.event.entity.living.PotionEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Deity;
@@ -75,7 +71,7 @@ import rpggods.favor.IFavor;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
 import rpggods.util.Cooldown;
 
@@ -116,31 +112,40 @@ public class FavorEventHandler {
                 }
             }
             // process the offering
+            // TODO: debug
+            if(offeringId != null) {
+                Cooldown cooldown = favor.getOfferingCooldown(offeringId);
+                RPGGods.LOGGER.debug(item.getItem().getRegistryName() + " is registered to " + offeringId + " with " + cooldown);
+            }
+
             if(offering != null && offeringId != null && favor.getOfferingCooldown(offeringId).canUse()) {
-                favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
-                favor.getOfferingCooldown(offeringId).addUse();
-                offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
-                // shrink item stack
-                if(!player.isCreative()) {
-                    item.shrink(offering.getAccept().getCount());
+                boolean matchTradeLevel = !offering.getTrade().isPresent()
+                        || (offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() >= offering.getTradeMinLevel());
+                if(matchTradeLevel) {
+                    // add favor and run function, if any
+                    favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
+                    favor.getOfferingCooldown(offeringId).addUse();
+                    offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                    // shrink item stack
+                    if(!player.isCreative()) {
+                        item.shrink(offering.getAccept().getCount());
+                    }
+                    // process trade, if any
+                    if(offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty()) {
+                        ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), offering.getTrade().get().copy());
+                        itemEntity.setNoPickUpDelay();
+                        player.level.addFreshEntity(itemEntity);
+                    }
+                    // particles
+                    if(entity.isPresent() && player.level instanceof ServerWorld) {
+                        Vector3d pos = Vector3d.atBottomCenterOf(entity.get().blockPosition().above());
+                        IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+                        ((ServerWorld)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
+                    }
+                    return Optional.of(item);
                 }
-                // process trade, if any
-                if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() >= offering.getTradeMinLevel()) {
-                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), offering.getTrade().get().copy());
-                    itemEntity.setNoPickUpDelay();
-                    player.level.addFreshEntity(itemEntity);
-                }
-                // particles
-                if(entity.isPresent() && player.level instanceof ServerWorld) {
-                    Vector3d pos = Vector3d.atBottomCenterOf(entity.get().blockPosition().above());
-                    IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
-                    ((ServerWorld)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
-                }
-                return Optional.of(item);
             }
         }
-
-
         return Optional.empty();
     }
 
@@ -156,6 +161,7 @@ public class FavorEventHandler {
         if(favor.isEnabled()) {
             // find and process all matching sacrifices
             ResourceLocation entityId = entity.getType().getRegistryName();
+            ResourceLocation deity;
             Sacrifice sacrifice;
             Cooldown cooldown;
             for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
@@ -163,9 +169,10 @@ public class FavorEventHandler {
                     sacrifice = entry.getValue().get();
                     if(sacrifice != null && entityId.equals(sacrifice.getEntity())) {
                         cooldown = favor.getSacrificeCooldown(entry.getKey());
+                        deity = Sacrifice.getDeity(entry.getKey());
                         if(cooldown.canUse()) {
                             cooldown.addUse();
-                            favor.getFavor(sacrifice.getDeity()).addFavor(player, sacrifice.getDeity(), sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
+                            favor.getFavor(deity).addFavor(player, deity, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
                             sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
                         }
                     }
@@ -199,19 +206,19 @@ public class FavorEventHandler {
     }
 
     /**
-     * Loads all perks with the given {@link PerkData.Type} and attempts to run each one.
+     * Loads all perks with the given {@link PerkAction.Type} and attempts to run each one.
      * @param type the action type (eg, function, item, potion, summon, arrow, xp)
      * @param player the player
      * @param favor the player's favor
      * @param entity an entity to use when running the perk, if any
      * @return True if at least one perk ran
      */
-    public static boolean triggerPerks(final PerkData.Type type, final PlayerEntity player, final IFavor favor, final Optional<Entity> entity) {
+    public static boolean triggerPerks(final PerkAction.Type type, final PlayerEntity player, final IFavor favor, final Optional<Entity> entity) {
         return triggerPerks(type, player, favor, entity, Optional.empty(), Optional.empty());
     }
 
     /**
-     * Loads all perks with the given {@link PerkData.Type} and attempts to run each one.
+     * Loads all perks with the given {@link PerkAction.Type} and attempts to run each one.
      * @param type the action type (eg, function, item, potion, summon, arrow, xp)
      * @param player the player
      * @param favor the player's favor
@@ -220,7 +227,7 @@ public class FavorEventHandler {
      * @param object the Event to reference when running the perk, if any
      * @return True if at least one perk ran
      */
-    public static boolean triggerPerks(final PerkData.Type type, final PlayerEntity player, final IFavor favor,
+    public static boolean triggerPerks(final PerkAction.Type type, final PlayerEntity player, final IFavor favor,
                                        final Optional<Entity> entity, final Optional<ResourceLocation> data,
                                        final Optional<? extends Event> object) {
         boolean success = false;
@@ -306,7 +313,7 @@ public class FavorEventHandler {
             // DEBUG
             RPGGods.LOGGER.debug("Running perk " + perk);
             boolean success = false;
-            for(final PerkData action : perk.getActions()) {
+            for(final PerkAction action : perk.getActions()) {
                 success |= runPerkAction(perk.getDeity(), action, player, favor, entity, data, object);
             }
             if(success) {
@@ -333,7 +340,7 @@ public class FavorEventHandler {
      * @param object the Event to reference when running the perk, if any
      * @return True if the action ran successfully
      */
-    public static boolean runPerkAction(final ResourceLocation deity, final PerkData action, final PlayerEntity player, final IFavor favor,
+    public static boolean runPerkAction(final ResourceLocation deity, final PerkAction action, final PlayerEntity player, final IFavor favor,
                                         final Optional<Entity> entity, final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         switch (action.getType()) {
             case FUNCTION: return action.getId().isPresent() && runFunction(player.level, player, action.getId().get());
@@ -478,6 +485,7 @@ public class FavorEventHandler {
             case PLAYER_RIDE_ENTITY: return player.isPassenger() && player.getVehicle() != null
                     && data.isPresent() && data.equals(player.getVehicle().getType().getRegistryName());
             // match data to perk condition data
+            case EFFECT_START:
             case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER:
             case PLAYER_HURT_ENTITY:
@@ -664,6 +672,7 @@ public class FavorEventHandler {
                     event.getTarget().getCapability(RPGGods.TAMEABLE).ifPresent(t -> {
                         if(t.isOwner(event.getPlayer())) {
                             t.setSitting(!t.isSitting());
+                            // TODO: send packet to notify client of new sitting state
                             event.setCancellationResult(ActionResultType.SUCCESS);
                         }
                     });
@@ -679,17 +688,21 @@ public class FavorEventHandler {
                 if(thrower instanceof PlayerEntity) {
                     // onArrowDamage, onArrowEffect, onArrowCount
                     thrower.getCapability(RPGGods.FAVOR).ifPresent(f -> {
-                        triggerPerks(PerkData.Type.ARROW_DAMAGE, (PlayerEntity) thrower, f, Optional.of(arrow));
-                        triggerPerks(PerkData.Type.ARROW_EFFECT, (PlayerEntity) thrower, f, Optional.of(arrow));
-                        triggerPerks(PerkData.Type.ARROW_COUNT, (PlayerEntity) thrower, f, Optional.of(arrow));
+                        triggerPerks(PerkAction.Type.ARROW_DAMAGE, (PlayerEntity) thrower, f, Optional.of(arrow));
+                        triggerPerks(PerkAction.Type.ARROW_EFFECT, (PlayerEntity) thrower, f, Optional.of(arrow));
+                        triggerPerks(PerkAction.Type.ARROW_COUNT, (PlayerEntity) thrower, f, Optional.of(arrow));
                     });
                 }
             }
             if(!event.getEntity().level.isClientSide && event.getEntity() instanceof MobEntity) {
                 MobEntity mob = (MobEntity) event.getEntity();
                 //addAffinityGoals(mob);
+                boolean fleeEnabled = RPGGods.CONFIG.isFleeEnabled();
+                boolean hostileEnabled= RPGGods.CONFIG.isHostileEnabled();
+                boolean passiveEnabled = RPGGods.CONFIG.isPassiveEnabled();
+                boolean tameableEnabled = RPGGods.CONFIG.isTameableEnabled();
                 // add tameable goals
-                if(event.getEntity().getCapability(RPGGods.TAMEABLE).isPresent()) {
+                if(tameableEnabled && event.getEntity().getCapability(RPGGods.TAMEABLE).isPresent()) {
                     mob.goalSelector.addGoal(0, new AffinityGoal.SittingGoal(mob));
                     mob.goalSelector.addGoal(0, new AffinityGoal.SittingResetGoal(mob));
                     mob.goalSelector.addGoal(1, new AffinityGoal.FollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
@@ -697,13 +710,32 @@ public class FavorEventHandler {
                     mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtTargetGoal(mob));
                 }
                 // add flee goal
-                if(event.getEntity() instanceof CreatureEntity) {
+                if(fleeEnabled && event.getEntity() instanceof CreatureEntity) {
                     mob.goalSelector.addGoal(1, new AffinityGoal.FleeGoal((CreatureEntity) mob));
                 }
                 // add hostile goal
-                mob.goalSelector.addGoal(4, new AffinityGoal.NearestAttackableGoal(mob, 0.1F));
+                if(hostileEnabled) {
+                    mob.goalSelector.addGoal(4, new AffinityGoal.NearestAttackableGoal(mob, 0.1F));
+                }
                 // add target reset goal
-                mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
+                if(hostileEnabled || passiveEnabled) {
+                    mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
+                }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onAddPotion(final PotionEvent.PotionAddedEvent event) {
+            if(!event.isCanceled() && event.getEntityLiving() instanceof PlayerEntity && !event.getEntityLiving().level.isClientSide
+                    && event.getEntityLiving().isAlive()) {
+                PlayerEntity player = (PlayerEntity)event.getEntityLiving();
+                if(!player.isSpectator() && !player.isCreative()) {
+                    // onEffectStart
+                    player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                        triggerCondition(PerkCondition.Type.EFFECT_START, player, f, Optional.empty(),
+                                Optional.of(event.getPotionEffect().getEffect().getRegistryName()), Optional.empty());
+                    });
+                }
             }
         }
 
@@ -726,7 +758,7 @@ public class FavorEventHandler {
                     && !event.getCausedByPlayer().isCreative() && !event.getCausedByPlayer().isSpectator()
                     && event.getParentA() instanceof AnimalEntity && event.getParentB() instanceof AnimalEntity) {
                 event.getCausedByPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
-                    triggerPerks(PerkData.Type.OFFSPRING, event.getCausedByPlayer(), f, Optional.of(event.getParentA()), Optional.empty(), Optional.of(event));
+                    triggerPerks(PerkAction.Type.OFFSPRING, event.getCausedByPlayer(), f, Optional.of(event.getParentA()), Optional.empty(), Optional.of(event));
                 });
             }
         }
@@ -735,7 +767,7 @@ public class FavorEventHandler {
         public static void onPlayerPickupXp(final PlayerXpEvent.PickupXp event) {
             if(event.getPlayer().isEffectiveAi() && !event.getPlayer().level.isClientSide()) {
                 event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
-                    triggerPerks(PerkData.Type.XP, event.getPlayer(), f, Optional.of(event.getOrb()));
+                    triggerPerks(PerkAction.Type.XP, event.getPlayer(), f, Optional.of(event.getOrb()));
                 });
             }
         }
@@ -746,23 +778,23 @@ public class FavorEventHandler {
                     && event.player.isAlive() && canTickFavor(event.player)) {
                 event.player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                     // trigger perks
-                    if(Math.random() < RANDOM_TICK_CHANCE) {
+                    if(Math.random() < RPGGods.CONFIG.getRandomPerkChance()) {
                         // onRandomTick
                         triggerCondition(PerkCondition.Type.RANDOM_TICK, event.player, f, Optional.empty(),
                                 Optional.empty(), Optional.empty());
                     }
                     // reduce cooldowns
                     f.tickCooldown(event.player.level.getGameTime());
+                    // deplete favor
+                    if(Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
+                        f.depleteFavor(event.player);
+                    }
                 });
             }
         }
 
-        // TODO: add to config
-        public static final int TICK_RATE = 20;
-        public static final float RANDOM_TICK_CHANCE = 0.6F;
-
         public static boolean canTickFavor(final LivingEntity entity) {
-            return (entity.tickCount + entity.getId()) % TICK_RATE == 0;
+            return (entity.tickCount + entity.getId()) % RPGGods.CONFIG.getFavorUpdateRate() == 0;
         }
 
         // TODO: use this instead of adding to all entities
@@ -776,8 +808,12 @@ public class FavorEventHandler {
                 }
                 Set<Affinity.Type> types = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).keySet();
                 RPGGods.LOGGER.debug(id + " has affinity types " + types);
+                boolean fleeEnabled = RPGGods.CONFIG.isFleeEnabled();
+                boolean hostileEnabled= RPGGods.CONFIG.isHostileEnabled();
+                boolean passiveEnabled = RPGGods.CONFIG.isPassiveEnabled();
+                boolean tameableEnabled = RPGGods.CONFIG.isTameableEnabled();
                 // add tameable goals
-                if(types.contains(Affinity.Type.TAME)) {
+                if(tameableEnabled && types.contains(Affinity.Type.TAME)) {
                     mob.goalSelector.addGoal(0, new AffinityGoal.SittingGoal(mob));
                     mob.goalSelector.addGoal(0, new AffinityGoal.SittingResetGoal(mob));
                     mob.goalSelector.addGoal(1, new AffinityGoal.FollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
@@ -785,15 +821,15 @@ public class FavorEventHandler {
                     mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtTargetGoal(mob));
                 }
                 // add flee goal
-                if(types.contains(Affinity.Type.FLEE) && mob instanceof CreatureEntity) {
+                if(fleeEnabled && types.contains(Affinity.Type.FLEE) && mob instanceof CreatureEntity) {
                     mob.goalSelector.addGoal(1, new AffinityGoal.FleeGoal((CreatureEntity) mob));
                 }
                 // add hostile goal
-                if(types.contains(Affinity.Type.HOSTILE)) {
+                if(hostileEnabled && types.contains(Affinity.Type.HOSTILE)) {
                     mob.goalSelector.addGoal(4, new AffinityGoal.NearestAttackableGoal(mob, 0.1F));
                 }
                 // add target reset goal
-                if(types.contains(Affinity.Type.HOSTILE) || types.contains(Affinity.Type.PASSIVE)) {
+                if((hostileEnabled && types.contains(Affinity.Type.HOSTILE)) || (passiveEnabled && types.contains(Affinity.Type.PASSIVE))) {
                     mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
                 }
             };

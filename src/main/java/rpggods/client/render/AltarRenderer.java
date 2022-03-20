@@ -51,7 +51,6 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
 
     public AltarRenderer(final EntityRendererManager renderManagerIn) {
         super(renderManagerIn, new AltarModel(0.0F, 0.0F), 0.5F);
-        // TODO: fix armor layer
         this.addLayer(new BipedArmorLayer(this, new AltarArmorModel(0.5F), new AltarArmorModel(1.0F)));
         this.addLayer(new HeldItemLayer<>(this));
         this.addLayer(new ElytraLayer<>(this));

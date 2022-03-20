@@ -38,7 +38,7 @@ import rpggods.favor.IFavor;
 import rpggods.gui.FavorContainer;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -193,7 +193,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             entry.getValue().ifPresent(offering -> {
                 if(offering.getFavor() != 0 || offering.getFunction().isPresent()) {
                     Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
-                    map.computeIfAbsent(offering.getDeity(), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), offering));
+                    map.computeIfAbsent(Offering.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), offering));
                 }
             });
         }
@@ -204,7 +204,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
             entry.getValue().ifPresent(sacrifice -> {
                 if(sacrifice.getFavor() != 0 || sacrifice.getFunction().isPresent()) {
-                    sacrificeMap.computeIfAbsent(sacrifice.getDeity(), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), sacrifice));
+                    sacrificeMap.computeIfAbsent(Sacrifice.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), sacrifice));
                 }
             });
         }
@@ -898,7 +898,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             this.perkRange = StringTextComponent.EMPTY;
             if(perk != null) {
                 // add all perk action titles
-                for(PerkData data : perk.getActions()) {
+                for(PerkAction data : perk.getActions()) {
                     perkTypes.add(data.getDisplayName().withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE));
                     perkTypes.add(data.getDisplayDescription().withStyle(TextFormatting.BLUE));
                 }

@@ -6,7 +6,7 @@ import net.minecraft.util.text.TranslationTextComponent;
 import rpggods.favor.FavorRange;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -19,6 +19,8 @@ import java.util.Map;
  * for quicker and easier lookup
  */
 public class Deity {
+    public static final Deity EMPTY = new Deity(new ResourceLocation("null"));
+
     /** The ResourceLocation ID **/
     public final ResourceLocation id;
     /** List of Altars **/
@@ -30,7 +32,7 @@ public class Deity {
     /** Map of PerkCondition.Type to Perk(s). May contain multiple instances of the same Perk. **/
     public final Map<PerkCondition.Type, List<ResourceLocation>> perkByConditionMap = new EnumMap<>(PerkCondition.Type.class);
     /** Map of PerkData.Type to Perk(s) **/
-    public final Map<PerkData.Type, List<ResourceLocation>> perkByTypeMap = new EnumMap<>(PerkData.Type.class);
+    public final Map<PerkAction.Type, List<ResourceLocation>> perkByTypeMap = new EnumMap<>(PerkAction.Type.class);
     /** List of all Perks **/
     public final List<ResourceLocation> perkList = new ArrayList<>();
 
@@ -93,8 +95,8 @@ public class Deity {
             perkByConditionMap.computeIfAbsent(condition.getType(), r -> new ArrayList<>()).add(id);
         }
         // add to perkByType map
-        for(final PerkData action : perk.getActions()) {
-            PerkData.Type type = action.getType();
+        for(final PerkAction action : perk.getActions()) {
+            PerkAction.Type type = action.getType();
             perkByTypeMap.computeIfAbsent(type, r -> new ArrayList<>()).add(id);
         }
     }

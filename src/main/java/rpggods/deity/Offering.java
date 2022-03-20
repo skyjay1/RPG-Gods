@@ -8,17 +8,17 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
 import net.minecraftforge.registries.ForgeRegistries;
+import rpggods.RPGGods;
 import rpggods.util.Cooldown;
 
 import java.util.Optional;
 import java.util.function.Function;
 
 public class Offering {
-    public static final Offering EMPTY = new Offering(new ResourceLocation("null"), ItemStack.EMPTY,
-            0, 0, 0, Optional.empty(), 0, Optional.empty(), Optional.empty());
+    public static final Offering EMPTY = new Offering(ItemStack.EMPTY, 0, 0, 0,
+            Optional.empty(), 0, Optional.empty(), Optional.empty());
 
     public static final Codec<Offering> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("deity", new ResourceLocation("null")).forGetter(Offering::getDeity),
             Codec.either(Registry.ITEM, ItemStack.CODEC)
                     .xmap(either -> either.map(ItemStack::new, Function.identity()),
                             stack -> stack.getCount() == 1 && !stack.hasTag()
@@ -34,7 +34,6 @@ public class Offering {
             Codec.STRING.optionalFieldOf("function_text").forGetter(Offering::getFunctionText)
     ).apply(instance, Offering::new));
 
-    private final ResourceLocation deity;
     private final ItemStack accept;
     private final int favor;
     private final Optional<ItemStack> trade;
@@ -44,10 +43,9 @@ public class Offering {
     private final int maxUses;
     private final int cooldown;
 
-    public Offering(ResourceLocation deity, ItemStack accept, int favor, int maxUses, int cooldown,
+    public Offering(ItemStack accept, int favor, int maxUses, int cooldown,
                     Optional<ItemStack> trade, int tradeMinLevel,
                     Optional<ResourceLocation> function, Optional<String> functionText) {
-        this.deity = deity;
         this.accept = accept;
         this.favor = favor;
         this.maxUses = maxUses;
@@ -58,8 +56,18 @@ public class Offering {
         this.functionText = functionText;
     }
 
-    public ResourceLocation getDeity() {
-        return deity;
+    /**
+     * Attempts to parse the deity from the given offering id
+     * @param offeringId the offering id in the form {@code namespace:deity/offering}
+     * @return the resource location if found, otherwise {@link Deity#EMPTY}
+     */
+    public static ResourceLocation getDeity(final ResourceLocation offeringId) {
+        String path = offeringId.getPath();
+        int index = path.indexOf("/");
+        if(index > -1) {
+            return new ResourceLocation(offeringId.getNamespace(), path.substring(0, index));
+        }
+        return Deity.EMPTY.id;
     }
 
     public ItemStack getAccept() {

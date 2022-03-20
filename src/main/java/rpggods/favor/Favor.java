@@ -60,7 +60,7 @@ public class Favor implements IFavor {
 
     @Override
     public boolean isEnabled() {
-        return /* TODO: GreekFantasy.CONFIG.isFavorEnabled() && */ enabled;
+        return RPGGods.CONFIG.isFavorEnabled() && enabled;
     }
 
     @Override

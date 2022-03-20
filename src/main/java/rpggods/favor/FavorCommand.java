@@ -3,7 +3,6 @@ package rpggods.favor;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -15,11 +14,11 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TranslationTextComponent;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.deity.Deity;
 import rpggods.event.FavorChangedEvent;
 
 import java.util.Collection;
+import java.util.Optional;
 
 public class FavorCommand {
     private static final DynamicCommandExceptionType FAVOR_DISABLED_EXCEPTION = new DynamicCommandExceptionType(o -> new TranslationTextComponent("commands.favor.enabled.disabled", o));
@@ -36,7 +35,9 @@ public class FavorCommand {
                                                         .then(Commands.literal("points")
                                                                 .executes(command -> addFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"), Type.POINTS)))
                                                         .then(Commands.literal("levels")
-                                                                .executes(command -> addFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"), Type.LEVELS))))))))
+                                                                .executes(command -> addFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"), Type.LEVELS)))
+                                                        .then(Commands.literal("decay")
+                                                                .executes(command -> addDecay(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount")))))))))
                         .then(Commands.literal("set")
                                 .then(Commands.argument("targets", EntityArgument.players())
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
@@ -45,7 +46,11 @@ public class FavorCommand {
                                                         .then(Commands.literal("points")
                                                                 .executes(command -> setFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"), Type.POINTS)))
                                                         .then(Commands.literal("levels")
-                                                                .executes(command -> setFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"), Type.LEVELS))))))
+                                                                .executes(command -> setFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"), Type.LEVELS)))
+                                                        .then(Commands.literal("decay")
+                                                                .executes(command -> setDecay(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"))))))
+                                                .then(Commands.literal("patron")
+                                                        .executes(command -> setPatron(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity")))))
                                         .then(Commands.literal("enabled")
                                                 .then(Commands.argument("flag", BoolArgumentType.bool())
                                                         .executes(command -> setEnabled(command.getSource(), EntityArgument.getPlayers(command, "targets"), BoolArgumentType.getBool(command, "flag")))))))
@@ -56,9 +61,13 @@ public class FavorCommand {
                                                 .then(Commands.literal("points")
                                                         .executes(command -> queryFavor(command.getSource(), EntityArgument.getPlayer(command, "target"), ResourceLocationArgument.getId(command, "deity"), Type.POINTS)))
                                                 .then(Commands.literal("levels")
-                                                        .executes(command -> queryFavor(command.getSource(), EntityArgument.getPlayer(command, "target"), ResourceLocationArgument.getId(command, "deity"), Type.LEVELS))))
+                                                        .executes(command -> queryFavor(command.getSource(), EntityArgument.getPlayer(command, "target"), ResourceLocationArgument.getId(command, "deity"), Type.LEVELS)))
+                                                .then(Commands.literal("decay")
+                                                        .executes(command -> queryDecay(command.getSource(), EntityArgument.getPlayer(command, "target"), ResourceLocationArgument.getId(command, "deity")))))
                                         .then(Commands.literal("enabled")
-                                                .executes(command -> queryEnabled(command.getSource(), EntityArgument.getPlayer(command, "target"))))))
+                                                .executes(command -> queryEnabled(command.getSource(), EntityArgument.getPlayer(command, "target"))))
+                                        .then(Commands.literal("patron")
+                                                .executes(command -> queryPatron(command.getSource(), EntityArgument.getPlayer(command, "target"))))))
                         .then(Commands.literal("cap")
                                 .then(Commands.argument("target", EntityArgument.players())
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
@@ -72,6 +81,13 @@ public class FavorCommand {
                                                                 .then(Commands.literal("levels")
                                                                         .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"),
                                                                                 IntegerArgumentType.getInteger(command, "min"), IntegerArgumentType.getInteger(command, "max"), Type.LEVELS))))))))
+                        .then(Commands.literal("reset")
+                                .then(Commands.argument("target", EntityArgument.players())
+                                        .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "target")))
+                                        .then(Commands.argument("deity", ResourceLocationArgument.id())
+                                                .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"))))
+                                        .then(Commands.literal("cooldown")
+                                                .executes(command -> resetCooldown(command.getSource(), EntityArgument.getPlayers(command, "target"))))))
         );
 
         commandSource.register(Commands.literal("favor")
@@ -129,6 +145,13 @@ public class FavorCommand {
         return players.size();
     }
 
+    private static int queryEnabled(CommandSource source, ServerPlayerEntity player) {
+        final boolean enabled = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()).isEnabled();
+        // send command feedback
+        source.sendSuccess(new TranslationTextComponent("commands.favor.enabled." + (enabled ? "enabled" : "disabled"), player.getDisplayName()), true);
+        return enabled ? 1 : 0;
+    }
+
     private static int setEnabled(CommandSource source, Collection<? extends ServerPlayerEntity> players, boolean enabled) {
         for (final ServerPlayerEntity player : players) {
             player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()).setEnabled(enabled);
@@ -140,38 +163,155 @@ public class FavorCommand {
         } else {
             source.sendSuccess(new TranslationTextComponent("commands.favor." + sub + ".success.multiple", players.size()), true);
         }
-        return 0;
+        return players.size();
     }
 
-    private static int queryEnabled(CommandSource source, ServerPlayerEntity player) {
-        final boolean enabled = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()).isEnabled();
+    private static int queryDecay(CommandSource source, ServerPlayerEntity target, ResourceLocation deity) throws CommandSyntaxException {
+        IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+        if (!favor.isEnabled()) {
+            throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
+        }
+        float fDecay = favor.getFavor(deity).getDecayRate();
+        int decay = Math.round(fDecay * 100);
         // send command feedback
-        source.sendSuccess(new TranslationTextComponent("commands.favor.enabled." + (enabled ? "enabled" : "disabled"), player.getDisplayName()), true);
-        return enabled ? 1 : 0;
+        source.sendSuccess(new TranslationTextComponent("commands.favor.query.decay", target.getDisplayName(), decay, Deity.getName(deity)), true);
+        return decay;
     }
-//
-//    private static int setCooldown(CommandSource source, Collection<? extends ServerPlayerEntity> players, long cooldown) throws CommandSyntaxException {
-//        // add favor to each player in the collection
-//        IFavor favor;
-//        long time;
-//        for (final ServerPlayerEntity player : players) {
-//            time = IFavor.calculateTime(player);
-//            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
-//            if (!favor.isEnabled()) {
-//                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
-//            }
-//            favor.setEffectTime(time, cooldown);
-//            favor.setTriggeredTime(time, cooldown);
-//        }
-//        // send command feedback
-//        if (players.size() == 1) {
-//            source.sendFeedback(new TranslationTextComponent("commands.favor.cooldown.success.single", cooldown, players.iterator().next().getDisplayName()), true);
-//        } else {
-//            source.sendFeedback(new TranslationTextComponent("commands.favor.cooldown.success.multiple", cooldown, players.size()), true);
-//        }
-//
-//        return players.size();
-//    }
+
+    private static int setDecay(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int decay) throws CommandSyntaxException {
+        // set decay rate to each player in the collection
+        IFavor favor;
+        float fDecay = decay / 100.0F;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            if (!favor.isEnabled()) {
+                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
+            }
+            favor.getFavor(deity).setDecayRate(fDecay);
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.set.decay.success.single", decay, Deity.getName(deity), players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.set.decay.success.multiple", decay, Deity.getName(deity), players.size()), true);
+        }
+        return players.size();
+    }
+
+    private static int addDecay(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int decay) throws CommandSyntaxException {
+        // add decay rate to each player in the collection
+        IFavor favor;
+        float fDecay = decay / 100.0F;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            if (!favor.isEnabled()) {
+                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
+            }
+            float d = favor.getFavor(deity).getDecayRate();
+            favor.getFavor(deity).setDecayRate(d + fDecay);
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.add.decay.success.single", decay, Deity.getName(deity), players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.add.decay.success.multiple", decay, Deity.getName(deity), players.size()), true);
+        }
+        return players.size();
+    }
+
+    private static int queryPatron(CommandSource source, ServerPlayerEntity target) throws CommandSyntaxException {
+        IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+        if (!favor.isEnabled()) {
+            throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
+        }
+        Optional<ResourceLocation> deity = favor.getPatron();
+        // send command feedback
+        if(deity.isPresent()) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.query.patron.success", target.getDisplayName(), Deity.getName(deity.get())), true);
+            return 1;
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.query.patron.empty", target.getDisplayName()), true);
+            return 0;
+        }
+    }
+
+    private static int setPatron(CommandSource source, Collection<ServerPlayerEntity> players, ResourceLocation deity) throws CommandSyntaxException {
+        // set decay rate to each player in the collection
+        IFavor favor;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            if (!favor.isEnabled()) {
+                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
+            }
+            favor.setPatron(Optional.of(deity));
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.set.patron.success.single", Deity.getName(deity), players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.set.patron.success.multiple", Deity.getName(deity), players.size()), true);
+        }
+        return players.size();
+    }
+
+
+    private static int resetFavor(CommandSource source, Collection<? extends ServerPlayerEntity> players) {
+        // reset favor for each player in the collection
+        IFavor favor;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            favor.reset();
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.success.single", players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.success.multiple", players.size()), true);
+        }
+
+        return players.size();
+    }
+
+    private static int resetFavor(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity) throws CommandSyntaxException {
+        // reset favor for a single deity for each player in the collection
+        IFavor favor;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            if (!favor.isEnabled()) {
+                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
+            }
+            favor.setFavor(deity, new FavorLevel(0));
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.deity.success.single", Deity.getName(deity), players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.deity.success.multiple", Deity.getName(deity), players.size()), true);
+        }
+
+        return players.size();
+    }
+
+    private static int resetCooldown(CommandSource source, Collection<? extends ServerPlayerEntity> players) throws CommandSyntaxException {
+        // add favor to each player in the collection
+        IFavor favor;
+        long time;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            if (!favor.isEnabled()) {
+                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
+            }
+            favor.resetCooldowns();
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.cooldown.success.single", players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.cooldown.success.multiple", players.size()), true);
+        }
+
+        return players.size();
+    }
 
     private static int setCap(CommandSource source, Collection<ServerPlayerEntity> players, ResourceLocation deity, int min, int max, Type type) throws CommandSyntaxException {
         // cap favor for each player in the collection

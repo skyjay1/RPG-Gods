@@ -1,20 +1,14 @@
 package rpggods;
 
 import com.google.common.collect.Lists;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.event.AttachCapabilitiesEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.network.NetworkDirection;
@@ -37,7 +31,7 @@ import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 import rpggods.util.GenericJsonReloadListener;
@@ -52,6 +46,10 @@ import java.util.Optional;
 public class RPGGods {
     public static final String MODID = "rpggods";
 
+    private static final ForgeConfigSpec.Builder CONFIG_BUILDER = new ForgeConfigSpec.Builder();
+    public static RGConfig CONFIG = new RGConfig(CONFIG_BUILDER);
+    private static final ForgeConfigSpec CONFIG_SPEC = CONFIG_BUILDER.build();
+
     @CapabilityInject(IFavor.class)
     public static final Capability<IFavor> FAVOR = null;
 
@@ -61,7 +59,6 @@ public class RPGGods {
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, "channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
-
 
     // Map of Deity ID to Deity
     public static final Map<ResourceLocation, Deity> DEITY = new HashMap<>();
@@ -76,12 +73,12 @@ public class RPGGods {
     public static final GenericJsonReloadListener<Offering> OFFERING = new GenericJsonReloadListener<>("deity/offering", Offering.class, Offering.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SOfferingPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(o -> RPGGods.DEITY.computeIfAbsent(o.getDeity(), Deity::new).add(e.getKey(), o));
+                e.getValue().ifPresent(o -> RPGGods.DEITY.computeIfAbsent(Offering.getDeity(e.getKey()), Deity::new).add(e.getKey(), o));
             }));
     public static final GenericJsonReloadListener<Sacrifice> SACRIFICE = new GenericJsonReloadListener<>("deity/sacrifice", Sacrifice.class, Sacrifice.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SSacrificePacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(s -> RPGGods.DEITY.computeIfAbsent(s.getDeity(), Deity::new).add(e.getKey(), s));
+                e.getValue().ifPresent(s -> RPGGods.DEITY.computeIfAbsent(Sacrifice.getDeity(e.getKey()), Deity::new).add(e.getKey(), s));
             }));
     public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
             l -> l.getEntries().forEach(e -> {
@@ -90,7 +87,7 @@ public class RPGGods {
                     // add Perk to Deity
                     RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(e.getKey(), p);
                     // add Perk to Affinity map if applicable
-                    for(PerkData action : p.getActions()) {
+                    for(PerkAction action : p.getActions()) {
                         if(action.getAffinity().isPresent()) {
                             Affinity affinity = action.getAffinity().get();
                             RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
@@ -113,6 +110,8 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.LootModifierReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);
         // Required for data pack sync and favor capability
         MinecraftForge.EVENT_BUS.register(RGData.class);
         // Events that affect Favor and Perks
@@ -131,5 +130,13 @@ public class RPGGods {
         // register capability
         CapabilityManager.INSTANCE.register(IFavor.class, new Favor.Storage(), Favor::new);
         CapabilityManager.INSTANCE.register(ITameable.class, new Tameable.Storage(), Tameable::new);
+    }
+
+    public static void loadConfig(final ModConfig.Loading event) {
+        CONFIG.bake();
+    }
+
+    public static void reloadConfig(final ModConfig.Reloading event) {
+        CONFIG.bake();
     }
 }

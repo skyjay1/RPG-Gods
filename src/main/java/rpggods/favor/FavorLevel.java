@@ -7,6 +7,7 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.INBTSerializable;
+import rpggods.deity.Deity;
 import rpggods.event.FavorChangedEvent;
 
 public class FavorLevel implements INBTSerializable<CompoundNBT> {
@@ -26,11 +27,8 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
     private float decayRate;
 
     public FavorLevel(final long f) {
-        this(f, -MAX_FAVOR_LEVEL, MAX_FAVOR_LEVEL);
-    }
-
-    public FavorLevel(final long f, final int min, final int max) {
         setFavor(f);
+        setDecayRate(1.0F);
     }
 
     public FavorLevel(final CompoundNBT nbt) {
@@ -171,8 +169,8 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      */
     public void sendStatusMessage(final PlayerEntity playerIn, final ResourceLocation deity) {
         long favorToNext = Math.min(calculateFavor(maxLevel), getFavorToNextLevel());
-        // TODO: centralized deity name text component
-        playerIn.displayClientMessage(new TranslationTextComponent("favor.current_favor", new TranslationTextComponent(deity.toString()), getFavor(), (favorToNext == 0 ? "--" : favorToNext), getLevel()).withStyle(TextFormatting.LIGHT_PURPLE), false);
+        String sFavorToNext = (favorToNext == 0 ? "--" : String.valueOf(favorToNext));
+        playerIn.displayClientMessage(new TranslationTextComponent("favor.current_favor", Deity.getName(deity), getFavor(), sFavorToNext, getLevel()).withStyle(TextFormatting.LIGHT_PURPLE), false);
     }
 
     @Override

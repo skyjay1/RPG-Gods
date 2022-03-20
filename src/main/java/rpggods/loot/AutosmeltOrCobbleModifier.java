@@ -29,7 +29,7 @@ import rpggods.deity.Deity;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
-import rpggods.perk.PerkData;
+import rpggods.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,8 +60,8 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         List<ResourceLocation> autosmelt = Lists.newArrayList();
         List<ResourceLocation> unsmelt = Lists.newArrayList();
         for (Deity deity : RPGGods.DEITY.values()) {
-            autosmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkData.Type.AUTOSMELT, ImmutableList.of()));
-            unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkData.Type.UNSMELT, ImmutableList.of()));
+            autosmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.AUTOSMELT, ImmutableList.of()));
+            unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.UNSMELT, ImmutableList.of()));
         }
         // make sure this is an ore mined by a non-creative player
         if (entity instanceof PlayerEntity && context.hasParam(LootParameters.BLOCK_STATE)

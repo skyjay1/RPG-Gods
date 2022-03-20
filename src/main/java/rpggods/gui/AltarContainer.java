@@ -14,6 +14,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.common.ForgeMod;
 import rpggods.RGRegistry;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
@@ -80,7 +81,8 @@ public class AltarContainer extends Container {
 
     @Override
     public boolean stillValid(final PlayerEntity playerIn) {
-        return true; // TODO
+        final double maxDistanceSq = Math.pow(playerIn.getAttributeValue(ForgeMod.REACH_DISTANCE.get()) + 1.0D, 2);
+        return getEntity() != null && playerIn.distanceToSqr(getEntity()) < maxDistanceSq;
     }
 
     public Altar getAltar() { return altar; }

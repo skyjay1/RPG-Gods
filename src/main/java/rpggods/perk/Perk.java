@@ -23,7 +23,7 @@ public class Perk {
                             list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list))
                     .optionalFieldOf("condition", Lists.newArrayList()).forGetter(Perk::getConditions),
             FavorRange.CODEC.optionalFieldOf("range", FavorRange.EMPTY).forGetter(Perk::getRange),
-            Codec.either(PerkData.CODEC, PerkData.CODEC.listOf())
+            Codec.either(PerkAction.CODEC, PerkAction.CODEC.listOf())
                     .xmap(either -> either.map(ImmutableList::of, Function.identity()),
                             list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list))
                     .optionalFieldOf("action", Lists.newArrayList()).forGetter(Perk::getActions),
@@ -35,13 +35,13 @@ public class Perk {
     private final PerkIcon icon;
     private final List<PerkCondition> conditions;
     private final FavorRange range;
-    private final List<PerkData> actions;
+    private final List<PerkAction> actions;
     private final float chance;
     private final String category;
     private final long cooldown;
 
     public Perk(PerkIcon icon, List<PerkCondition> conditions, FavorRange range,
-                List<PerkData> actions, float chance, String category, long cooldown) {
+                List<PerkAction> actions, float chance, String category, long cooldown) {
         this.icon = icon;
         this.conditions = conditions;
         this.range = range;
@@ -79,7 +79,7 @@ public class Perk {
         return cooldown;
     }
 
-    public List<PerkData> getActions() {
+    public List<PerkAction> getActions() {
         return actions;
     }
 
