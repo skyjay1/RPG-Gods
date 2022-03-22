@@ -3,21 +3,12 @@
   "name": "greek:poseidon",
   "female": false,
   "slim": false,
-  "icon": {
-    "id": "minecraft:trident",
-    "Count": 1
-  },
+  "icon": "minecraft:trident",
   "items": {
-    "mainhand": {
-      "id": "minecraft:trident",
-      "Count": 1
-    },
-    "offhand": {
-      "id": "minecraft:cod",
-      "Count": 1
-    },
+    "mainhand": "minecraft:trident",
+    "offhand": "minecraft:nautilus_shell",
     "block": "minecraft:prismarine_brick_slab",
-    "armor_locked": true,
+    "armor_locked": false,
     "hands_locked": true,
     "block_locked": true
   },
@@ -39,5 +30,5 @@
       "z": 0.0349066
     }
   },
-  "pose_locked": true
+  "pose_locked": false
 }

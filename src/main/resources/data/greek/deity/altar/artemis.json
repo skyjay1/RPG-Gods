@@ -17,7 +17,7 @@
       "Count": 1
     },
     "block": "minecraft:birch_slab",
-    "armor_locked": true,
+    "armor_locked": false,
     "hands_locked": true,
     "block_locked": true
   },
@@ -40,5 +40,5 @@
       "z": 0.069813
     }
   },
-  "pose_locked": true
+  "pose_locked": false
 }

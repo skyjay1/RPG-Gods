@@ -5,36 +5,30 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
-import net.minecraftforge.registries.ForgeRegistries;
-import rpggods.deity.Altar;
-
-import java.util.List;
-import java.util.Optional;
-
+import rpggods.deity.Offering;
 
 public class AltarItems {
 
     public static final AltarItems EMPTY = new AltarItems(ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
             ItemStack.EMPTY, ItemStack.EMPTY, Blocks.AIR, false, false, false);
 
+    private static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Offering.ITEM_OR_STACK_CODEC;
+
     public static final Codec<AltarItems> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ItemStack.CODEC.optionalFieldOf("head", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.HEAD)),
-            ItemStack.CODEC.optionalFieldOf("chest", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.CHEST)),
-            ItemStack.CODEC.optionalFieldOf("legs", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.LEGS)),
-            ItemStack.CODEC.optionalFieldOf("feet", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.FEET)),
-            ItemStack.CODEC.optionalFieldOf("mainhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.MAINHAND)),
-            ItemStack.CODEC.optionalFieldOf("offhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.OFFHAND)),
-            Registry.BLOCK.optionalFieldOf("block", Blocks.SMOOTH_STONE_SLAB).forGetter(AltarItems::getBlock),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("head", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.HEAD)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("chest", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.CHEST)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("legs", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.LEGS)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("feet", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.FEET)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("mainhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.MAINHAND)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("offhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.OFFHAND)),
+            Registry.BLOCK.optionalFieldOf("block", Blocks.AIR).forGetter(AltarItems::getBlock),
             Codec.BOOL.optionalFieldOf("armor_locked", false).forGetter(AltarItems::isArmorLocked),
             Codec.BOOL.optionalFieldOf("hands_locked", false).forGetter(AltarItems::isHandsLocked),
             Codec.BOOL.optionalFieldOf("block_locked", false).forGetter(AltarItems::isBlockLocked)
-            ).apply(instance, AltarItems::new));
+    ).apply(instance, AltarItems::new));
 
     private final ImmutableList<ItemStack> handItems;
     private final ImmutableList<ItemStack> armorItems;
@@ -62,14 +56,6 @@ public class AltarItems {
                 return armorItems.get(slotIn.getIndex());
         }
         return ItemStack.EMPTY;
-    }
-
-    public List<ItemStack> getHandItems() {
-        return handItems;
-    }
-
-    public List<ItemStack> getArmorItems() {
-        return armorItems;
     }
 
     public Block getBlock() {

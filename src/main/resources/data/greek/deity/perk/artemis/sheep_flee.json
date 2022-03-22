@@ -1,7 +1,7 @@
 {
     "icon": {
         "item": {
-            "id": "minecraft:wool",
+            "id": "minecraft:white_wool",
             "Count": 1
         },
         "color": 14277081

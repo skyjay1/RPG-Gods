@@ -41,6 +41,7 @@ import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkAction;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -191,7 +192,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         tradeMap.clear();
         for(Map.Entry<ResourceLocation, Optional<Offering>> entry : RPGGods.OFFERING.getEntries()) {
             entry.getValue().ifPresent(offering -> {
-                if(offering.getFavor() != 0 || offering.getFunction().isPresent()) {
+                if(offering.getFavor() != 0 || offering.getFunction().isPresent() || offering.getTrade().isPresent()) {
                     Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
                     map.computeIfAbsent(Offering.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), offering));
                 }
@@ -199,6 +200,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         }
         offeringCount = OFFERING_COUNT;
         tradeCount = TRADE_COUNT;
+        // sort offerings by favor (descending)
+        offeringMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getB().getFavor() - t1.getB().getFavor()));
+        // sort trades by unlock level (ascending)
+        tradeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t1.getB().getTradeMinLevel() - t2.getB().getTradeMinLevel()));
         // add all sacrifices to map
         sacrificeMap.clear();
         for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
@@ -209,6 +214,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             });
         }
         sacrificeCount = SACRIFICE_COUNT;
+        // sort sacrifices by favor (descending)
+        sacrificeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getB().getFavor() - t1.getB().getFavor()));
         // add all perks to map
         perkMap.clear();
         Perk perk;
@@ -270,12 +277,12 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         ITextComponent text;
         ITextComponent tooltip;
         // add offering UI elements
-        text = new TranslationTextComponent("gui.favor.offerings").withStyle(TextFormatting.DARK_GRAY, TextFormatting.UNDERLINE);
+        text = new TranslationTextComponent("gui.favor.offerings").withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE);
         tooltip = new TranslationTextComponent("gui.favor.offerings.tooltip");
-        offeringTitle = this.addButton(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 10, OFFERING_WIDTH * 2, 12, text, tooltip));
-        text = new TranslationTextComponent("gui.favor.trades").withStyle(TextFormatting.DARK_GRAY, TextFormatting.UNDERLINE);
+        offeringTitle = this.addButton(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 16, OFFERING_WIDTH * 2, 12, text, tooltip));
+        text = new TranslationTextComponent("gui.favor.trades").withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE);
         tooltip = new TranslationTextComponent("gui.favor.trades.tooltip");
-        tradeTitle = this.addButton(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 10, TRADE_WIDTH, 12, text, tooltip));
+        tradeTitle = this.addButton(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 16, TRADE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < OFFERING_COUNT; i++) {
             offeringButtons[i] = this.addButton(new OfferingButton(this, i, this.leftPos + OFFERING_X + OFFERING_WIDTH * (i % 2), this.topPos + OFFERING_Y + OFFERING_HEIGHT * (i / 2)));
         }
@@ -283,9 +290,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             tradeButtons[i] = this.addButton(new TradeButton(this, i, this.leftPos + TRADE_X, this.topPos + TRADE_Y + i * OFFERING_HEIGHT));
         }
         // add sacrifice UI elements
-        text = new TranslationTextComponent("gui.favor.sacrifices").withStyle(TextFormatting.DARK_GRAY, TextFormatting.UNDERLINE);
+        text = new TranslationTextComponent("gui.favor.sacrifices").withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE);
         tooltip = new TranslationTextComponent("gui.favor.sacrifices.tooltip");
-        sacrificeTitle = this.addButton(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 12, SACRIFICE_WIDTH, 12, text, tooltip));
+        sacrificeTitle = this.addButton(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 16, SACRIFICE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < SACRIFICE_COUNT; i++) {
             sacrificeButtons[i] = this.addButton(new SacrificeButton(this, i, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y + i * SACRIFICE_HEIGHT));
         }
@@ -649,11 +656,17 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         updateDeity(this.deity);
     }
 
+    /**
+     * Updates all scrollable items based on the amount
+     * @param amount the scroll percentage in the range [0.0, 1.0]
+     */
     public void updateScroll(final float amount) {
         int scrollIndex;
         switch (this.page) {
             case OFFERINGS:
+                // scroll index is some discrete value between 0 and the greater of (offeringCount/2, tradeCount)
                 scrollIndex = (int) Math.floor(amount * Math.max(offeringCount / 2, tradeCount));
+                // update all buttons with the calculated scroll index
                 for(int i = 0; i < OFFERING_COUNT; i++) {
                     offeringButtons[i].updateOffering(deity, scrollIndex);
                 }
@@ -662,7 +675,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 }
                 break;
             case SACRIFICES:
+                // scroll index is some discrete between 0 and sacrificeCount
                 scrollIndex = (int) Math.floor(amount * sacrificeCount);
+                // update all buttons with the calculated scroll index
                 for(int i = 0; i < SACRIFICE_COUNT; i++) {
                     sacrificeButtons[i].updateSacrifice(deity, scrollIndex);
                 }
@@ -715,8 +730,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
     public AltarEntity getOrCreateEntity(final ResourceLocation deity) {
         if(!entityMap.containsKey(deity)) {
-            Altar altar = RPGGods.ALTAR.get(deity).orElse(Altar.EMPTY);
-            AltarEntity altarEntity = AltarEntity.createAltar(inventory.player.level, BlockPos.ZERO, Direction.NORTH, altar);
+            AltarEntity altarEntity = AltarEntity.createAltar(inventory.player.level, BlockPos.ZERO, Direction.NORTH, deity);
             altarEntity.setNoGravity(true);
             altarEntity.noPhysics = true;
             entityMap.put(deity, altarEntity);
@@ -1018,12 +1032,15 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     protected class TradeButton extends OfferingButton {
         protected static final int ARROW_WIDTH = 12;
         protected static final int ARROW_HEIGHT = 9;
-        protected ITextComponent tradeTooltip;
+        protected ITextComponent tradeFunctionText;
         protected ITextComponent unlockText;
         protected ITextComponent unlockTooltip;
+        protected boolean hasTrade;
 
         public TradeButton(FavorScreen gui, int index, int x, int y) {
             super(gui, index, x, y, TRADE_WIDTH, OFFERING_HEIGHT);
+            tradeFunctionText = new TranslationTextComponent("?")
+                    .withStyle(TextFormatting.BOLD, TextFormatting.DARK_BLUE);
         }
 
         @Override
@@ -1032,13 +1049,17 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(offering.getAccept(), this.x, this.y);
                 // draw trade
-                FavorScreen.this.itemRenderer.renderGuiItem(offering.getTrade().get(), this.x + 18 + ARROW_WIDTH, this.y);
-                // draw unlock text
-                FavorScreen.this.font.draw(matrixStack, unlockText, this.x + 18 * 2 + ARROW_WIDTH + 4, this.y + textY, 0xFFFFFF);
-                // draw function text
-                if(offering != null && offering.getFunction().isPresent()) {
+                if(hasTrade) {
+                    // draw trade item
+                    FavorScreen.this.itemRenderer.renderGuiItem(offering.getTrade().get(), this.x + 18 + ARROW_WIDTH, this.y);
+                } else if(offering.getFunction().isPresent()) {
+                    // draw question mark instead of item
+                    FavorScreen.this.font.draw(matrixStack, tradeFunctionText, this.x + 18 + ARROW_WIDTH + 4, this.y + textY, 0xFFFFFF);
+                    // draw function text
                     FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 3 + ARROW_WIDTH - 4, this.y + textY, 0xFFFFFF);
                 }
+                // draw unlock text
+                FavorScreen.this.font.draw(matrixStack, unlockText, this.x + 18 * 2 + ARROW_WIDTH + 4, this.y + textY, 0xFFFFFF);
                 // draw arrow
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
                 FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
@@ -1067,34 +1088,34 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         @Override
         protected void updateOffering(final ResourceLocation offeringId, final Offering offering) {
             super.updateOffering(offeringId, offering);
+            this.hasTrade = offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty();
             // determine item tooltip
             if(offering.getTrade().isPresent()) {
-                this.tradeTooltip = offering.getTrade().get().getHoverName();
                 this.unlockText = new StringTextComponent("" + offering.getTradeMinLevel()).withStyle(TextFormatting.DARK_PURPLE);
                 this.unlockTooltip = new TranslationTextComponent("gui.favor.offering.unlock.tooltip", offering.getTradeMinLevel());
             }
         }
 
         @Override
-        protected Optional<ITextComponent> getTooltip(final int mouseX, final int mouseY) {
+        protected List<ITextComponent> getTooltip(final int mouseX, final int mouseY) {
             if(offering != null) {
                 if(offering.getFunction().isPresent() && mouseX >= (this.x + 18 * 3 + ARROW_WIDTH - 4)) {
-                    return Optional.of(functionTooltip);
+                    return Lists.newArrayList(functionTooltip);
                 }
                 if(mouseX >= (this.x + 18 * 2 + ARROW_WIDTH) && mouseX <= (this.x + 18 * 3 + ARROW_WIDTH - 4)) {
-                    return Optional.of(unlockTooltip);
+                    return Lists.newArrayList(unlockTooltip);
                 }
                 if(offering.getTrade().isPresent() && mouseX >= (this.x + 18 + ARROW_WIDTH) && mouseX <= (this.x + 18 * 2 + ARROW_WIDTH)) {
                     if(offering.getTrade().get().isEmpty() && offering.getFunction().isPresent()) {
-                        return Optional.of(functionTooltip);
+                        return Lists.newArrayList(functionTooltip);
                     }
-                    return Optional.of(tradeTooltip);
+                    return FavorScreen.this.getTooltipFromItem(offering.getTrade().get());
                 }
                 if(mouseX <= (this.x + 18)) {
-                    return Optional.of(itemTooltip);
+                    return FavorScreen.this.getTooltipFromItem(offering.getAccept());
                 }
             }
-            return Optional.empty();
+            return Lists.newArrayList();
         }
     }
 
@@ -1103,7 +1124,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         protected int id;
         protected Offering offering;
         protected long cooldown;
-        protected ITextComponent itemTooltip;
         protected ITextComponent favorText;
         protected final ITextComponent functionText;
         protected ITextComponent functionTooltip;
@@ -1114,9 +1134,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
         public OfferingButton(final FavorScreen gui, final int index, int x, int y,final int width, final int height) {
             super(x, y, width, height, StringTextComponent.EMPTY, b -> {},
-                    (b, m, bx, by) -> ((OfferingButton)b).getTooltip(bx, by).ifPresent(t -> gui.renderTooltip(m, t, bx, by)));
+                    (b, m, bx, by) -> gui.renderWrappedToolTip(m, ((OfferingButton)b).getTooltip(bx, by), bx, by, gui.font));
             this.id = index;
-            this.itemTooltip = StringTextComponent.EMPTY;
             this.favorText = StringTextComponent.EMPTY;
             this.functionText = new StringTextComponent(" \u2605 ").withStyle(TextFormatting.BLUE);
             this.functionTooltip = StringTextComponent.EMPTY;
@@ -1156,8 +1175,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         protected void updateOffering(final ResourceLocation offeringId, final Offering offering) {
             this.offering = offering;
             this.cooldown = FavorScreen.this.getMenu().getFavor().getOfferingCooldown(offeringId).getCooldown();
-            // determine item tooltip
-            this.itemTooltip = offering.getAccept().getHoverName();
             // determine favor text
             int favorAmount = offering.getFavor();
             String favorString;
@@ -1177,19 +1194,18 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             }
         }
 
-        protected Optional<ITextComponent> getTooltip(final int mouseX, final int mouseY) {
+        protected List<ITextComponent> getTooltip(final int mouseX, final int mouseY) {
             if(offering != null && offering.getFunction().isPresent() && mouseX >= (this.x + 18 * 2 - 2)) {
-                return Optional.of(functionTooltip);
+                return Lists.newArrayList(functionTooltip);
             }
             if(mouseX <= (this.x + 18)) {
-                return Optional.of(itemTooltip);
+                return FavorScreen.this.getTooltipFromItem(this.offering.getAccept());
             }
-            return Optional.empty();
+            return Lists.newArrayList();
         }
     }
 
     protected class SacrificeButton extends Button {
-
         protected int id;
         protected Sacrifice sacrifice;
         protected long cooldown;

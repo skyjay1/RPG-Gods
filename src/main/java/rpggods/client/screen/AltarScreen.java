@@ -57,6 +57,8 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private static final int GENDER_Y = 87;
     private static final int SLIM_X = 45;
     private static final int SLIM_Y = 87;
+    private static final int PRESET_X = 103;
+    private static final int PRESET_Y = 87;
     private static final int RESET_X = 123;
     private static final int RESET_Y = 87;
 
@@ -92,6 +94,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private final PartButton[] partButtons = new PartButton[ModelPart.values().length];
     private IconButton genderButton;
     private IconButton slimButton;
+    private IconButton presetButton;
     private IconButton resetButton;
     private ModelPart selectedPart = ModelPart.BODY;
 
@@ -143,6 +146,13 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
                 }
             });
         }
+        // add randomize button
+        final ITextComponent titlePreset = new TranslationTextComponent("gui.altar.preset");
+        final AltarPose[] presets = new AltarPose[] { AltarPose.STANDING_HOLDING, AltarPose.STANDING_RAISED,
+                AltarPose.STANDING_HOLDING_DRAMATIC, AltarPose.WALKING, AltarPose.WEEPING, AltarPose.DAB };
+        presetButton = this.addButton(new IconButton(this, this.leftPos + PRESET_X, this.topPos + RESET_Y, 16, 202, titlePreset, button -> {
+            this.pose = presets[(int)Math.floor(Math.random() * presets.length)];
+        }));
         // add reset button
         final ITextComponent titleReset = new TranslationTextComponent("controls.reset");
         resetButton = this.addButton(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
@@ -199,7 +209,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         this.nameField.setBordered(true);
         this.nameField.setMaxLength(35);
         this.nameField.setResponder(s -> name = (s != null && s.length() > 0) ? Optional.of(s) : Optional.empty());
-        this.nameField.setEditable(!getMenu().getAltar().getDeity().isPresent());
+        this.nameField.setEditable(!getMenu().getEntity().isNameLocked());
         this.children.add(this.nameField);
         // update
         this.updateSliders();

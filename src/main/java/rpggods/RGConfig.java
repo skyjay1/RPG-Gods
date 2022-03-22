@@ -30,18 +30,20 @@ public class RGConfig {
 
     public RGConfig(final ForgeConfigSpec.Builder builder) {
         builder.push("favor");
-        FAVOR_ENABLED = builder.define("favor_enabled", true);
+        FAVOR_ENABLED = builder
+                .comment("Set to false to disable favor, offerings, sacrifices, and perks")
+                .define("favor_enabled", true);
         FAVOR_UPDATE_RATE = builder
-                .comment("Number of ticks between favor calculations.")
-                .comment("Increase to reduce the frequency of favor updates.")
-                .comment("THIS AFFECTS PERKS, FAVOR DECAY, AND COOLDOWNS.")
+                .comment("Number of ticks between favor calculations.",
+                        "Increase to reduce the frequency of favor updates.",
+                        "THIS AFFECTS PERKS, FAVOR DECAY, AND COOLDOWNS.")
                 .defineInRange("favor_update_rate", 20, 1, 24000);
         RANDOM_PERK_CHANCE = builder
                 .comment("Percent chance that perks with [random tick] conditions run (every [favor_update_rate] ticks)")
                 .defineInRange("random_perk_chance", 0.2D, 0.0D, 1.0D);
         FAVOR_DECAY_RATE = builder
-                .comment("Percent chance that favor will deplete (every [favor_update_rate] ticks)")
-                .comment("Applies to all players independent of their favor decay rate")
+                .comment("Percent chance that favor will deplete (every [favor_update_rate] ticks)",
+                        "Applies to all players independent of their favor decay rate")
                 .defineInRange("favor_decay_rate", 0.006D, 0.0D, 1.0D);
         FAVOR_DECAY_AMOUNT = builder
                 .comment("Amount of favor to deplete when applicable")

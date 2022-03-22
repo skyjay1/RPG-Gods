@@ -32,5 +32,8 @@
   "deity.greek.zeus": "Zeus",
   "deity.greek.zeus.title": "God of Thunder",
   "perk.function.set_storming": "Create a thunderstorm",
-  "perk.function.set_clear": "Create clear weather"
+  "perk.function.set_clear": "Create clear weather",
+  "perk.function.golden_apple_aphrodite": "Pleases Aphrodite, but angers Hera and Athena",
+  "perk.function.golden_apple_hera": "Pleases Hera, but angers Aphrodite and Athena",
+  "perk.function.golden_apple_athena": "Pleases Athena, but angers Aphrodite and Hera"
 }

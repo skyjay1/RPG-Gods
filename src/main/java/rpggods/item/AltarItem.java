@@ -111,12 +111,8 @@ public class AltarItem extends Item {
                     // determine altar properties to apply
                     String sAltarId = context.getItemInHand().getOrCreateTag().getString(KEY_ALTAR);
                     ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
-                    Altar altar = Altar.EMPTY;
-                    if(altarId != null) {
-                        altar = RPGGods.ALTAR.get(altarId).orElse(Altar.EMPTY);
-                    }
                     // crate altar entity
-                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getHorizontalDirection(), altar);
+                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getHorizontalDirection(), altarId);
                     if (altarEntity == null) {
                         return ActionResultType.FAIL;
                     }

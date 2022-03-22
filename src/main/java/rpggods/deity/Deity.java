@@ -1,5 +1,6 @@
 package rpggods.deity;
 
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
@@ -61,7 +62,7 @@ public class Deity {
      * @param offering the Offering to add
      */
     public void add(final ResourceLocation id, final Offering offering) {
-        if(offering.getFavor() == 0 && !offering.getFunction().isPresent()) {
+        if(offering.getFavor() == 0 && !offering.getFunction().isPresent() && !offering.getTrade().isPresent()) {
             return;
         }
         ResourceLocation itemId = offering.getAccept().getItem().getRegistryName();

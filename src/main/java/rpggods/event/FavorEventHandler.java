@@ -44,6 +44,8 @@ import net.minecraft.util.Tuple;
 import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
@@ -112,38 +114,43 @@ public class FavorEventHandler {
                 }
             }
             // process the offering
-            // TODO: debug
-            if(offeringId != null) {
-                Cooldown cooldown = favor.getOfferingCooldown(offeringId);
-                RPGGods.LOGGER.debug(item.getItem().getRegistryName() + " is registered to " + offeringId + " with " + cooldown);
-            }
-
-            if(offering != null && offeringId != null && favor.getOfferingCooldown(offeringId).canUse()) {
-                boolean matchTradeLevel = !offering.getTrade().isPresent()
-                        || (offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() >= offering.getTradeMinLevel());
-                if(matchTradeLevel) {
-                    // add favor and run function, if any
-                    favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
-                    favor.getOfferingCooldown(offeringId).addUse();
-                    offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
-                    // shrink item stack
-                    if(!player.isCreative()) {
-                        item.shrink(offering.getAccept().getCount());
-                    }
-                    // process trade, if any
-                    if(offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty()) {
-                        ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), offering.getTrade().get().copy());
-                        itemEntity.setNoPickUpDelay();
-                        player.level.addFreshEntity(itemEntity);
-                    }
-                    // particles
-                    if(entity.isPresent() && player.level instanceof ServerWorld) {
-                        Vector3d pos = Vector3d.atBottomCenterOf(entity.get().blockPosition().above());
-                        IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
-                        ((ServerWorld)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
-                    }
+            if(offering != null && offeringId != null) {
+                // ensure offering can be accepted
+                if(!favor.getOfferingCooldown(offeringId).canUse()) {
+                    // send message to player informing them of maxed offering
+                    ITextComponent message = new TranslationTextComponent("favor.offering.cooldown");
+                    player.displayClientMessage(message, true);
                     return Optional.of(item);
                 }
+                // ensure player meets trade level, if any
+                if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() < offering.getTradeMinLevel()) {
+                    // Send message to player informing them of trade level minimum
+                    ITextComponent message = new TranslationTextComponent("favor.offering.trade.failure", offering.getTradeMinLevel());
+                    player.displayClientMessage(message, true);
+                    return Optional.of(item);
+                }
+                // add favor and run function, if any
+                favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
+                offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                // add cooldown
+                favor.getOfferingCooldown(offeringId).addUse();
+                // shrink item stack
+                if(!player.isCreative()) {
+                    item.shrink(offering.getAccept().getCount());
+                }
+                // process trade, if any
+                if(offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty()) {
+                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), offering.getTrade().get().copy());
+                    itemEntity.setNoPickUpDelay();
+                    player.level.addFreshEntity(itemEntity);
+                }
+                // particles
+                if(entity.isPresent() && player.level instanceof ServerWorld) {
+                    Vector3d pos = Vector3d.atBottomCenterOf(entity.get().blockPosition().above());
+                    IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+                    ((ServerWorld)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
+                }
+                return Optional.of(item);
             }
         }
         return Optional.empty();
@@ -167,11 +174,15 @@ public class FavorEventHandler {
             for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
                 if(entry.getValue() != null && entry.getValue().isPresent()) {
                     sacrifice = entry.getValue().get();
+                    // check sacrifice matches entity that was killed
                     if(sacrifice != null && entityId.equals(sacrifice.getEntity())) {
+                        // check sacrifice cooldown
                         cooldown = favor.getSacrificeCooldown(entry.getKey());
                         deity = Sacrifice.getDeity(entry.getKey());
                         if(cooldown.canUse()) {
+                            // add sacrifice cooldown
                             cooldown.addUse();
+                            // add favor and run function, if any
                             favor.getFavor(deity).addFavor(player, deity, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
                             sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
                         }
@@ -182,6 +193,17 @@ public class FavorEventHandler {
         return success;
     }
 
+    /**
+     * Loads all perks that match the given {@link PerkCondition.Type} and
+     * attempts to run them.
+     * @param type The Perk Condition Type to run
+     * @param player The player
+     * @param favor The player's favor
+     * @param entity An entity associated with this condition, if any
+     * @param data A ResourceLocation associated with this condition, if any
+     * @param object An event associated with this condition, if any
+     * @return true if at least one perk ran successfully
+     */
     public static boolean triggerCondition(final PerkCondition.Type type, final PlayerEntity player, final IFavor favor,
                                            final Optional<Entity> entity, final Optional<ResourceLocation> data,
                                            final Optional<? extends Event> object) {
@@ -211,7 +233,7 @@ public class FavorEventHandler {
      * @param player the player
      * @param favor the player's favor
      * @param entity an entity to use when running the perk, if any
-     * @return True if at least one perk ran
+     * @return True if at least one perk ran successfully
      */
     public static boolean triggerPerks(final PerkAction.Type type, final PlayerEntity player, final IFavor favor, final Optional<Entity> entity) {
         return triggerPerks(type, player, favor, entity, Optional.empty(), Optional.empty());
@@ -225,7 +247,7 @@ public class FavorEventHandler {
      * @param entity an entity to use when running the perk, if any
      * @param data a ResourceLocation ID to use when running the perk, if any
      * @param object the Event to reference when running the perk, if any
-     * @return True if at least one perk ran
+     * @return True if at least one perk ran successfully
      */
     public static boolean triggerPerks(final PerkAction.Type type, final PlayerEntity player, final IFavor favor,
                                        final Optional<Entity> entity, final Optional<ResourceLocation> data,
@@ -794,7 +816,7 @@ public class FavorEventHandler {
         }
 
         public static boolean canTickFavor(final LivingEntity entity) {
-            return (entity.tickCount + entity.getId()) % RPGGods.CONFIG.getFavorUpdateRate() == 0;
+            return RPGGods.CONFIG.isFavorEnabled() && (entity.tickCount + entity.getId()) % RPGGods.CONFIG.getFavorUpdateRate() == 0;
         }
 
         // TODO: use this instead of adding to all entities

@@ -18,17 +18,19 @@ public class Offering {
     public static final Offering EMPTY = new Offering(ItemStack.EMPTY, 0, 0, 0,
             Optional.empty(), 0, Optional.empty(), Optional.empty());
 
+    // Codec that accepts Item or ItemStack
+    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(Registry.ITEM, ItemStack.CODEC)
+            .xmap(either -> either.map(ItemStack::new, Function.identity()),
+                    stack -> stack.getCount() == 1 && !stack.hasTag()
+                            ? Either.left(stack.getItem())
+                            : Either.right(stack));
+
     public static final Codec<Offering> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.either(Registry.ITEM, ItemStack.CODEC)
-                    .xmap(either -> either.map(ItemStack::new, Function.identity()),
-                            stack -> stack.getCount() == 1 && !stack.hasTag()
-                                    ? Either.left(stack.getItem())
-                                    : Either.right(stack))
-                    .optionalFieldOf("item", ItemStack.EMPTY).forGetter(Offering::getAccept),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(Offering::getAccept),
             Codec.INT.optionalFieldOf("favor", 0).forGetter(Offering::getFavor),
             Codec.INT.optionalFieldOf("maxuses", 16).forGetter(Offering::getMaxUses),
             Codec.INT.optionalFieldOf("cooldown", 12000).forGetter(Offering::getCooldown),
-            ItemStack.CODEC.optionalFieldOf("trade").forGetter(Offering::getTrade),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("trade").forGetter(Offering::getTrade),
             Codec.INT.optionalFieldOf("minlevel", 0).forGetter(Offering::getTradeMinLevel),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Offering::getFunction),
             Codec.STRING.optionalFieldOf("function_text").forGetter(Offering::getFunctionText)

@@ -13,7 +13,7 @@
       "Count": 1
     },
     "block": "minecraft:polished_blackstone_slab",
-    "armor_locked": true,
+    "armor_locked": false,
     "hands_locked": true,
     "block_locked": true
   },
@@ -38,5 +38,5 @@
       "z": 0.034907
     }
   },
-  "pose_locked": true
+  "pose_locked": false
 }

@@ -4,8 +4,6 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.DataResult;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
 import net.minecraft.entity.EntityType;
@@ -20,13 +18,11 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.IInventoryChangedListener;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
-import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.INBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.nbt.NBTDynamicOps;
-import net.minecraft.nbt.NBTUtil;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
@@ -63,18 +59,19 @@ import java.util.Optional;
 
 public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
 
+    private static final DataParameter<String> ALTAR = EntityDataManager.defineId(AltarEntity.class, DataSerializers.STRING);
     private static final DataParameter<String> DEITY = EntityDataManager.defineId(AltarEntity.class, DataSerializers.STRING);
     private static final DataParameter<Byte> FLAGS = EntityDataManager.defineId(AltarEntity.class, DataSerializers.BYTE);
     private static final DataParameter<Byte> LOCKED = EntityDataManager.defineId(AltarEntity.class, DataSerializers.BYTE);
     private static final DataParameter<CompoundNBT> POSE = EntityDataManager.defineId(AltarEntity.class, DataSerializers.COMPOUND_TAG);
 
+    private static final String KEY_ALTAR = "Altar";
     private static final String KEY_DEITY = "Deity";
     private static final String KEY_INVENTORY = "Inventory";
     private static final String KEY_SLOT = "Slot";
     private static final String KEY_FLAGS = "Flags";
     private static final String KEY_LOCKED = "Locked";
     private static final String KEY_POSE = "Pose";
-    private static final String KEY_BLOCK = "Block";
 
     private Optional<BlockState> block = Optional.empty();
     private Optional<ResourceLocation> deity = Optional.empty();
@@ -96,7 +93,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         initInventory();
     }
 
-    public static AltarEntity createAltar(final World world, final BlockPos pos, Direction facing, final Altar altar) {
+    public static AltarEntity createAltar(final World world, final BlockPos pos, Direction facing, final ResourceLocation altar) {
         AltarEntity entity = new AltarEntity(RGRegistry.EntityReg.ALTAR, world);
         entity.absMoveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, facing.toYRot(), facing.toYRot());
         entity.applyAltarProperties(altar);
@@ -112,6 +109,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     @Override
     public void defineSynchedData() {
         super.defineSynchedData();
+        this.getEntityData().define(ALTAR, "");
         this.getEntityData().define(DEITY, "");
         this.getEntityData().define(FLAGS, (byte) 0);
         this.getEntityData().define(LOCKED, (byte) 0);
@@ -121,9 +119,17 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     @Override
     public void onSyncedDataUpdated(DataParameter<?> key) {
         super.onSyncedDataUpdated(key);
+        if(key.equals(ALTAR)) {
+            String sAltarId = getEntityData().get(ALTAR);
+            if(sAltarId != null && !sAltarId.isEmpty() && sAltarId.contains(":")) {
+                this.applyAltarProperties(ResourceLocation.tryParse(sAltarId));
+            } else {
+                RPGGods.LOGGER.debug("Failed to parse altar ID for entity from '" + sAltarId + "'");
+            }
+        }
         if(key.equals(DEITY)) {
             String sDeityId = getEntityData().get(DEITY);
-            if(sDeityId != null && !sDeityId.isEmpty()) {
+            if(sDeityId != null && !sDeityId.isEmpty() && sDeityId.contains(":")) {
                 this.setDeity(Optional.ofNullable(ResourceLocation.tryParse(sDeityId)));
             } else {
                 this.setDeity(Optional.empty());
@@ -203,38 +209,34 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             RPGGods.LOGGER.debug("Deity data: " + RPGGods.DEITY.get(getDeity().get()));
         }
 
-        // open container
-        // open the container GUI
         if(player instanceof ServerPlayerEntity && hand == Hand.MAIN_HAND) {
-            // attempt to process favor capability
+            // check if altar is deity
             if(getDeity().isPresent()) {
+                // attempt to process favor capability
                 LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
                 if(favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
                     // detect item in mainhand
                     ItemStack heldItem = player.getItemInHand(hand);
-                    if(heldItem.isEmpty()) {
-                        // open favor GUI
-                        NetworkHooks.openGui((ServerPlayerEntity)player,
-                                new SimpleNamedContainerProvider((id, inventory, p) ->
-                                        new FavorContainer(id, inventory, ifavor, deity),
-                                        StringTextComponent.EMPTY),
-                                buf -> {
-                                    buf.writeNbt(ifavor.serializeNBT());
-                                    buf.writeResourceLocation(deity);
-                                }
-                        );
-                        return ActionResultType.SUCCESS;
-                    } else {
-                        // apply offering
-                        Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
-                        // if item changed, update player inventory
-                        if(offeringResult.isPresent()) {
-                            player.setItemInHand(hand, offeringResult.get());
-                            return ActionResultType.CONSUME;
-                        }
+                    // attempt to process held item as offering
+                    Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
+                    // if item changed, update player inventory
+                    if(offeringResult.isPresent()) {
+                        player.setItemInHand(hand, offeringResult.get());
+                        return ActionResultType.CONSUME;
                     }
+                    // no offering result, open favor GUI
+                    NetworkHooks.openGui((ServerPlayerEntity)player,
+                            new SimpleNamedContainerProvider((id, inventory, p) ->
+                                    new FavorContainer(id, inventory, ifavor, deity),
+                                    StringTextComponent.EMPTY),
+                            buf -> {
+                                buf.writeNbt(ifavor.serializeNBT());
+                                buf.writeResourceLocation(deity);
+                            }
+                    );
+                    return ActionResultType.SUCCESS;
                 }
             } else if(!(isArmorLocked() && isHandsLocked() && isBlockLocked() && isAltarPoseLocked())) {
                 // open altar GUI
@@ -260,6 +262,8 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         if(getDeity().isPresent()) {
             compound.putString(KEY_DEITY, getDeity().get().toString());
         }
+        // write altar
+        compound.putString(KEY_ALTAR, getAltar().toString());
         // write inventory
         ListNBT listNBT = new ListNBT();
         // write inventory slots to NBT
@@ -286,8 +290,13 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         super.readAdditionalSaveData(compound);
         // read deity
         if(compound.contains(KEY_DEITY)) {
-            setDeity(Optional.of(ResourceLocation.tryParse(compound.getString(KEY_DEITY))));
+            String deity = compound.getString(KEY_DEITY);
+            if(deity != null && !deity.isEmpty()) {
+                setDeity(Optional.of(ResourceLocation.tryParse(deity)));
+            }
         }
+        // read altar
+        setAltar(ResourceLocation.tryParse(compound.getString(KEY_ALTAR)));
         // init inventory
         initInventory();
         // read inventory
@@ -339,14 +348,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     @Override
     protected void dropEquipment() {
-        final boolean keepInventory = level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY);
         // drop altar
         final ItemStack altarItem = new ItemStack(RGRegistry.ItemReg.ALTAR);
-        final DataResult<INBT> altarTag = Altar.CODEC.encodeStart(NBTDynamicOps.INSTANCE, createAltarProperties(keepInventory));
-        altarTag.result().ifPresent(nbt -> altarItem.getOrCreateTag().put(AltarItem.KEY_ALTAR, nbt));
+        altarItem.getOrCreateTag().putString(AltarItem.KEY_ALTAR, getAltar().toString());
         this.spawnAtLocation(altarItem);
         // drop inventory
-        if (!keepInventory && this.inventory != null) {
+        if (this.inventory != null) {
             if(!isHandsLocked()) {
                 this.spawnAtLocation(getItemBySlot(EquipmentSlotType.MAINHAND));
                 this.spawnAtLocation(getItemBySlot(EquipmentSlotType.OFFHAND));
@@ -365,9 +372,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     /**
      * Applies the Altar properties to this entity
-     * @param altar the Altar with properties to use
+     * @param altarId the Altar with properties to use
      */
-    public void applyAltarProperties(final Altar altar) {
+    public void applyAltarProperties(final ResourceLocation altarId) {
+        // query altar by id
+        Altar altar = RPGGods.ALTAR.get(altarId).orElse(Altar.EMPTY);
+        // apply properties
         setCustomName(altar.getName().isPresent() ? new StringTextComponent(altar.getName().get()) : null);
         setCustomNameVisible(false);
         setDeity(altar.getDeity());
@@ -382,35 +392,41 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             setItemSlot(slot, altar.getItems().getItemStackFromSlot(slot).copy());
         }
         setBlockSlot(new ItemStack(altar.getItems().getBlock().asItem()));
-    }
-
-    public Altar createAltarProperties() {
-        return createAltarProperties(true);
+        // save altar id
+        setAltar(altarId);
     }
 
     /**
      * Creates a new Altar instance with the same properties as found in this entity.
      */
-    public Altar createAltarProperties(boolean keepInventory) {
+    public Altar createAltarProperties() {
         AltarItems items;
-        if(keepInventory) {
-            items = new AltarItems(
-                    getItemBySlot(EquipmentSlotType.HEAD),
-                    getItemBySlot(EquipmentSlotType.CHEST),
-                    getItemBySlot(EquipmentSlotType.LEGS),
-                    getItemBySlot(EquipmentSlotType.FEET),
-                    getItemBySlot(EquipmentSlotType.MAINHAND),
-                    getItemBySlot(EquipmentSlotType.OFFHAND),
-                    ForgeRegistries.BLOCKS.getValue(getBlockBySlot().getItem().getRegistryName()),
-                    isArmorLocked(), isHandsLocked(), isBlockLocked());
-        } else {
-            items = AltarItems.EMPTY;
-        }
+        items = new AltarItems(
+                getItemBySlot(EquipmentSlotType.HEAD),
+                getItemBySlot(EquipmentSlotType.CHEST),
+                getItemBySlot(EquipmentSlotType.LEGS),
+                getItemBySlot(EquipmentSlotType.FEET),
+                getItemBySlot(EquipmentSlotType.MAINHAND),
+                getItemBySlot(EquipmentSlotType.OFFHAND),
+                ForgeRegistries.BLOCKS.getValue(getBlockBySlot().getItem().getRegistryName()),
+                isArmorLocked(), isHandsLocked(), isBlockLocked());
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
         ResourceLocation material = Altar.MATERIAL; // TODO
         return new Altar(enabled, name, isFemale(), isSlim(), ItemStack.EMPTY, items,
                 material, getAltarPose(), isAltarPoseLocked());
+    }
+
+    public void setAltar(final ResourceLocation altar) {
+        getEntityData().set(ALTAR, altar.toString());
+    }
+
+    public ResourceLocation getAltar() {
+        String altar = getEntityData().get(ALTAR);
+        if(altar != null && !altar.isEmpty() && altar.contains(":")) {
+            return ResourceLocation.tryParse(altar);
+        }
+        return new ResourceLocation("null");
     }
 
     public void setDeity(final Optional<ResourceLocation> deity) {

@@ -1,0 +1,8 @@
+{
+  "item": {
+    "id": "minecraft:string",
+    "Count": 8
+  },
+  "favor": 8,
+  "maxuses": 6
+}

@@ -7,6 +7,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -112,6 +113,9 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);
+        // register config
+        RPGGods.LOGGER.debug("registerConfig");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC);
         // Required for data pack sync and favor capability
         MinecraftForge.EVENT_BUS.register(RGData.class);
         // Events that affect Favor and Perks
