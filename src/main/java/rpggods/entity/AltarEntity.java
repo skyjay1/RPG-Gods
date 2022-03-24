@@ -1,5 +1,6 @@
 package rpggods.entity;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.DataResult;
@@ -23,9 +24,11 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.INBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.nbt.NBTDynamicOps;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.SkullTileEntity;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
@@ -33,6 +36,7 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.ITextComponent;
@@ -40,19 +44,23 @@ import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkHooks;
+import net.minecraftforge.fml.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.deity.Altar;
+import rpggods.deity.Deity;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
+import rpggods.network.SUpdateAltarPacket;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -73,7 +81,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     private static final String KEY_LOCKED = "Locked";
     private static final String KEY_POSE = "Pose";
 
-    private Optional<BlockState> block = Optional.empty();
     private Optional<ResourceLocation> deity = Optional.empty();
 
     public static final int INV_SIZE = 7;
@@ -81,7 +88,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     @Nullable
     private GameProfile playerProfile = null;
-    private String textureName = "";
 
     private AltarPose pose = AltarPose.EMPTY;
 
@@ -95,7 +101,10 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     public static AltarEntity createAltar(final World world, final BlockPos pos, Direction facing, final ResourceLocation altar) {
         AltarEntity entity = new AltarEntity(RGRegistry.EntityReg.ALTAR, world);
-        entity.absMoveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, facing.toYRot(), facing.toYRot());
+        float f = facing.toYRot();
+        entity.absMoveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, f, 0);
+        entity.yHeadRot = f;
+        entity.yBodyRot = f;
         entity.applyAltarProperties(altar);
         return entity;
     }
@@ -119,14 +128,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     @Override
     public void onSyncedDataUpdated(DataParameter<?> key) {
         super.onSyncedDataUpdated(key);
-        if(key.equals(ALTAR)) {
-            String sAltarId = getEntityData().get(ALTAR);
-            if(sAltarId != null && !sAltarId.isEmpty() && sAltarId.contains(":")) {
-                this.applyAltarProperties(ResourceLocation.tryParse(sAltarId));
-            } else {
-                RPGGods.LOGGER.debug("Failed to parse altar ID for entity from '" + sAltarId + "'");
-            }
-        }
         if(key.equals(DEITY)) {
             String sDeityId = getEntityData().get(DEITY);
             if(sDeityId != null && !sDeityId.isEmpty() && sDeityId.contains(":")) {
@@ -156,6 +157,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                 this.inventory.getItem(EquipmentSlotType.CHEST.getFilterFlag()),
                 this.inventory.getItem(EquipmentSlotType.HEAD.getFilterFlag())
         );
+    }
+
+    @Override
+    public Iterable<ItemStack> getAllSlots() {
+        return Iterables.concat(this.getHandSlots(), this.getArmorSlots(), Lists.newArrayList(getBlockBySlot()));
     }
 
     public ItemStack getItemBySlot(EquipmentSlotType slotIn) {
@@ -203,11 +209,22 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         return (getBlockBySlot().isEmpty()) ? smallSize : this.getType().getDimensions();
     }
 
+    public void tick() {
+        if(firstTick) {
+            if(level.isClientSide) {
+                // update game profile
+                setCustomName(getCustomName());
+            }
+        }
+        super.tick();
+    }
+
     public ActionResultType interactAt(PlayerEntity player, Vector3d vec, Hand hand) {
         // TODO: remove debug
         if(getDeity().isPresent()) {
             RPGGods.LOGGER.debug("Deity data: " + RPGGods.DEITY.get(getDeity().get()));
         }
+        RPGGods.LOGGER.debug("Block: " + getBlockBySlot());
 
         if(player instanceof ServerPlayerEntity && hand == Hand.MAIN_HAND) {
             // check if altar is deity
@@ -344,6 +361,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     @Override
     public void containerChanged(IInventory inv) {
         this.refreshDimensions();
+        // send packet to client to notify change
+        if(!this.level.isClientSide) {
+            ItemStack block = getBlockBySlot();
+            RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SUpdateAltarPacket(this.getId(), block));
+        }
     }
 
     @Override
@@ -378,8 +400,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         // query altar by id
         Altar altar = RPGGods.ALTAR.get(altarId).orElse(Altar.EMPTY);
         // apply properties
-        setCustomName(altar.getName().isPresent() ? new StringTextComponent(altar.getName().get()) : null);
-        setCustomNameVisible(false);
         setDeity(altar.getDeity());
         setFemale(altar.isFemale());
         setSlim(altar.isSlim());
@@ -392,6 +412,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             setItemSlot(slot, altar.getItems().getItemStackFromSlot(slot).copy());
         }
         setBlockSlot(new ItemStack(altar.getItems().getBlock().asItem()));
+        // custom name
+        if(altar.getDeity().isPresent()) {
+            setCustomName(Deity.getName(altarId));
+        } else if(altar.getName().isPresent()) {
+            setCustomName(new StringTextComponent(altar.getName().get()));
+        }
         // save altar id
         setAltar(altarId);
     }
@@ -436,11 +462,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             // determine string to save deity name
             ResourceLocation deityId = deity.get();
             deityString = deityId.toString();
-            // set custom name
-            setCustomName(new TranslationTextComponent(Altar.createTranslationKey(deityId)));
-            setCustomNameVisible(false);
-        } else {
-            setCustomName(null);
         }
         // update data manager
         getEntityData().set(DEITY, deityString);
@@ -521,10 +542,12 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     public void setCustomName(final ITextComponent name) {
         super.setCustomName(name);
         // attempt to use custom name to set texture
-        if(name != null && !getDeity().isPresent()) {
+        if(name != null) {
             String sName = name.getContents();
-            if(sName.length() <= 16) {
-                this.textureName = sName;
+            if(sName.length() > 0 && sName.length() <= 16 && !sName.contains(":")) {
+                final CompoundNBT profileNBT = new CompoundNBT();
+                profileNBT.putString("Name", sName);
+                setPlayerProfile(NBTUtil.readGameProfile(profileNBT));
             }
         }
     }

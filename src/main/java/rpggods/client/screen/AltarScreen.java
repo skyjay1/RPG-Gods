@@ -57,18 +57,22 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private static final int GENDER_Y = 87;
     private static final int SLIM_X = 45;
     private static final int SLIM_Y = 87;
-    private static final int PRESET_X = 103;
+    private static final int PRESET_X = PARTS_X;
     private static final int PRESET_Y = 87;
     private static final int RESET_X = 123;
     private static final int RESET_Y = 87;
 
     private static final int SLIDER_X = 69;
     private static final int SLIDER_Y = 14;
+    private static final int SLIDER_WIDTH = 70;
     private static final int SLIDER_HEIGHT = 20;
     private static final int SLIDER_SPACING = 4;
 
-    private static final int BTN_WIDTH = 70;
-    private static final int BTN_HEIGHT = 16;
+    private static final int PART_WIDTH = 70;
+    private static final int PART_HEIGHT = 14;
+
+    private static final int ICON_WIDTH = 16;
+    private static final int ICON_HEIGHT = 16;
 
     private static final int TEXT_X = 100;
     private static final int TEXT_Y = 7;
@@ -83,10 +87,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private boolean female;
     private boolean slim;
     private AltarItems items;
-    private BlockState block;
-    private boolean blockLocked;
     private AltarPose pose;
-    private boolean poseLocked;
 
     protected AngleSlider sliderAngleX;
     protected AngleSlider sliderAngleY;
@@ -118,10 +119,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         female = altar.isFemale();
         slim = altar.isSlim();
         items = altar.getItems();
-        block = items.getBlock().defaultBlockState();
-        blockLocked = items.isBlockLocked();
         pose = altar.getPose();
-        poseLocked = altar.isPoseLocked();
     }
 
     @Override
@@ -136,7 +134,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         for (int i = 0, l = ModelPart.values().length; i < l; i++) {
             final ModelPart p = ModelPart.values()[i];
             final ITextComponent title = new TranslationTextComponent("gui.altar." + p.getSerializedName());
-            partButtons[i] = this.addButton(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (BTN_HEIGHT * i), title, button -> {
+            partButtons[i] = this.addButton(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (PART_HEIGHT * i), title, button -> {
                 this.selectedPart = p;
                 AltarScreen.this.updateSliders();
             }) {
@@ -150,7 +148,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         final ITextComponent titlePreset = new TranslationTextComponent("gui.altar.preset");
         final AltarPose[] presets = new AltarPose[] { AltarPose.STANDING_HOLDING, AltarPose.STANDING_RAISED,
                 AltarPose.STANDING_HOLDING_DRAMATIC, AltarPose.WALKING, AltarPose.WEEPING, AltarPose.DAB };
-        presetButton = this.addButton(new IconButton(this, this.leftPos + PRESET_X, this.topPos + RESET_Y, 16, 202, titlePreset, button -> {
+        presetButton = this.addButton(new IconButton(this, this.leftPos + PRESET_X, this.topPos + PRESET_Y, 16, 202, titlePreset, button -> {
             this.pose = presets[(int)Math.floor(Math.random() * presets.length)];
         }));
         // add reset button
@@ -234,7 +232,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
                 // render slab icon on last slot
                 if(i == l - 1 && slot.getItem().isEmpty()) {
                     this.blit(matrixStack, this.leftPos + slot.x, this.topPos + slot.y,
-                            48, 202, BTN_HEIGHT, BTN_HEIGHT);
+                            48, 202, 16, 16);
                 }
             }
         }
@@ -312,6 +310,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         sliderAngleZ.visible = tab0;
         genderButton.visible = tab0;
         slimButton.visible = tab0;
+        presetButton.visible = tab0;
         resetButton.visible = tab0;
         for(PartButton pb : partButtons) {
             pb.visible = tab0;
@@ -346,7 +345,9 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.translatef(posX + margin, posY + margin, 100.0F + 10.0F);
         RenderSystem.translatef(0.0F, PREVIEW_HEIGHT - margin * 1.75F, 0.0F);
-        //RenderSystem.rotatef(this.blockRotation.getOpposite().getHorizontalAngle(), 0.0F, -1.0F, 0.0F);
+        // apply negative body rotation to ensure entity faces camera
+        final float entityYRot = 360.0F - getMenu().getEntity().yBodyRot;
+        RenderSystem.rotatef(entityYRot, 0.0F, -1.0F, 0.0F);
         RenderSystem.scalef(1.0F, -1.0F, 1.0F);
         RenderSystem.scalef(scale, scale, scale);
         RenderSystem.rotatef(rotX * 15.0F, 0.0F, 1.0F, 0.0F);
@@ -376,7 +377,8 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         entity.setAltarPose(this.pose);
         entity.setFemale(female);
         entity.setSlim(slim);
-        if(name.isPresent()) {
+        if(name.isPresent() && !nameField.isFocused() &&
+                (null == entity.getPlayerProfile() || !entity.getCustomName().getContents().equals(name.get()))) {
             entity.setCustomName(new StringTextComponent(name.get()));
         }
     }
@@ -418,7 +420,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     protected class PartButton extends Button {
 
         public PartButton(final AltarScreen screenIn, final int x, final int y, final ITextComponent title, final IPressable pressedAction) {
-            super(x, y, BTN_WIDTH, BTN_HEIGHT, title, pressedAction);
+            super(x, y, PART_WIDTH, PART_HEIGHT, title, pressedAction);
         }
 
         @Override
@@ -446,7 +448,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
 
         public IconButton(final AltarScreen screenIn, final int x, final int y, final int tX, final int tY,
                           final ITextComponent title, final IPressable pressedAction) {
-            super(x, y, BTN_HEIGHT, BTN_HEIGHT, StringTextComponent.EMPTY, pressedAction,
+            super(x, y, ICON_WIDTH, ICON_HEIGHT, StringTextComponent.EMPTY, pressedAction,
                     (b, m, bx, by) -> screenIn.renderTooltip(m, screenIn.minecraft.font.split(title, Math.max(screenIn.width / 2 - 43, 170)), bx, by));
             this.textureX = tX;
             this.textureY = tY;
@@ -481,7 +483,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         private final String rotationName;
 
         public AngleSlider(final int x, final int y, final String rName) {
-            super(x, y, BTN_WIDTH, SLIDER_HEIGHT, StringTextComponent.EMPTY, 0.5D);
+            super(x, y, SLIDER_WIDTH, SLIDER_HEIGHT, StringTextComponent.EMPTY, 0.5D);
             rotationName = rName;
             this.updateMessage();
         }

@@ -1,8 +1,7 @@
 {
   "item": {
     "id": "minecraft:flint",
-    "Count": 8
+    "Count": 1
   },
-  "favor": 8,
-  "maxuses": 6
+  "favor": 1
 }

@@ -39,15 +39,15 @@ import rpggods.client.screen.AltarScreen;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation("greek", "textures/altar/zeus.png");
     protected static final ResourceLocation STEVE_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/steve.png");
     protected static final ResourceLocation ALEX_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/alex.png");
 
-
+    private final Map<ResourceLocation, ResourceLocation> DEITY_TEXTURES = new HashMap<>();
 
     public AltarRenderer(final EntityRendererManager renderManagerIn) {
         super(renderManagerIn, new AltarModel(0.0F, 0.0F), 0.5F);
@@ -65,6 +65,9 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
         if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
             return;
         }
+        matrixStackIn.pushPose();
+        // rotate around entity body rotation
+        matrixStackIn.mulPose(Vector3f.YN.rotationDegrees(entityIn.yBodyRot));
 
         // render base
         float baseHeight = -0.5F;
@@ -93,9 +96,9 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
         boolean flag2 = minecraft.shouldEntityAppearGlowing(entityIn);
         RenderType rendertype = this.getRenderType(entityIn, flag, flag1, flag2);
 
-        // render model
-        matrixStackIn.pushPose();
+        // rotate around body and translate according to pose offsets
         getModel().translateRotateAroundBody(pose.get(ModelPart.OFFSET), pose.get(ModelPart.BODY), matrixStackIn, partialTicks);
+        // translate and rotate so the model is not upside-down
         matrixStackIn.translate(0.0F, 2.0F + baseHeight, 0.0F);
         matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(180.0F));
         if (rendertype != null) {
@@ -130,15 +133,15 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
             return false;
         }
         final Vector3d pos = entityIn.position().add(0, entityIn.getType().getDimensions().height / 2D, 0);
-        return isWithinDistanceToRenderName(pos, 6.0D);
+        return super.shouldShowName(entityIn) && mc.crosshairPickEntity == entityIn;
     }
 
     @Override
     public ResourceLocation getTextureLocation(final AltarEntity entity) {
         // return deity texture
         if(entity.getDeity().isPresent() && !entity.getDeity().get().toString().isEmpty()) {
-            ResourceLocation deity = entity.getDeity().get();
-            return new ResourceLocation(deity.getNamespace(), "textures/altar/" + deity.getPath() + ".png");
+            return DEITY_TEXTURES.computeIfAbsent(entity.getDeity().get(),
+                    deity -> new ResourceLocation(deity.getNamespace(), "textures/altar/" + deity.getPath() + ".png"));
         }
         // return player texture
         final GameProfile gameProfile = entity.getPlayerProfile();
@@ -158,14 +161,5 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
     protected RenderType getRenderType(final AltarEntity entityIn, boolean isVisible, boolean isVisibleToPlayer, boolean isGlowing) {
         // TODO: optimize, allow for player skins, etc.
         return super.getRenderType(entityIn, isVisible, isVisibleToPlayer, isGlowing);
-    }
-
-    public boolean isWithinDistanceToRenderName(final Vector3d pos, final double dis) {
-        final Minecraft mc = Minecraft.getInstance();
-        final EntityRendererManager renderManager = mc.getEntityRenderDispatcher();
-        return renderManager.distanceToSqr(pos.x, pos.y, pos.z) < (dis * dis)
-                && mc.hitResult != null
-                && mc.hitResult.getType() == RayTraceResult.Type.ENTITY
-                && mc.hitResult.getLocation().distanceToSqr(pos) < Math.pow(0.9D, 2);
     }
 }

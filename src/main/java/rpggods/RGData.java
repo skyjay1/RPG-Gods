@@ -6,13 +6,16 @@ import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.horse.AbstractHorseEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
+import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
 import rpggods.favor.FavorCommand;
 import rpggods.favor.IFavor;
@@ -20,6 +23,7 @@ import rpggods.network.SAltarPacket;
 import rpggods.network.SOfferingPacket;
 import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
+import rpggods.network.SUpdateAltarPacket;
 import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 
@@ -85,6 +89,17 @@ public final class RGData {
         LazyOptional<IFavor> copy = event.getPlayer().getCapability(RPGGods.FAVOR);
         if(original.isPresent() && copy.isPresent()) {
             copy.ifPresent(f -> f.deserializeNBT(original.orElseGet(() -> RPGGods.FAVOR.getDefaultInstance()).serializeNBT()));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onStartTracking(final PlayerEvent.StartTracking event) {
+        if(event.getTarget() instanceof AltarEntity && !event.getPlayer().level.isClientSide) {
+            RPGGods.LOGGER.debug("Player " + event.getPlayer().getDisplayName() + " started tracking " + event.getTarget());
+            int entityId = event.getTarget().getId();
+            ItemStack block = ((AltarEntity)event.getTarget()).getBlockBySlot();
+            RPGGods.LOGGER.debug("Sending packet for entity " + entityId + " about block " + block);
+            RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SUpdateAltarPacket(entityId, block));
         }
     }
 }

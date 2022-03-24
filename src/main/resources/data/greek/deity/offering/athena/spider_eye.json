@@ -1,8 +1,7 @@
 {
   "item": {
     "id": "minecraft:spider_eye",
-    "Count": 8
+    "Count": 1
   },
-  "favor": 16,
-  "maxuses": 3
+  "favor": 2
 }

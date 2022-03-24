@@ -5,8 +5,6 @@ import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraftforge.client.ForgeHooksClient;
-import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
@@ -17,9 +15,9 @@ import rpggods.entity.AltarEntity;
 import java.util.function.Supplier;
 
 /**
- * Created when the player closes a StatueContainer GUI.
- * The packet sends the BlockPos, StatuePose, and other settings
- * to the server to update the StatueTileEntity NBT data.
+ * Created when the player closes an AltarScreen GUI.
+ * The packet sends the AltarPose, name, and other settings
+ * to the server to update the AltarEntity NBT data.
  **/
 public class CUpdateAltarPacket {
 
@@ -28,7 +26,7 @@ public class CUpdateAltarPacket {
     protected AltarPose pose = AltarPose.EMPTY;
     protected boolean female = false;
     protected boolean slim = false;
-    protected String textureName = "";
+    protected String customName = "";
 
     public CUpdateAltarPacket() {
     }
@@ -38,15 +36,15 @@ public class CUpdateAltarPacket {
      * @param pose        the StatuePose settings
      * @param female      true if the statue uses the female model
      * @param slim        true if the statue uses the slim model
-     * @param textureName the String name of the texture to use
+     * @param customName the String name of the texture to use
      **/
     public CUpdateAltarPacket(final int entityId, final AltarPose pose,
-                              final boolean female, final boolean slim, final String textureName) {
+                              final boolean female, final boolean slim, final String customName) {
         this.entityId = entityId;
         this.pose = pose;
         this.female = female;
         this.slim = slim;
-        this.textureName = textureName;
+        this.customName = customName;
     }
 
     /**
@@ -60,8 +58,8 @@ public class CUpdateAltarPacket {
         final CompoundNBT nbt = buf.readNbt();
         final boolean female = buf.readBoolean();
         final boolean slim = buf.readBoolean();
-        final String textureName = buf.readUtf(NAME_LEN);
-        return new CUpdateAltarPacket(id, new AltarPose(nbt), female, slim, textureName);
+        final String customName = buf.readUtf(NAME_LEN);
+        return new CUpdateAltarPacket(id, new AltarPose(nbt), female, slim, customName);
     }
 
     /**
@@ -75,7 +73,7 @@ public class CUpdateAltarPacket {
         buf.writeNbt(msg.pose.serializeNBT());
         buf.writeBoolean(msg.female);
         buf.writeBoolean(msg.slim);
-        String name = msg.textureName;
+        String name = msg.customName;
         if (name.length() > NAME_LEN) {
             name = name.substring(0, NAME_LEN);
         }
@@ -99,8 +97,8 @@ public class CUpdateAltarPacket {
                     // update pose and name
                     AltarEntity altar = (AltarEntity) entity;
                     altar.setAltarPose(message.pose);
-                    if (message.textureName != null && !message.textureName.isEmpty()) {
-                        altar.setCustomName(new StringTextComponent(message.textureName));
+                    if (message.customName != null && !message.customName.isEmpty()) {
+                        altar.setCustomName(new StringTextComponent(message.customName));
                     }
                 }
             });

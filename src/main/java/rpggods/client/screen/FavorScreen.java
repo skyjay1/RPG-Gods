@@ -730,7 +730,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
     public AltarEntity getOrCreateEntity(final ResourceLocation deity) {
         if(!entityMap.containsKey(deity)) {
-            AltarEntity altarEntity = AltarEntity.createAltar(inventory.player.level, BlockPos.ZERO, Direction.NORTH, deity);
+            AltarEntity altarEntity = AltarEntity.createAltar(inventory.player.level, BlockPos.ZERO, Direction.SOUTH, deity);
             altarEntity.setNoGravity(true);
             altarEntity.noPhysics = true;
             entityMap.put(deity, altarEntity);
@@ -1048,10 +1048,12 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             if (this.visible && offering != null) {
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(offering.getAccept(), this.x, this.y);
+                FavorScreen.this.itemRenderer.renderGuiItemDecorations(FavorScreen.this.font, offering.getAccept(), this.x, this.y);
                 // draw trade
                 if(hasTrade) {
                     // draw trade item
                     FavorScreen.this.itemRenderer.renderGuiItem(offering.getTrade().get(), this.x + 18 + ARROW_WIDTH, this.y);
+                    FavorScreen.this.itemRenderer.renderGuiItemDecorations(FavorScreen.this.font, offering.getTrade().get(), this.x + 18 + ARROW_WIDTH, this.y);
                 } else if(offering.getFunction().isPresent()) {
                     // draw question mark instead of item
                     FavorScreen.this.font.draw(matrixStack, tradeFunctionText, this.x + 18 + ARROW_WIDTH + 4, this.y + textY, 0xFFFFFF);
@@ -1146,6 +1148,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             if (this.visible && offering != null) {
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(offering.getAccept(), this.x, this.y);
+                FavorScreen.this.itemRenderer.renderGuiItemDecorations(FavorScreen.this.font, offering.getAccept(), this.x, this.y);
                 // draw favor text
                 FavorScreen.this.font.draw(matrixStack, favorText, this.x + 18, this.y + textY, 0xFFFFFF);
                 // draw function text

@@ -103,23 +103,19 @@ public class AltarItem extends Item {
             ItemStack itemstack = context.getItemInHand();
             Vector3d vector3d = Vector3d.atBottomCenterOf(blockpos);
             AxisAlignedBB axisalignedbb = RGRegistry.EntityReg.ALTAR.getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
-            if (world.noCollision((Entity)null, axisalignedbb, (entity) -> {
-                return true;
-            }) && world.getEntities((Entity)null, axisalignedbb).isEmpty()) {
+            if (world.noCollision((Entity)null, axisalignedbb, (entity) -> true)
+                    && world.getEntities((Entity)null, axisalignedbb).isEmpty()) {
                 if (world instanceof ServerWorld) {
                     ServerWorld serverworld = (ServerWorld)world;
                     // determine altar properties to apply
                     String sAltarId = context.getItemInHand().getOrCreateTag().getString(KEY_ALTAR);
                     ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
                     // crate altar entity
-                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getHorizontalDirection(), altarId);
+                    AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getHorizontalDirection().getOpposite(), altarId);
                     if (altarEntity == null) {
                         return ActionResultType.FAIL;
                     }
-                    serverworld.addFreshEntityWithPassengers(altarEntity);
-                    float f = (float) MathHelper.floor((MathHelper.wrapDegrees(context.getRotation() - 180.0F) + 22.5F) / 45.0F) * 45.0F;
-                    altarEntity.moveTo(altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), f, 0.0F);
-                    world.addFreshEntity(altarEntity);
+                    serverworld.addFreshEntity(altarEntity);
                     world.playSound((PlayerEntity)null, altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundCategory.BLOCKS, 0.75F, 0.8F);
                 }
 
