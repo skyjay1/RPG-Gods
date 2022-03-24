@@ -19,6 +19,8 @@ import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.merchant.IMerchant;
+import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
 import net.minecraft.entity.monster.DrownedEntity;
 import net.minecraft.entity.monster.GuardianEntity;
 import net.minecraft.entity.passive.AnimalEntity;
@@ -28,6 +30,7 @@ import net.minecraft.entity.projectile.AbstractArrowEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.SpectralArrowEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.MerchantOffer;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ParticleTypes;
@@ -40,6 +43,7 @@ import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.util.math.BlockPos;
@@ -69,6 +73,7 @@ import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.entity.ai.AffinityGoal;
+import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
@@ -475,7 +480,38 @@ public class FavorEventHandler {
                 // These are handled using loot table modifiers
                 return true;
             case SPECIAL_PRICE:
-                break;
+                if(action.getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof IMerchant) {
+                    final int diff = Math.round(action.getMultiplier().get());
+                    final IMerchant merchant = (IMerchant) entity.get();
+                    // cancel event if the diff is ridiculously high
+                    if(diff >= 100 && object.isPresent()) {
+                        object.get().setCanceled(true);
+                        // cause villager to shake head and play unhappy sound
+                        if(entity.get() instanceof AbstractVillagerEntity) {
+                            ((AbstractVillagerEntity)entity.get()).setUnhappyCounter(40);
+                            entity.get().playSound(SoundEvents.VILLAGER_NO, 0.5F, 1.0F);
+                        }
+                        // spawn angry particles
+                        if(entity.get().level instanceof ServerWorld) {
+                            Vector3d pos = entity.get().getEyePosition(1.0F);
+                            ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 4, 0.5D, 0.5D, 0.5D, 0);
+                        }
+                        return true;
+                    }
+                    // add or reduce special price for all offers
+                    final boolean add = diff > 0;
+                    int special;
+                    for(MerchantOffer offer : merchant.getOffers()) {
+                        special = offer.getSpecialPriceDiff();
+                        if((add && special < diff) || (!add && special > diff)) {
+                            offer.setSpecialPriceDiff(diff);
+                        }
+                    }
+                    return !merchant.getOffers().isEmpty();
+                }
+                return false;
+            case PATRON:
+                return favor.setPatron(player, action.getId(), action.getMultiplier().orElse(0F), action.getFavor().orElse(0L));
             case XP:
                 if(entity.isPresent() && action.getMultiplier().isPresent() && entity.get() instanceof ExperienceOrbEntity) {
                     ((ExperienceOrbEntity)entity.get()).value *= action.getMultiplier().get();
@@ -687,6 +723,9 @@ public class FavorEventHandler {
                     final ResourceLocation id = event.getTarget().getType().getRegistryName();
                     if(triggerCondition(PerkCondition.Type.PLAYER_INTERACT_ENTITY, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.of(id), Optional.empty())) {
                         event.setCancellationResult(ActionResultType.SUCCESS);
+                    }
+                    if(event.getTarget() instanceof IMerchant && triggerPerks(PerkAction.Type.SPECIAL_PRICE, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.of(id), Optional.of(event))) {
+                        event.setCancellationResult(event.isCanceled() ? ActionResultType.FAIL : ActionResultType.SUCCESS);
                     }
                 });
                 // toggle sitting for tamed mobs

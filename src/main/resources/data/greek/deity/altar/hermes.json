@@ -1,39 +1,38 @@
 {
   "enabled": true,
-  "name": "greek:zeus",
+  "name": "greek:hermes",
   "female": false,
   "slim": false,
   "icon": {
-    "id": "minecraft:end_rod",
+    "id": "minecraft:feather",
     "Count": 1
   },
   "items": {
     "mainhand": {
-      "id": "minecraft:iron_sword",
+      "id": "minecraft:golden_sword",
       "Count": 1
     },
-    "block": "minecraft:quartz_slab",
+    "block": "minecraft:smooth_sandstone_slab",
     "armor_locked": false,
     "hands_locked": true,
     "block_locked": true
   },
   "pose": {
     "head": {
-      "x": 0.174533
+      "x": 0.10472
     },
     "left_arm": {
-      "x": -0.20944,
-      "z": -0.087266
+      "z": -0.034907
     },
     "right_arm": {
-      "x": -2.617994,
-      "z": -0.174533
+      "x": -1.22173,
+      "y": 0.034907
     },
     "left_leg": {
-      "z": -0.0349066
+      "x": 0.314159
     },
     "right_leg": {
-      "z": 0.0349066
+      "x": -0.174533
     }
   },
   "pose_locked": false

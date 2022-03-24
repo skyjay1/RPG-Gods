@@ -13,6 +13,7 @@ import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
+import rpggods.deity.Deity;
 import rpggods.event.FavorEventHandler;
 
 import java.util.Optional;
@@ -44,7 +45,6 @@ public class PerkAction {
     private final Optional<Float> multiplier;
     private final Optional<Affinity> affinity;
     private final boolean hidden;
-    private IFormattableTextComponent descriptionTranslationKey;
 
     public PerkAction(Type type, Optional<String> string, Optional<ResourceLocation> id, Optional<CompoundNBT> tag,
                       Optional<ItemStack> item, Optional<Long> favor, Optional<Float> multiplier,
@@ -150,8 +150,12 @@ public class PerkAction {
                 }
                 return StringTextComponent.EMPTY;
             case AFFINITY:
-                return getAffinity().isPresent() ? getAffinity().get().getDisplayName() : StringTextComponent.EMPTY;
+                if(getAffinity().isPresent()) {
+                    return getAffinity().get().getDisplayName();
+                }
+                return StringTextComponent.EMPTY;
             case ARROW_COUNT:
+            case SPECIAL_PRICE:
                 if(getMultiplier().isPresent()) {
                     // format multiplier as discrete bonus
                     // EX: multiplier of 0.0 becomes +0, 0.6 becomes +1, 1.2 becomes +1, etc.
@@ -162,13 +166,17 @@ public class PerkAction {
             case ARROW_DAMAGE:
             case CROP_HARVEST:
             case OFFSPRING:
-            case SPECIAL_PRICE:
             case XP:
                 if(getMultiplier().isPresent()) {
                     // format multiplier as percentage
                     // EX: multiplier of 0.0 becomes -100%, 0.5 becomes -50%, 1.2 becomes +120%, etc.
                     String prefix = getMultiplier().get() >= 0 ? "+" : "";
                     return new StringTextComponent(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
+                }
+                return StringTextComponent.EMPTY;
+            case PATRON:
+                if(getId().isPresent()) {
+                    return Deity.getName(getId().get());
                 }
                 return StringTextComponent.EMPTY;
             case FUNCTION: case AUTOSMELT: case UNSMELT: default:
@@ -192,6 +200,7 @@ public class PerkAction {
         AUTOSMELT("autosmelt"),
         UNSMELT("unsmelt"),
         SPECIAL_PRICE("special_price"),
+        PATRON("patron"),
         XP("xp");
 
         private static final Codec<PerkAction.Type> CODEC = Codec.STRING.comapFlatMap(PerkAction.Type::fromString, PerkAction.Type::getSerializedName).stable();

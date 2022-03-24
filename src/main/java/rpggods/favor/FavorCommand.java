@@ -86,6 +86,8 @@ public class FavorCommand {
                                         .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "target")))
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
                                                 .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"))))
+                                        .then(Commands.literal("patron")
+                                                .executes(command -> resetPatron(command.getSource(), EntityArgument.getPlayers(command, "target"))))
                                         .then(Commands.literal("cooldown")
                                                 .executes(command -> resetCooldown(command.getSource(), EntityArgument.getPlayers(command, "target"))))))
         );
@@ -292,10 +294,29 @@ public class FavorCommand {
         return players.size();
     }
 
+    private static int resetPatron(CommandSource source, Collection<ServerPlayerEntity> players) throws CommandSyntaxException {
+        // add favor to each player in the collection
+        IFavor favor;
+        for (final ServerPlayerEntity player : players) {
+            favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+            if (!favor.isEnabled()) {
+                throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
+            }
+            favor.setPatron(Optional.empty());
+        }
+        // send command feedback
+        if (players.size() == 1) {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.patron.success.single", players.iterator().next().getDisplayName()), true);
+        } else {
+            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.patron.success.multiple", players.size()), true);
+        }
+
+        return players.size();
+    }
+
     private static int resetCooldown(CommandSource source, Collection<? extends ServerPlayerEntity> players) throws CommandSyntaxException {
         // add favor to each player in the collection
         IFavor favor;
-        long time;
         for (final ServerPlayerEntity player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {

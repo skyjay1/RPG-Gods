@@ -112,7 +112,10 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      */
     public long addFavor(final PlayerEntity playerIn, final ResourceLocation deityIn, final long toAdd, final FavorChangedEvent.Source source) {
         // Post a context-aware event to allow other modifiers
-        return setFavor(playerIn, deityIn, favor + toAdd, source);
+        if(toAdd != 0) {
+            return setFavor(playerIn, deityIn, favor + toAdd, source);
+        }
+        return favor;
     }
 
     /**

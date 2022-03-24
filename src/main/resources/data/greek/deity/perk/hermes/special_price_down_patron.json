@@ -1,0 +1,23 @@
+{
+    "icon": {
+        "item": "minecraft:emerald_block",
+        "color": 4128580
+    },
+    "range": {
+        "deity": "greek:hermes",
+        "minlevel": 9,
+        "maxlevel": 10
+    },
+    "condition": [
+        {
+            "type": "patron",
+            "data": "greek:hermes"
+        }
+    ],
+    "action": {
+        "type": "special_price",
+        "multiplier": -16
+    },
+    "cooldown_category": "special_price_down",
+    "cooldown": 0
+}

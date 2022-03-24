@@ -33,8 +33,6 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
     String SACRIFICE_COOLDOWN = "SacrificeCooldown";
     String TIMESTAMP = "Timestamp";
 
-    long MIN_FAVOR = 10;
-
     /**
      * Gets the FavorLevel for the given Deity
      *
@@ -61,8 +59,14 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
      */
     Map<String, Long> getPerkCooldownMap();
 
+    /**
+     * @return a map of all offering IDs and cooldowns
+     */
     Map<ResourceLocation, Cooldown> getOfferingCooldownMap();
 
+    /**
+     * @return a map of all sacrifice IDs and cooldowns
+     */
     Map<ResourceLocation, Cooldown> getSacrificeCooldownMap();
 
     /**
@@ -94,6 +98,39 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
      * @param patron the updated Patron deity of this favor holder, or an empty optional
      */
     void setPatron(Optional<ResourceLocation> patron);
+
+    /**
+     * Updates the player's patron deity by removing the previous patron, if any, and adjusting favor decay
+     * @param player the player
+     * @param patron the new patron deity, or empty to remove the current patron
+     * @param decayBonus the favor decay rate to add to the given patron
+     * @param favorPunish the amount of favor to add to the old patron (typically negative)
+     * @return true if the patron deity was changed
+     */
+    default boolean setPatron(final PlayerEntity player, final Optional<ResourceLocation> patron,
+                                    final float decayBonus, final long favorPunish) {
+        Optional<ResourceLocation> old = getPatron();
+        // attempt to change patron (if no existing patron OR given patron is empty OR existing and given are different)
+        if(!old.isPresent() || !patron.isPresent() || !patron.get().equals(old.get())) {
+            // remove old patron
+            if (old.isPresent()) {
+                // reset favor decay
+                FavorLevel level = getFavor(old.get());
+                level.setDecayRate((float) RPGGods.CONFIG.getFavorDecayRate());
+                // add favor to old patron
+                level.addFavor(player, old.get(), favorPunish, FavorChangedEvent.Source.OTHER);
+            }
+            // set new patron
+            setPatron(patron);
+            // add multiplier to favor decay
+            if(patron.isPresent()) {
+                FavorLevel level = getFavor(patron.get());
+                level.setDecayRate(level.getDecayRate() + decayBonus);
+            }
+            return true;
+        }
+        return false;
+    }
 
     /**
      * @return the time until the next perk
