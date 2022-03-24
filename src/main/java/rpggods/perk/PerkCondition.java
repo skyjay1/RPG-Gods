@@ -15,7 +15,11 @@ import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.gen.feature.structure.Structure;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.BiomeDictionary;
+import net.minecraftforge.registries.ForgeRegistries;
+import rpggods.RPGGods;
 import rpggods.deity.Altar;
 
 import java.util.Optional;
@@ -35,11 +39,16 @@ public class PerkCondition {
 
     private final PerkCondition.Type type;
     private final Optional<String> data;
-    private IFormattableTextComponent translationKey;
+    private final Optional<ResourceLocation> id;
 
     public PerkCondition(PerkCondition.Type type, Optional<String> data) {
         this.type = type;
         this.data = data;
+        if(data.isPresent() && data.get().contains(":")) {
+            id = Optional.ofNullable(ResourceLocation.tryParse(getData().get()));
+        } else {
+            id = Optional.empty();
+        }
     }
 
     public PerkCondition.Type getType() {
@@ -51,10 +60,7 @@ public class PerkCondition {
     }
 
     public Optional<ResourceLocation> getId() {
-        if(getData().isPresent() && getData().get().contains(":")) {
-            return Optional.ofNullable(ResourceLocation.tryParse(getData().get()));
-        }
-        return Optional.empty();
+        return id;
     }
 
     public boolean isInBiome(final World world, final BlockPos pos) {
@@ -80,6 +86,16 @@ public class PerkCondition {
         return true;
     }
 
+    public boolean isInStructure(final ServerWorld world, final BlockPos pos) {
+        if(type == PerkCondition.Type.STRUCTURE && id.isPresent()) {
+            Structure<?> structure = ForgeRegistries.STRUCTURE_FEATURES.getValue(id.get());
+            if(structure != null) {
+                return world.structureFeatureManager().getStructureAt(pos, true, structure).isValid();
+            }
+        }
+        return false;
+    }
+
     public static DataResult<PerkCondition> fromType(PerkCondition.Type type) {
         return DataResult.success(new PerkCondition(type, Optional.empty()));
     }
@@ -103,7 +119,7 @@ public class PerkCondition {
                     ? new TranslationTextComponent("biome." + rl.getNamespace() + "." + rl.getPath())
                     : new StringTextComponent(d);
             case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
-            case ENTITY_KILLED_PLAYER: case PLAYER_INTERACT_ENTITY:
+            case ENTITY_KILLED_PLAYER: case PLAYER_INTERACT_ENTITY: case PLAYER_RIDE_ENTITY:
                 // read data as Entity ID
                 Optional<EntityType<?>> entityType = EntityType.byString(d);
                 return entityType.isPresent()
@@ -121,6 +137,7 @@ public class PerkCondition {
         NIGHT("night"),
         RANDOM_TICK("random_tick"),
         MAINHAND_ITEM("mainhand_item"),
+        STRUCTURE("structure"),
         EFFECT_START("effect_start"),
         ENTITY_HURT_PLAYER("entity_hurt_player"),
         ENTITY_KILLED_PLAYER("entity_killed_player"),

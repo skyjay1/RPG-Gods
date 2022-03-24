@@ -74,8 +74,6 @@ public class SUpdateAltarPacket {
                     AltarEntity altar = (AltarEntity) entity;
                     // update block slot
                     altar.setBlockSlot(message.block);
-                } else {
-                    RPGGods.LOGGER.error("SUpdateAltarPacket failed to locate AltarEntity with id " + message.entityId);
                 }
             });
         }

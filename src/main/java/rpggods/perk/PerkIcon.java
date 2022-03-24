@@ -9,6 +9,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Vector3f;
+import rpggods.deity.Offering;
 import rpggods.favor.FavorRange;
 
 import java.util.function.Function;
@@ -17,8 +18,10 @@ public class PerkIcon {
 
     public static final PerkIcon EMPTY = new PerkIcon(ItemStack.EMPTY, 0x000, true);
 
+    private static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Offering.ITEM_OR_STACK_CODEC;
+
     public static final Codec<PerkIcon> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ItemStack.CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(PerkIcon::getItem),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(PerkIcon::getItem),
             Codec.INT.optionalFieldOf("color", 0x000).forGetter(PerkIcon::getColor),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkIcon::isHidden)
     ).apply(instance, PerkIcon::new));

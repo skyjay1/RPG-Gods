@@ -52,6 +52,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
+import net.minecraft.world.gen.feature.structure.Structure;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
@@ -380,7 +381,8 @@ public class FavorEventHandler {
                 }
                 return false;
             case SUMMON:
-                return action.getTag().isPresent() && summonEntityNearPlayer(player.level, player, action.getTag()).isPresent();
+                float distance = action.getMultiplier().orElse(9F);
+                return action.getTag().isPresent() && summonEntityNearPlayer(player.level, player, action.getTag(), distance).isPresent();
             case ITEM: if(action.getItem().isPresent()) {
                     ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), action.getItem().get().copy());
                     itemEntity.setNoPickUpDelay();
@@ -539,9 +541,11 @@ public class FavorEventHandler {
             case NIGHT: return player.level.isNight();
             case RANDOM_TICK: return true;
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < COMBAT_TIMER;
-            case MAINHAND_ITEM: return data.isPresent() && data.get().equals(player.getMainHandItem().getItem().getRegistryName());
-            case PLAYER_RIDE_ENTITY: return player.isPassenger() && player.getVehicle() != null
-                    && data.isPresent() && data.equals(player.getVehicle().getType().getRegistryName());
+            case MAINHAND_ITEM: return condition.getId().isPresent() && condition.getId().get().equals(player.getMainHandItem().getItem().getRegistryName());
+            case PLAYER_RIDE_ENTITY:
+                return player.isPassenger() && player.getVehicle() != null
+                    && condition.getId().isPresent() && condition.getId().get().equals(player.getVehicle().getType().getRegistryName());
+            case STRUCTURE: return player.level instanceof ServerWorld && condition.isInStructure((ServerWorld) player.level, player.blockPosition());
             // match data to perk condition data
             case EFFECT_START:
             case ENTITY_HURT_PLAYER:
@@ -564,7 +568,16 @@ public class FavorEventHandler {
         return Optional.empty();
     }
 
-    public static Optional<Entity> summonEntityNearPlayer(final World worldIn, final PlayerEntity playerIn, final Optional<CompoundNBT> entityTag) {
+    /**
+     * Attempts to summon an entity near the player
+     * @param worldIn the world
+     * @param playerIn the player
+     * @param entityTag the CompoundNBT of the entity
+     * @param distance the maximum distance from the player to summon. Using 0 will skip the usual canSpawn checks.
+     * @return the entity if it was summoned, or an empty optional
+     **/
+    public static Optional<Entity> summonEntityNearPlayer(final World worldIn, final PlayerEntity playerIn,
+                                                          final Optional<CompoundNBT> entityTag, final float distance) {
         if(entityTag.isPresent() && worldIn instanceof IServerWorld) {
             final Optional<EntityType<?>> entityType = EntityType.by(entityTag.get());
             if(entityType.isPresent()) {
@@ -574,10 +587,15 @@ public class FavorEventHandler {
                 // find a place to spawn the entity
                 Random rand = playerIn.getRandom();
                 BlockPos spawnPos;
-                for(int attempts = 24, range = 9; attempts > 0; attempts--) {
-                    spawnPos = playerIn.blockPosition().offset(rand.nextInt(range) - rand.nextInt(range), rand.nextInt(2) - rand.nextInt(2), rand.nextInt(range) - rand.nextInt(range));
+                for(int range = 1 + Math.round(distance), attempts = Math.min(32, range * 3); attempts > 0; attempts--) {
+                    if(range > 1) {
+                        spawnPos = playerIn.blockPosition().offset(rand.nextInt(range) - rand.nextInt(range), rand.nextInt(2) - rand.nextInt(2), rand.nextInt(range) - rand.nextInt(range));
+                    } else {
+                        spawnPos = playerIn.blockPosition().above();
+                    }
                     // check if this is a valid position
-                    boolean canSpawnHere = EntitySpawnPlacementRegistry.checkSpawnRules(entityType.get(), (IServerWorld)worldIn, SpawnReason.SPAWN_EGG, spawnPos, rand)
+                    boolean canSpawnHere = (range == 1)
+                            || EntitySpawnPlacementRegistry.checkSpawnRules(entityType.get(), (IServerWorld)worldIn, SpawnReason.SPAWN_EGG, spawnPos, rand)
                             || (waterMob && worldIn.getBlockState(spawnPos).is(Blocks.WATER))
                             || (!waterMob && worldIn.getBlockState(spawnPos.below()).canOcclude()
                             && worldIn.getBlockState(spawnPos).getMaterial() == Material.AIR
