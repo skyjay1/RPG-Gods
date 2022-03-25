@@ -49,6 +49,7 @@ import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
@@ -337,14 +338,13 @@ public class FavorEventHandler {
                     return false;
                 }
             }
-            // run the perk
-            // DEBUG
-            RPGGods.LOGGER.debug("Running perk " + perk);
             boolean success = false;
             for(final PerkAction action : perk.getActions()) {
                 success |= runPerkAction(perk.getDeity(), action, player, favor, entity, data, object);
             }
             if(success) {
+                // send feedback
+                sendPerkFeedback(perk.getDeity(), player, favor);
                 // apply cooldown
                 long cooldown = (long) Math.floor(perk.getCooldown() * (1.0D + Math.random() * 0.25D));
                 favor.setPerkCooldown(perk.getCategory(), cooldown);
@@ -543,8 +543,9 @@ public class FavorEventHandler {
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < COMBAT_TIMER;
             case MAINHAND_ITEM: return condition.getId().isPresent() && condition.getId().get().equals(player.getMainHandItem().getItem().getRegistryName());
             case PLAYER_RIDE_ENTITY:
-                return player.isPassenger() && player.getVehicle() != null
-                    && condition.getId().isPresent() && condition.getId().get().equals(player.getVehicle().getType().getRegistryName());
+                return player.isPassenger() && player.getVehicle() != null && condition.getId().isPresent()
+                        && condition.getId().get().equals(player.getVehicle().getType().getRegistryName());
+            case DIMENSION: return condition.getId().isPresent() && condition.getId().get().equals(player.level.dimension().location());
             case STRUCTURE: return player.level instanceof ServerWorld && condition.isInStructure((ServerWorld) player.level, player.blockPosition());
             // match data to perk condition data
             case EFFECT_START:
@@ -557,6 +558,21 @@ public class FavorEventHandler {
                 return id.isPresent() && data.isPresent() && id.get().equals(data.get());
         }
         return false;
+    }
+
+
+    public static void sendPerkFeedback(ResourceLocation deity, PlayerEntity player, IFavor favor) {
+        if(RPGGods.CONFIG.canGiveFeedback()) {
+            final ITextComponent deityName = Deity.getName(deity);
+            final boolean positive = favor.getFavor(deity).getLevel() >= 0;
+            final ITextComponent message;
+            if(positive) {
+                message = new TranslationTextComponent("favor.perk.feedback.positive", deityName).withStyle(TextFormatting.GREEN);
+            } else {
+                message = new TranslationTextComponent("favor.perk.feedback.negative", deityName).withStyle(TextFormatting.RED);
+            }
+            player.displayClientMessage(message, !RPGGods.CONFIG.isFeedbackChat());
+        }
     }
 
     public static Optional<EffectInstance> readEffectInstance(final CompoundNBT tag) {
@@ -674,7 +690,7 @@ public class FavorEventHandler {
 
     public static class ForgeEvents {
 
-        @SubscribeEvent()
+        @SubscribeEvent
         public static void onLivingDeath(final LivingDeathEvent event) {
             if(!event.isCanceled() && event.getEntityLiving() != null && !event.getEntityLiving().level.isClientSide() && event.getEntityLiving().isEffectiveAi()) {
                 if(event.getEntityLiving() instanceof PlayerEntity) {

@@ -3,10 +3,7 @@
   "name": "greek:zeus",
   "female": false,
   "slim": false,
-  "icon": {
-    "id": "minecraft:end_rod",
-    "Count": 1
-  },
+  "icon": "minecraft:diamond_helmet",
   "items": {
     "mainhand": {
       "id": "minecraft:iron_sword",

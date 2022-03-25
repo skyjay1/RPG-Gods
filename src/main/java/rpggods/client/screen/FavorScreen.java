@@ -53,8 +53,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     // CONSTANTS
     private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/favor/favor.png");
     private static final ResourceLocation SCREEN_WIDGETS = new ResourceLocation(RPGGods.MODID, "textures/gui/favor/favor_widgets.png");
-    private static final ResourceLocation PERK_TOOLTIP = new ResourceLocation(RPGGods.MODID, "textures/gui/favor/perk.png");
-    private static final ResourceLocation FAVOR_LEVEL = new ResourceLocation(RPGGods.MODID, "textures/gui/favor/level.png");
 
     private static final int SCREEN_WIDTH = 256;
     private static final int SCREEN_HEIGHT = 168;
@@ -243,7 +241,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         }
         // initialize number of tabs
         tabCount = Math.min(deityList.size(), TAB_COUNT);
-        tabGroupCount = 1 + (deityList.size() / TAB_COUNT);
+        tabGroupCount = Math.max(1, deityList.size() / TAB_COUNT);
     }
 
     @Override

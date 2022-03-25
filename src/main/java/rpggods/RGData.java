@@ -94,11 +94,9 @@ public final class RGData {
 
     @SubscribeEvent
     public static void onStartTracking(final PlayerEvent.StartTracking event) {
-        if(event.getTarget() instanceof AltarEntity && !event.getPlayer().level.isClientSide) {
-            RPGGods.LOGGER.debug("Player " + event.getPlayer().getDisplayName() + " started tracking " + event.getTarget());
+        if(event.getPlayer().isAlive() && event.getTarget() instanceof AltarEntity && !event.getPlayer().level.isClientSide) {
             int entityId = event.getTarget().getId();
             ItemStack block = ((AltarEntity)event.getTarget()).getBlockBySlot();
-            RPGGods.LOGGER.debug("Sending packet for entity " + entityId + " about block " + block);
             RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SUpdateAltarPacket(entityId, block));
         }
     }

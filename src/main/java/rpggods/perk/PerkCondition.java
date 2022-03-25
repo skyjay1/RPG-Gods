@@ -118,6 +118,8 @@ public class PerkCondition {
                 return d.contains(":")
                     ? new TranslationTextComponent("biome." + rl.getNamespace() + "." + rl.getPath())
                     : new StringTextComponent(d);
+            case DIMENSION: return new TranslationTextComponent("dimension." + rl.getNamespace() + "." + rl.getPath());
+            case STRUCTURE: return new TranslationTextComponent("structure." + rl.getNamespace() + "." + rl.getPath());
             case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER: case PLAYER_INTERACT_ENTITY: case PLAYER_RIDE_ENTITY:
                 // read data as Entity ID
@@ -138,6 +140,7 @@ public class PerkCondition {
         RANDOM_TICK("random_tick"),
         MAINHAND_ITEM("mainhand_item"),
         STRUCTURE("structure"),
+        DIMENSION("dimension"),
         EFFECT_START("effect_start"),
         ENTITY_HURT_PLAYER("entity_hurt_player"),
         ENTITY_KILLED_PLAYER("entity_killed_player"),

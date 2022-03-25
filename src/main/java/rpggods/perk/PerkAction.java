@@ -13,6 +13,8 @@ import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.World;
+import net.minecraftforge.common.util.Constants;
 import rpggods.deity.Deity;
 import rpggods.event.FavorEventHandler;
 

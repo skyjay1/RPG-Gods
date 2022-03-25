@@ -10,6 +10,8 @@ public class RGConfig {
     private final ForgeConfigSpec.DoubleValue FAVOR_DECAY_RATE;
     private final ForgeConfigSpec.IntValue FAVOR_DECAY_AMOUNT;
     private final ForgeConfigSpec.IntValue FAVOR_UPDATE_RATE;
+    private final ForgeConfigSpec.BooleanValue PERK_FEEDBACK;
+    private final ForgeConfigSpec.BooleanValue PERK_FEEDBACK_CHAT;
 
     // Affinity
     private final ForgeConfigSpec.BooleanValue FLEE_ENABLED;
@@ -22,6 +24,8 @@ public class RGConfig {
     private double favorDecayRate;
     private int favorDecayAmount;
     private int favorUpdateRate;
+    private boolean perkFeedback;
+    private boolean perkFeedbackChat;
 
     private boolean fleeEnabled;
     private boolean hostileEnabled;
@@ -48,6 +52,12 @@ public class RGConfig {
         FAVOR_DECAY_AMOUNT = builder
                 .comment("Amount of favor to deplete when applicable")
                 .defineInRange("favor_decay_amount", 1, 0, 1024);
+        PERK_FEEDBACK = builder
+                .comment("True to notify player when a perk is given")
+                .define("perk_feedback", true);
+        PERK_FEEDBACK_CHAT = builder
+                .comment("True to send feedback through chat instead of status bar", "Only if perk_feedback is True")
+                .define("perk_feedback_chat", false);
         builder.pop();
         builder.push("affinity");
         FLEE_ENABLED = builder
@@ -72,6 +82,8 @@ public class RGConfig {
         favorDecayRate = FAVOR_DECAY_RATE.get();
         favorDecayAmount = FAVOR_DECAY_AMOUNT.get();
         favorUpdateRate = FAVOR_UPDATE_RATE.get();
+        perkFeedback = PERK_FEEDBACK.get();
+        perkFeedbackChat = PERK_FEEDBACK_CHAT.get();
 
         fleeEnabled = FLEE_ENABLED.get();
         hostileEnabled = HOSTILE_ENABLED.get();
@@ -84,6 +96,8 @@ public class RGConfig {
     public double getFavorDecayRate() { return favorDecayRate; }
     public int getFavorDecayAmount() { return favorDecayAmount; }
     public int getFavorUpdateRate() { return favorUpdateRate; }
+    public boolean canGiveFeedback() { return perkFeedback; }
+    public boolean isFeedbackChat() { return perkFeedbackChat; }
 
     public boolean isFleeEnabled() { return fleeEnabled; }
     public boolean isHostileEnabled() { return hostileEnabled; }
