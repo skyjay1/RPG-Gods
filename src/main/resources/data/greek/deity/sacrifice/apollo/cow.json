@@ -1,5 +1,5 @@
 {
   "entity": "minecraft:cow",
-  "favor": -1,
+  "favor": 1,
   "maxuses": 12
 }

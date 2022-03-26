@@ -17,6 +17,11 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.goal.Goal;
+import net.minecraft.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.entity.ai.goal.RangedBowAttackGoal;
+import net.minecraft.entity.ai.goal.RangedCrossbowAttackGoal;
 import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.merchant.IMerchant;
@@ -45,7 +50,6 @@ import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.Tuple;
 import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
@@ -94,6 +98,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class FavorEventHandler {
 
@@ -114,9 +119,8 @@ public class FavorEventHandler {
             Offering offering = null;
             for(ResourceLocation id : RPGGods.DEITY.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
                 Offering o = RPGGods.OFFERING.get(id).orElse(null);
-                if(o != null && item.getCount() >= o.getAccept().getCount()
-                        && ItemStack.isSame(item, o.getAccept())
-                        && ItemStack.tagMatches(item, o.getAccept())) {
+                // TODO: some reliable way of matching NBT
+                if(o != null && item.getCount() >= o.getAccept().getCount() && ItemStack.isSame(o.getAccept(), item)) {
                     offeringId = id;
                     offering = o;
                     break;
@@ -184,7 +188,7 @@ public class FavorEventHandler {
                 if(entry.getValue() != null && entry.getValue().isPresent()) {
                     sacrifice = entry.getValue().get();
                     // check sacrifice matches entity that was killed
-                    if(sacrifice != null && entityId.equals(sacrifice.getEntity())) {
+                    if(entityId.equals(sacrifice.getEntity())) {
                         // check sacrifice cooldown
                         cooldown = favor.getSacrificeCooldown(entry.getKey());
                         deity = Sacrifice.getDeity(entry.getKey());
@@ -426,7 +430,7 @@ public class FavorEventHandler {
             case ARROW_COUNT:
                 if(entity.isPresent() && action.getMultiplier().isPresent() && entity.get() instanceof AbstractArrowEntity) {
                     AbstractArrowEntity arrow = (AbstractArrowEntity) entity.get();
-                    int arrowCount = (int)Math.round(action.getMultiplier().get());
+                    int arrowCount = Math.round(action.getMultiplier().get());
                     double motionScale = 0.8;
                     for(int i = 0; i < arrowCount; i++) {
                         AbstractArrowEntity arrow2 = (AbstractArrowEntity) arrow.getType().create(arrow.level);
@@ -447,7 +451,7 @@ public class FavorEventHandler {
                     int childCount = Math.round(action.getMultiplier().get());
                     if(childCount < 1) {
                         // number of babies is zero, so cancel the event
-                        ((BabyEntitySpawnEvent)object.get()).setCanceled(true);
+                        object.get().setCanceled(true);
                         if(entity.get().level instanceof ServerWorld) {
                             Vector3d pos = entity.get().getEyePosition(1.0F);
                             ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 6, 0.5D, 0.5D, 0.5D, 0);
@@ -580,8 +584,11 @@ public class FavorEventHandler {
     public static Optional<EffectInstance> readEffectInstance(final CompoundNBT tag) {
         if(tag.contains("Potion", 8)) {
             final CompoundNBT nbt = tag.copy();
-            nbt.putByte("Id", (byte) Effect.getId(ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")))));
-            return Optional.of(EffectInstance.load(nbt));
+            Effect potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")));
+            if(potion != null) {
+                nbt.putByte("Id", (byte) Effect.getId(potion));
+                return Optional.of(EffectInstance.load(nbt));
+            }
         }
         return Optional.empty();
     }
@@ -669,8 +676,8 @@ public class FavorEventHandler {
                         // attempt to update the age (add or subtract)
                         int oldAge = state.getValue(AGE);
                         int newAge = Math.max(0, oldAge + amount);
-                        if(AGE.getPossibleValues().contains(Integer.valueOf(newAge))) {
-                            // update the blockstate age
+                        if(AGE.getPossibleValues().contains(newAge)) {
+                            // update the block age
                             player.level.setBlock(blockpos, state.setValue(AGE, newAge), 2);
                             // spawn particles
                             if(player.level instanceof ServerWorld) {
@@ -740,7 +747,7 @@ public class FavorEventHandler {
             if(!event.isCanceled() && !event.getEntityLiving().level.isClientSide() && event.getEntityLiving().isEffectiveAi() && event.getEntityLiving().isAlive()
                     && event.getSource().getEntity() instanceof LivingEntity && event.getEntityLiving() instanceof PlayerEntity) {
                 PlayerEntity player = (PlayerEntity)event.getEntityLiving();
-                Entity source = (Entity) event.getSource().getDirectEntity();
+                Entity source = event.getSource().getDirectEntity();
                 if(!player.isSpectator() && !player.isCreative()) {
                     // onEntityHurtPlayer
                     player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
@@ -800,6 +807,7 @@ public class FavorEventHandler {
                 boolean hostileEnabled= RPGGods.CONFIG.isHostileEnabled();
                 boolean passiveEnabled = RPGGods.CONFIG.isPassiveEnabled();
                 boolean tameableEnabled = RPGGods.CONFIG.isTameableEnabled();
+                boolean checkAttackGoal = false;
                 // add tameable goals
                 if(tameableEnabled && event.getEntity().getCapability(RPGGods.TAMEABLE).isPresent()) {
                     mob.goalSelector.addGoal(0, new AffinityGoal.SittingGoal(mob));
@@ -807,6 +815,7 @@ public class FavorEventHandler {
                     mob.goalSelector.addGoal(1, new AffinityGoal.FollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
                     mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtByTargetGoal(mob));
                     mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtTargetGoal(mob));
+                    checkAttackGoal = true;
                 }
                 // add flee goal
                 if(fleeEnabled && event.getEntity() instanceof CreatureEntity) {
@@ -815,10 +824,27 @@ public class FavorEventHandler {
                 // add hostile goal
                 if(hostileEnabled) {
                     mob.goalSelector.addGoal(4, new AffinityGoal.NearestAttackableGoal(mob, 0.1F));
+                    checkAttackGoal = true;
                 }
                 // add target reset goal
                 if(hostileEnabled || passiveEnabled) {
                     mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
+                }
+                // ensure target has attack goal
+                if(checkAttackGoal && event.getEntity() instanceof CreatureEntity) {
+                    // check for existing attack goal
+                    boolean hasAttackGoal = false;
+                    for(Goal g : mob.goalSelector.getRunningGoals().collect(Collectors.toList())) {
+                        if(g instanceof MeleeAttackGoal || g instanceof RangedAttackGoal
+                                || g instanceof RangedBowAttackGoal || g instanceof RangedCrossbowAttackGoal) {
+                            hasAttackGoal = true;
+                            break;
+                        }
+                    }
+                    // add attack goal if none was found
+                    if(!hasAttackGoal) {
+                        mob.goalSelector.addGoal(3, new MeleeAttackGoal((CreatureEntity) event.getEntity(), 1.0D, false));
+                    }
                 }
             }
         }
@@ -882,7 +908,7 @@ public class FavorEventHandler {
                         triggerCondition(PerkCondition.Type.RANDOM_TICK, event.player, f, Optional.empty(),
                                 Optional.empty(), Optional.empty());
                     }
-                    // reduce cooldowns
+                    // reduce cooldown
                     f.tickCooldown(event.player.level.getGameTime());
                     // deplete favor
                     if(Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
@@ -902,7 +928,7 @@ public class FavorEventHandler {
             // create task
             Runnable task = () -> {
                 // ensure entity is still available
-                if(null == mob || !mob.isAlive()) {
+                if(!mob.isAlive()) {
                     return;
                 }
                 Set<Affinity.Type> types = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).keySet();
