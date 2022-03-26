@@ -3,13 +3,9 @@ package rpggods.deity;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
-import net.minecraftforge.registries.ForgeRegistries;
-import rpggods.RPGGods;
-import rpggods.util.Cooldown;
 
 import java.util.Optional;
 import java.util.function.Function;

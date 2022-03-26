@@ -4,7 +4,7 @@
   "female": false,
   "slim": false,
   "icon": {
-    "id": "minecraft:wither_skeleton_skull",
+    "id": "minecraft:skeleton_skull",
     "Count": 1
   },
   "items": {

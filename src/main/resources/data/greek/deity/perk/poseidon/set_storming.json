@@ -1,0 +1,28 @@
+{
+    "icon": {
+        "item": "minecraft:water_bucket",
+        "color": 65535
+    },
+    "range": {
+        "deity": "greek:zeus",
+        "minlevel": -7,
+        "maxlevel": -10
+    },
+    "condition": [
+        {
+            "type": "random_tick"
+        },
+        {
+            "type": "biome",
+            "data": "WATER"
+        }
+    ],
+    "action": [
+        {
+            "type": "function",
+            "id": "greek:set_storming"
+        }
+    ],
+    "chance": 0.04,
+    "cooldown": 21000
+}

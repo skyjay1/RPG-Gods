@@ -2,11 +2,13 @@ package rpggods;
 
 import com.google.common.collect.Lists;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -31,6 +33,7 @@ import rpggods.network.SOfferingPacket;
 import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
 import rpggods.network.SUpdateAltarPacket;
+import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
@@ -114,20 +117,26 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);
-        // register config
+        // Config file
         RPGGods.LOGGER.debug("registerConfig");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC);
         // Required for data pack sync and favor capability
         MinecraftForge.EVENT_BUS.register(RGData.class);
         // Events that affect Favor and Perks
         MinecraftForge.EVENT_BUS.register(FavorEventHandler.ForgeEvents.class);
-
+        // Events that are client-only
+        DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> {
+            RPGGods.LOGGER.debug("registerClientEvents");
+            MinecraftForge.EVENT_BUS.register(FavorEventHandler.ClientEvents.class);
+        });
+        // Packets
         LOGGER.debug("registerNetwork");
         int messageId = 0;
         CHANNEL.registerMessage(messageId++, SAltarPacket.class, SAltarPacket::toBytes, SAltarPacket::fromBytes, SAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SOfferingPacket.class, SOfferingPacket::toBytes, SOfferingPacket::fromBytes, SOfferingPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SSacrificePacket.class, SSacrificePacket::toBytes, SSacrificePacket::fromBytes, SSacrificePacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SPerkPacket.class, SPerkPacket::toBytes, SPerkPacket::fromBytes, SPerkPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(messageId++, SUpdateSittingPacket.class, SUpdateSittingPacket::toBytes, SUpdateSittingPacket::fromBytes, SUpdateSittingPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SUpdateAltarPacket.class, SUpdateAltarPacket::toBytes, SUpdateAltarPacket::fromBytes, SUpdateAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, CUpdateAltarPacket.class, CUpdateAltarPacket::toBytes, CUpdateAltarPacket::fromBytes, CUpdateAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }

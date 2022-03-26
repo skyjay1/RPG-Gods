@@ -148,7 +148,8 @@ public class PerkAction {
                 if(favor.isPresent()) {
                     // format favor as discrete amount
                     // EX: multiplier of -1.1 becomes -1, 0.6 becomes +1, 1.2 becomes +1, etc.
-                    return new StringTextComponent((favor.get() >= 0 ? "+" : "") + Math.round(getFavor().get()));
+                    String prefix = (favor.get() > 0) ? "+" : "";
+                    return new StringTextComponent(prefix + Math.round(getFavor().get()));
                 }
                 return StringTextComponent.EMPTY;
             case AFFINITY:
@@ -161,7 +162,8 @@ public class PerkAction {
                 if(getMultiplier().isPresent()) {
                     // format multiplier as discrete bonus
                     // EX: multiplier of 0.0 becomes +0, 0.6 becomes +1, 1.2 becomes +1, etc.
-                    return new StringTextComponent("+" + Math.round(getMultiplier().get()));
+                    String prefix = (getMultiplier().get() > 0) ? "+" : "";
+                    return new StringTextComponent(prefix + Math.round(getMultiplier().get()));
                 }
                 return StringTextComponent.EMPTY;
             case CROP_GROWTH:

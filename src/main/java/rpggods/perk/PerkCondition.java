@@ -5,6 +5,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.entity.EntityType;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
@@ -113,6 +115,11 @@ public class PerkCondition {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
             case PATRON: return new TranslationTextComponent(Altar.createTranslationKey(rl));
+            case MAINHAND_ITEM:
+                Item item = ForgeRegistries.ITEMS.getValue(rl);
+                if(item != null) {
+                    return new ItemStack(item).getDisplayName();
+                }
             case BIOME:
                 // read data as either biome name or biome dictionary type
                 return d.contains(":")

@@ -1,6 +1,13 @@
 package rpggods;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import net.minecraft.entity.EntityType;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class RGConfig {
 
@@ -19,6 +26,8 @@ public class RGConfig {
     private final ForgeConfigSpec.BooleanValue PASSIVE_ENABLED;
     private final ForgeConfigSpec.BooleanValue TAMEABLE_ENABLED;
 
+    private final ForgeConfigSpec.ConfigValue<List<? extends String>> SITTING_MOBS;
+
     private boolean favorEnabled;
     private double randomPerkChance;
     private double favorDecayRate;
@@ -31,6 +40,8 @@ public class RGConfig {
     private boolean hostileEnabled;
     private boolean passiveEnabled;
     private boolean tameableEnabled;
+
+    private ImmutableList<ResourceLocation> sittingMobs;
 
     public RGConfig(final ForgeConfigSpec.Builder builder) {
         builder.push("favor");
@@ -73,6 +84,25 @@ public class RGConfig {
                 .comment("True if mobs can be given AI to become tamed")
                 .define("tameable_enabled", true);
         builder.pop();
+        builder.push("sitting");
+        SITTING_MOBS = builder
+                .comment("List of mobs that appear to sit (used client-side)")
+                .defineList("sitting_mobs", Lists.newArrayList(
+                        EntityType.ZOMBIE.getRegistryName().toString(),
+                        EntityType.HUSK.getRegistryName().toString(),
+                        EntityType.DROWNED.getRegistryName().toString(),
+                        EntityType.SKELETON.getRegistryName().toString(),
+                        EntityType.STRAY.getRegistryName().toString(),
+                        EntityType.WITHER_SKELETON.getRegistryName().toString(),
+                        EntityType.VINDICATOR.getRegistryName().toString(),
+                        EntityType.PILLAGER.getRegistryName().toString(),
+                        EntityType.EVOKER.getRegistryName().toString(),
+                        EntityType.ILLUSIONER.getRegistryName().toString(),
+                        EntityType.PIGLIN.getRegistryName().toString(),
+                        EntityType.ZOMBIFIED_PIGLIN.getRegistryName().toString(),
+                        EntityType.ENDERMAN.getRegistryName().toString()
+                ), o -> o instanceof String && ResourceLocation.isValidResourceLocation((String)o));
+        builder.pop();
     }
 
 
@@ -89,6 +119,12 @@ public class RGConfig {
         hostileEnabled = HOSTILE_ENABLED.get();
         passiveEnabled = PASSIVE_ENABLED.get();
         tameableEnabled = TAMEABLE_ENABLED.get();
+
+        ImmutableList.Builder<ResourceLocation> builder = ImmutableList.builder();
+        for(String s : SITTING_MOBS.get()) {
+            builder.add(ResourceLocation.tryParse(s));
+        }
+        sittingMobs = builder.build();
     }
 
     public boolean isFavorEnabled() { return favorEnabled; }
@@ -103,4 +139,6 @@ public class RGConfig {
     public boolean isHostileEnabled() { return hostileEnabled; }
     public boolean isPassiveEnabled() { return passiveEnabled; }
     public boolean isTameableEnabled() { return tameableEnabled; }
+
+    public boolean isSittingMob(final ResourceLocation id) { return sittingMobs.contains(id); }
 }

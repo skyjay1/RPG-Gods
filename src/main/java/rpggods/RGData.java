@@ -24,6 +24,7 @@ import rpggods.network.SOfferingPacket;
 import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
 import rpggods.network.SUpdateAltarPacket;
+import rpggods.network.SUpdateSittingPacket;
 import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 
@@ -92,12 +93,27 @@ public final class RGData {
         }
     }
 
+    /**
+     * Used to ensure that
+     * 1. AltarEntity syncs inventory to client and
+     * 2. Tameable entities sync sitting state to client
+     * @param event
+     */
     @SubscribeEvent
     public static void onStartTracking(final PlayerEvent.StartTracking event) {
-        if(event.getPlayer().isAlive() && event.getTarget() instanceof AltarEntity && !event.getPlayer().level.isClientSide) {
-            int entityId = event.getTarget().getId();
-            ItemStack block = ((AltarEntity)event.getTarget()).getBlockBySlot();
-            RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SUpdateAltarPacket(entityId, block));
+        if(event.getPlayer().isAlive() && !event.getPlayer().level.isClientSide) {
+            // sync altar entity
+            if(event.getTarget() instanceof AltarEntity) {
+                int entityId = event.getTarget().getId();
+                ItemStack block = ((AltarEntity)event.getTarget()).getBlockBySlot();
+                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SUpdateAltarPacket(entityId, block));
+            }
+            // sync tameable entity
+            LazyOptional<ITameable> tameable = event.getTarget().getCapability(RPGGods.TAMEABLE);
+            if(tameable.isPresent()) {
+                ITameable t = tameable.orElse(null);
+                t.setSittingWithUpdate(event.getTarget(), t.isSitting());
+            }
         }
     }
 }

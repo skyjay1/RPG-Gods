@@ -9,7 +9,7 @@ import net.minecraftforge.common.capabilities.Capability.IStorage;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
-import rpggods.util.Cooldown;
+import rpggods.deity.Cooldown;
 
 import java.util.HashMap;
 import java.util.Map;

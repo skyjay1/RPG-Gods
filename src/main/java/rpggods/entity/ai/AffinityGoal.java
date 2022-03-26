@@ -24,9 +24,12 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fml.network.PacketDistributor;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.favor.FavorRange;
 import rpggods.favor.IFavor;
+import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.tameable.ITameable;
@@ -62,13 +65,13 @@ public class AffinityGoal {
      * If one of the return parameters is true, the entity should have that affinity enforced.
      * @param creature the entity
      * @param target the target (such as a player)
-     * @return a Tuple where A=isPassive and B=isHostile
+     * @return an Immutable Pair where Left=isPassive and Right=isHostile
      */
-    public static Tuple<Boolean, Boolean> getPassiveAndHostile(final LivingEntity creature, final LivingEntity target) {
+    public static ImmutablePair<Boolean, Boolean> getPassiveAndHostile(final LivingEntity creature, final LivingEntity target) {
         final ResourceLocation id = creature.getType().getRegistryName();
         // passive behavior based on tame status
         if(AffinityGoal.isOwnerOrTeam(creature, target)) {
-            return new Tuple<>(false, false);
+            return ImmutablePair.of(true, false);
         }
         // passive behavior based on favor
         if(target != creature.getLastHurtByMob()) {
@@ -76,11 +79,11 @@ public class AffinityGoal {
             if(favor.isPresent()) {
                 IFavor f = favor.orElse(null);
                 if(!f.isEnabled()) {
-                    return new Tuple<>(false, false);
+                    return ImmutablePair.of(false, false);
                 }
                 boolean isPassive = isPassive(creature, f);
                 boolean isHostile = isHostile(creature, f);
-                // passive entity should not attack unless another perk enables hostility
+                // log error if there are conflicts
                 if(isPassive && isHostile) {
                     final Map<Affinity.Type, List<ResourceLocation>> affinityMap = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of());
                     final List<FavorRange> passivePerks = affinityMap.getOrDefault(Affinity.Type.PASSIVE, ImmutableList.of())
@@ -88,12 +91,12 @@ public class AffinityGoal {
                     final List<FavorRange> hostilePerks = affinityMap.getOrDefault(Affinity.Type.HOSTILE, ImmutableList.of())
                             .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());;
                     RPGGods.LOGGER.error("Conflicting affinity perks for " + id + " ; Hostile is " + hostilePerks + " and Passive is " + passivePerks);
-                    return new Tuple<>(false, false);
+                    return ImmutablePair.of(false, false);
                 }
-                return new Tuple<>(isPassive, isHostile);
+                return ImmutablePair.of(isPassive, isHostile);
             }
         }
-        return new Tuple<>(false, false);
+        return ImmutablePair.of(false, false);
     }
 
     public static boolean isPassive(final LivingEntity creature, final IFavor playerFavor) {
@@ -136,7 +139,7 @@ public class AffinityGoal {
     public static class NearestAttackableGoal extends NearestAttackableTargetGoal<PlayerEntity> {
 
         public NearestAttackableGoal(final MobEntity entity, float chance) {
-            super(entity, PlayerEntity.class, Math.round(chance * 100), true, false, e -> getPassiveAndHostile(entity, e).getB());
+            super(entity, PlayerEntity.class, Math.round(chance * 100), true, false, e -> getPassiveAndHostile(entity, e).getRight());
         }
     }
 
@@ -146,7 +149,7 @@ public class AffinityGoal {
 
         protected final Predicate<LivingEntity> passivePredicate;
 
-        public NearestAttackableResetGoal(final MobEntity entityIn) { this(entityIn, 10, e -> getPassiveAndHostile(entityIn, e).getA()); }
+        public NearestAttackableResetGoal(final MobEntity entityIn) { this(entityIn, 10, e -> getPassiveAndHostile(entityIn, e).getLeft()); }
 
         public NearestAttackableResetGoal(final MobEntity entityIn, int intervalIn, Predicate<LivingEntity> passivePredicate) {
             entity = entityIn;
@@ -247,7 +250,9 @@ public class AffinityGoal {
 
         @Override
         public void start() {
-            entity.getCapability(RPGGods.TAMEABLE).ifPresent(t -> t.setSitting(false));
+            entity.getCapability(RPGGods.TAMEABLE).ifPresent(t -> {
+                t.setSittingWithUpdate(entity, false);
+            });
         }
     }
 

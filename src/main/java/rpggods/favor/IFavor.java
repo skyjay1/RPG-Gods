@@ -7,17 +7,14 @@ import net.minecraft.nbt.ListNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.event.FavorChangedEvent;
-import rpggods.util.Cooldown;
+import rpggods.deity.Cooldown;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public interface IFavor extends INBTSerializable<CompoundNBT> {
 

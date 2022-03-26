@@ -1,4 +1,4 @@
-package rpggods.util;
+package rpggods.deity;
 
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraftforge.common.util.INBTSerializable;

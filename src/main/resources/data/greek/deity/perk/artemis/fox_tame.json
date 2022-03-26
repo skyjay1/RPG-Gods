@@ -8,13 +8,17 @@
     },
     "range": {
         "deity": "greek:artemis",
-        "minlevel": 1,
+        "minlevel": 8,
         "maxlevel": 10
     },
     "condition": [
         {
             "type": "player_interact_entity",
-            "data": "minecraft:spider"
+            "data": "minecraft:fox"
+        },
+        {
+            "type": "mainhand_item",
+            "data": "minecraft:raw_chicken"
         }
     ],
     "action": [
@@ -22,10 +26,10 @@
             "type": "affinity",
             "affinity": {
                 "type": "tame",
-                "entity": "minecraft:spider"
+                "entity": "minecraft:fox"
             }
         }
     ],
-    "cooldown": 100,
-    "chance": 1.0
+    "cooldown_category": "tame",
+    "cooldown": 12000
 }

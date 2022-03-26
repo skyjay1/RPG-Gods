@@ -18,7 +18,6 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Tuple;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.IFormattableTextComponent;
@@ -27,6 +26,7 @@ import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.deity.Offering;
@@ -123,9 +123,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     // Data
     private static final List<ResourceLocation> deityList = new ArrayList<>();
     private static final Map<ResourceLocation, AltarEntity> entityMap = new HashMap<>();
-    private static final Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> offeringMap = new HashMap();
-    private static final Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> tradeMap = new HashMap();
-    private static final Map<ResourceLocation, List<Tuple<ResourceLocation, Sacrifice>>> sacrificeMap = new HashMap();
+    private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> offeringMap = new HashMap();
+    private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> tradeMap = new HashMap();
+    private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Sacrifice>>> sacrificeMap = new HashMap();
     // Key: deity ID; Value: Map of perk level to list of available perks
     private static final Map<ResourceLocation, Map<Integer, List<Perk>>> perkMap = new HashMap();
     private ResourceLocation deity;
@@ -191,29 +191,29 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         for(Map.Entry<ResourceLocation, Optional<Offering>> entry : RPGGods.OFFERING.getEntries()) {
             entry.getValue().ifPresent(offering -> {
                 if(offering.getFavor() != 0 || offering.getFunction().isPresent() || offering.getTrade().isPresent()) {
-                    Map<ResourceLocation, List<Tuple<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
-                    map.computeIfAbsent(Offering.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), offering));
+                    Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
+                    map.computeIfAbsent(Offering.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(ImmutablePair.of(entry.getKey(), offering));
                 }
             });
         }
         offeringCount = OFFERING_COUNT;
         tradeCount = TRADE_COUNT;
         // sort offerings by favor (descending)
-        offeringMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getB().getFavor() - t1.getB().getFavor()));
+        offeringMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getRight().getFavor() - t1.getRight().getFavor()));
         // sort trades by unlock level (ascending)
-        tradeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t1.getB().getTradeMinLevel() - t2.getB().getTradeMinLevel()));
+        tradeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t1.getRight().getTradeMinLevel() - t2.getRight().getTradeMinLevel()));
         // add all sacrifices to map
         sacrificeMap.clear();
         for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
             entry.getValue().ifPresent(sacrifice -> {
                 if(sacrifice.getFavor() != 0 || sacrifice.getFunction().isPresent()) {
-                    sacrificeMap.computeIfAbsent(Sacrifice.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(new Tuple(entry.getKey(), sacrifice));
+                    sacrificeMap.computeIfAbsent(Sacrifice.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(ImmutablePair.of(entry.getKey(), sacrifice));
                 }
             });
         }
         sacrificeCount = SACRIFICE_COUNT;
         // sort sacrifices by favor (descending)
-        sacrificeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getB().getFavor() - t1.getB().getFavor()));
+        sacrificeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getRight().getFavor() - t1.getRight().getFavor()));
         // add all perks to map
         perkMap.clear();
         Perk perk;
@@ -230,7 +230,12 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     perkMap.put(perk.getDeity(), map);
                 }
                 // determine which level to place the perk
-                int unlock = (perk.getRange().getMaxLevel() <= 0) ? perk.getRange().getMaxLevel() : perk.getRange().getMinLevel();
+                int min = perk.getRange().getMinLevel();
+                int max = perk.getRange().getMaxLevel();
+                int unlock;
+                if(min >= 0 && max >= 0) unlock = min;
+                else if(min <= 0 && max <= 0) unlock = max;
+                else unlock = Math.min(Math.abs(min), Math.abs(max));
                 // actually add the perk to the map
                 perkMap.get(perk.getDeity()).get(unlock).add(perk);
             }
@@ -1075,11 +1080,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         @Override
         public void updateOffering(final ResourceLocation deity, final int startIndex) {
             final int offeringId = startIndex * 2 + id;
-            final List<Tuple<ResourceLocation, Offering>> offerings = FavorScreen.this.tradeMap.getOrDefault(deity, ImmutableList.of());
+            final List<ImmutablePair<ResourceLocation, Offering>> offerings = FavorScreen.this.tradeMap.getOrDefault(deity, ImmutableList.of());
             if(offeringId < offerings.size()) {
                 this.visible = true;
-                Tuple<ResourceLocation, Offering> tuple = offerings.get(offeringId);
-                updateOffering(tuple.getA(), tuple.getB());
+                ImmutablePair<ResourceLocation, Offering> tuple = offerings.get(offeringId);
+                updateOffering(tuple.getLeft(), tuple.getRight());
             } else {
                 this.visible = false;
             }
@@ -1163,11 +1168,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
         public void updateOffering(final ResourceLocation deity, final int startIndex) {
             final int offeringId = startIndex * 2 + id;
-            final List<Tuple<ResourceLocation, Offering>> offerings = FavorScreen.this.offeringMap.getOrDefault(deity, ImmutableList.of());
+            final List<ImmutablePair<ResourceLocation, Offering>> offerings = FavorScreen.this.offeringMap.getOrDefault(deity, ImmutableList.of());
             if(offeringId < offerings.size()) {
                 this.visible = true;
-                Tuple<ResourceLocation, Offering> tuple = offerings.get(offeringId);
-                updateOffering(tuple.getA(), tuple.getB());
+                ImmutablePair<ResourceLocation, Offering> tuple = offerings.get(offeringId);
+                updateOffering(tuple.getLeft(), tuple.getRight());
             } else {
                 this.visible = false;
             }
@@ -1246,11 +1251,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
         public void updateSacrifice(final ResourceLocation deity, final int startIndex) {
             final int sacrificeId = startIndex * 2 + id;
-            final List<Tuple<ResourceLocation, Sacrifice>> sacrifices = FavorScreen.this.sacrificeMap.getOrDefault(deity, ImmutableList.of());
+            final List<ImmutablePair<ResourceLocation, Sacrifice>> sacrifices = FavorScreen.this.sacrificeMap.getOrDefault(deity, ImmutableList.of());
             if(sacrificeId < sacrifices.size()) {
                 this.visible = true;
-                Tuple<ResourceLocation, Sacrifice> tuple = sacrifices.get(sacrificeId);
-                updateSacrifice(tuple.getA(), tuple.getB());
+                ImmutablePair<ResourceLocation, Sacrifice> tuple = sacrifices.get(sacrificeId);
+                updateSacrifice(tuple.getLeft(), tuple.getRight());
             } else {
                 this.visible = false;
             }
@@ -1330,6 +1335,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
         private int id;
         private ItemStack item = ItemStack.EMPTY;
+        private ResourceLocation deity;
 
         public TabButton(final FavorScreen gui, final int index, final ITextComponent title, final int x, final int y) {
             super(x, y, TAB_WIDTH, TAB_HEIGHT, title, b -> gui.updateTab(index),
@@ -1341,7 +1347,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         @Override
         public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if(this.visible) {
-                final boolean selected = FavorScreen.this.tab == id;
+                final boolean selected = FavorScreen.this.tab == id && FavorScreen.this.deity.equals(this.deity);
                 int dY = selected ? 0 : 4;
                 final int u = (id % TAB_COUNT) * TAB_WIDTH;
                 final int v = selected ? this.height : dY;
@@ -1358,11 +1364,12 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             final int deityId = id + (FavorScreen.this.tabGroup * FavorScreen.this.tabCount);
             if(deityId < FavorScreen.this.deityList.size()) {
                 this.visible = true;
-                final ResourceLocation deity = FavorScreen.this.deityList.get(deityId);
+                this.deity = FavorScreen.this.deityList.get(deityId);
                 this.setMessage(new TranslationTextComponent(Altar.createTranslationKey(deity)));
-                item = RPGGods.ALTAR.get(deity).orElse(Altar.EMPTY).getIcon();
+                this.item = RPGGods.ALTAR.get(deity).orElse(Altar.EMPTY).getIcon();
             } else {
                 this.visible = false;
+                this.deity = null;
             }
         }
     }

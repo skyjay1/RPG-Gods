@@ -1,12 +1,15 @@
 package rpggods.tameable;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.INBTSerializable;
+import net.minecraftforge.fml.network.PacketDistributor;
 import rpggods.RPGGods;
+import rpggods.network.SUpdateSittingPacket;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -30,6 +33,14 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
     void setSitting(boolean sitting);
 
     void setOwnerId(@Nullable UUID ownerId);
+
+    default void setSittingWithUpdate(Entity tamed, boolean isSitting) {
+        setSitting(isSitting);
+        if(!tamed.level.isClientSide) {
+            RPGGods.CHANNEL.send(PacketDistributor.TRACKING_ENTITY.with(() -> tamed),
+                    new SUpdateSittingPacket(tamed.getId(), isSitting));
+        }
+    }
 
     default boolean setTamedBy(PlayerEntity player) {
         if(!getOwnerId().isPresent()) {

@@ -136,12 +136,10 @@ public class AltarContainer extends Container {
 
         private boolean locked;
         private boolean hidden;
-        private int posY;
 
         public AltarSlot(IInventory inventoryIn, int index, int xPosition, int yPosition, boolean locked) {
             super(inventoryIn, index, xPosition, yPosition);
             this.locked = locked;
-            this.posY = yPosition;
         }
 
         @Override

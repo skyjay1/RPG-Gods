@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "rpggods.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "rpggods.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "LivingRendererMixin"
+  ],
+  "minVersion": "0.8"
+}

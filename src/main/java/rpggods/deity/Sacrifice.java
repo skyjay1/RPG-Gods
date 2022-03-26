@@ -3,8 +3,6 @@ package rpggods.deity;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.ResourceLocation;
-import rpggods.RPGGods;
-import rpggods.util.Cooldown;
 
 import java.util.Optional;
 

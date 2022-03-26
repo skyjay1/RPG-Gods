@@ -24,6 +24,7 @@ import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
 import net.minecraft.entity.monster.DrownedEntity;
 import net.minecraft.entity.monster.GuardianEntity;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.passive.WaterMobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.AbstractArrowEntity;
@@ -53,7 +54,6 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
-import net.minecraft.world.gen.feature.structure.Structure;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
@@ -68,21 +68,23 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.deity.Deity;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.entity.ai.AffinityGoal;
-import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
+import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
-import rpggods.util.Cooldown;
+import rpggods.deity.Cooldown;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -766,8 +768,10 @@ public class FavorEventHandler {
                 if(null == event.getCancellationResult() || !event.getCancellationResult().consumesAction()) {
                     event.getTarget().getCapability(RPGGods.TAMEABLE).ifPresent(t -> {
                         if(t.isOwner(event.getPlayer())) {
-                            t.setSitting(!t.isSitting());
-                            // TODO: send packet to notify client of new sitting state
+                            t.setSittingWithUpdate(event.getTarget(), !t.isSitting());
+                            // send packet to notify client of new sitting state
+                            RPGGods.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> event.getPlayer()),
+                                    new SUpdateSittingPacket(event.getTarget().getId(), t.isSitting()));
                             event.setCancellationResult(ActionResultType.SUCCESS);
                         }
                     });
@@ -839,8 +843,8 @@ public class FavorEventHandler {
             if(!event.getEntityLiving().level.isClientSide && event.getEntityLiving() instanceof MobEntity
                     && event.getTarget() instanceof PlayerEntity) {
                 // Determine if entity is passive or hostile toward target
-                Tuple<Boolean, Boolean> passiveHostile = AffinityGoal.getPassiveAndHostile(event.getEntityLiving(), event.getTarget());
-                if (passiveHostile.getA()) {
+                ImmutablePair<Boolean, Boolean> passiveHostile = AffinityGoal.getPassiveAndHostile(event.getEntityLiving(), event.getTarget());
+                if (passiveHostile.getLeft()) {
                     ((MobEntity) event.getEntityLiving()).setTarget(null);
                     return;
                 }
@@ -931,6 +935,22 @@ public class FavorEventHandler {
             // schedule task
             MinecraftServer server = mob.getServer();
             server.tell(new TickDelayedTask(10, task));
+        }
+    }
+
+    public static class ClientEvents {
+
+        @SubscribeEvent
+        public static void onRenderLiving(final net.minecraftforge.client.event.RenderLivingEvent.Pre<?,?> event) {
+            if(event.getEntity().isAlive() && event.getEntity() instanceof MobEntity && !(event.getEntity() instanceof TameableEntity)) {
+                LazyOptional<ITameable> tameable = event.getEntity().getCapability(RPGGods.TAMEABLE);
+                if(tameable.isPresent() && tameable.orElse(null).isSitting()) {
+                    // shift down when sitting
+                    ResourceLocation id = event.getEntity().getType().getRegistryName();
+                    double dy = RPGGods.CONFIG.isSittingMob(id) ? -0.5D : -0.125D;
+                    event.getMatrixStack().translate(0, dy, 0);
+                }
+            }
         }
     }
 }

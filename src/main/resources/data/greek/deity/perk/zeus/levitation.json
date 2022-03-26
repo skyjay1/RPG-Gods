@@ -1,15 +1,15 @@
 {
     "icon": {
         "item": {
-            "id": "minecraft:iron_ingot",
+            "id": "minecraft:soul_sand",
             "Count": 1
         },
         "color": 14277081
     },
     "range": {
         "deity": "greek:zeus",
-        "minlevel": 1,
-        "maxlevel": 10
+        "minlevel": -8,
+        "maxlevel": -10
     },
     "condition": [
         {
@@ -18,21 +18,14 @@
     ],
     "action": [
         {
-            "type": "item",
-            "item": {
-                "id": "minecraft:iron_ingot",
-                "Count": 8
-            }
-        },
-        {
             "type": "potion",
             "tag": {
-                "Potion": "minecraft:strength",
+                "Potion": "minecraft:levitation",
                 "Amplifier": 0,
-                "Duration": 400
+                "Duration": 450
             }
         }
     ],
-    "cooldown": 1000,
-    "chance": 0.6
+    "cooldown": 19800,
+    "chance": 0.08
 }

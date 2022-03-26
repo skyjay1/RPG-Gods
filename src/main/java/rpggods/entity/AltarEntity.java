@@ -220,12 +220,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     public ActionResultType interactAt(PlayerEntity player, Vector3d vec, Hand hand) {
-        // TODO: remove debug
-        if(getDeity().isPresent()) {
-            RPGGods.LOGGER.debug("Deity data: " + RPGGods.DEITY.get(getDeity().get()));
-        }
-        RPGGods.LOGGER.debug("Block: " + getBlockBySlot());
-
         if(player instanceof ServerPlayerEntity && hand == Hand.MAIN_HAND) {
             // check if altar is deity
             if(getDeity().isPresent()) {
