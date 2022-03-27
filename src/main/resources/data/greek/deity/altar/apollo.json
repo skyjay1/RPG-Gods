@@ -3,7 +3,7 @@
   "name": "greek:apollo",
   "female": false,
   "slim": false,
-  "icon": "minecraft:diamond_helmet",
+  "icon": "minecraft:spectral_arrow",
   "items": {
     "offhand": "minecraft:bow",
     "block": "minecraft:quartz_slab",

@@ -25,8 +25,15 @@ public class ShapelessAltarRecipe extends ShapelessRecipe {
 
     public ShapelessAltarRecipe(ResourceLocation recipeId, final ItemStack outputItem, final Optional<ResourceLocation> altarId,
                                 final NonNullList<Ingredient> recipeItemsIn) {
-        super(recipeId, CATEGORY, outputItem, recipeItemsIn);
+        super(recipeId, CATEGORY, resultWithTag(outputItem, altarId), recipeItemsIn);
         this.altarId = altarId;
+    }
+
+    private static ItemStack resultWithTag(final ItemStack item, final Optional<ResourceLocation> altarId) {
+        if(altarId.isPresent()) {
+            item.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.get().toString());
+        }
+        return item;
     }
 
     /**

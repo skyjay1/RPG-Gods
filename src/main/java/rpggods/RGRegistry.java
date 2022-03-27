@@ -1,5 +1,6 @@
 package rpggods;
 
+import com.google.common.collect.Lists;
 import net.minecraft.client.gui.ScreenManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
@@ -7,6 +8,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
+import net.minecraft.item.ItemModelsProperties;
 import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraft.item.crafting.ShapedRecipe;
 import net.minecraft.item.crafting.ShapelessRecipe;
@@ -24,10 +26,14 @@ import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
+import rpggods.item.ScrollItem;
 import rpggods.loot.AutosmeltOrCobbleModifier;
 import rpggods.loot.CropMultiplierModifier;
 import rpggods.recipe.ShapedAltarRecipe;
 import rpggods.recipe.ShapelessAltarRecipe;
+
+import java.util.Collections;
+import java.util.List;
 
 public final class RGRegistry {
 
@@ -61,11 +67,16 @@ public final class RGRegistry {
         @ObjectHolder("altar")
         public static final Item ALTAR = null;
 
+        @ObjectHolder("scroll")
+        public static final Item SCROLL = null;
+
         @SubscribeEvent
         public static void registerItems(final RegistryEvent.Register<Item> event) {
             RPGGods.LOGGER.debug("registerItems");
             event.getRegistry().register(new AltarItem(new Item.Properties().tab(ItemGroup.TAB_MISC))
                     .setRegistryName(RPGGods.MODID, "altar"));
+            event.getRegistry().register(new ScrollItem(new Item.Properties().tab(ItemGroup.TAB_MISC))
+                    .setRegistryName(RPGGods.MODID, "scroll"));
         }
     }
 
@@ -108,7 +119,11 @@ public final class RGRegistry {
             ContainerType<FavorContainer> favorContainer = IForgeContainerType.create((windowId, inv, data) -> {
                 final IFavor favor = RPGGods.FAVOR.getDefaultInstance();
                 RPGGods.FAVOR.readNBT(favor, null, data.readNbt());
-                ResourceLocation deityId = data.readResourceLocation();
+                boolean hasDeity = data.readBoolean();
+                ResourceLocation deityId = null;
+                if(hasDeity) {
+                    deityId = data.readResourceLocation();
+                }
                 return new FavorContainer(windowId, inv, favor, deityId);
             });
             event.getRegistry().register(altarContainer.setRegistryName(RPGGods.MODID, "altar_container"));
@@ -131,10 +146,11 @@ public final class RGRegistry {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             registerEntityRenderers();
-            registerContainerRenders();
+            event.enqueueWork(() -> registerContainerRenders());
+            event.enqueueWork(() -> registerModelProperties());
         }
 
-        public static void registerEntityRenderers() {
+        private static void registerEntityRenderers() {
             RPGGods.LOGGER.debug("registerEntityRenderers");
             RenderingRegistry.registerEntityRenderingHandler(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
         }
@@ -143,6 +159,34 @@ public final class RGRegistry {
             RPGGods.LOGGER.debug("registerContainerRenders");
             ScreenManager.register(RGRegistry.ContainerReg.ALTAR_CONTAINER, rpggods.client.screen.AltarScreen::new);
             ScreenManager.register(RGRegistry.ContainerReg.FAVOR_CONTAINER, rpggods.client.screen.FavorScreen::new);
+        }
+
+        private static List<ResourceLocation> altars = Lists.newArrayList();
+
+        private static void registerModelProperties() {
+            RPGGods.LOGGER.debug("registerModelProperties");
+            // Scroll properites
+            ItemModelsProperties.register(ItemReg.SCROLL, new ResourceLocation("open"),
+                    (item, world, entity) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
+            // Altar properties
+
+            ItemModelsProperties.register(ItemReg.ALTAR, new ResourceLocation("index"), (item, world, entity) -> {
+                // determine index of altar in list
+                if(altars.isEmpty()) {
+                    altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());
+                    Collections.sort(altars, ResourceLocation::compareNamespaced);
+                }
+                ResourceLocation deity = ResourceLocation.tryParse(item.getOrCreateTag().getString(AltarItem.KEY_ALTAR));
+                int index = 1;
+                int size = altars.size();
+                for(int i = 0; i < size; i++) {
+                    if(altars.get(i).equals(deity)) {
+                        index = i;
+                        break;
+                    }
+                }
+                return (float) (index + 1) / (float) size;
+            });
         }
     }
 }

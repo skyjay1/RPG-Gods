@@ -159,6 +159,7 @@ public class PerkAction {
                 return StringTextComponent.EMPTY;
             case ARROW_COUNT:
             case SPECIAL_PRICE:
+            case CROP_GROWTH:
                 if(getMultiplier().isPresent()) {
                     // format multiplier as discrete bonus
                     // EX: multiplier of 0.0 becomes +0, 0.6 becomes +1, 1.2 becomes +1, etc.
@@ -166,7 +167,6 @@ public class PerkAction {
                     return new StringTextComponent(prefix + Math.round(getMultiplier().get()));
                 }
                 return StringTextComponent.EMPTY;
-            case CROP_GROWTH:
             case ARROW_DAMAGE:
             case CROP_HARVEST:
             case OFFSPRING:

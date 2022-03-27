@@ -244,6 +244,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                                     StringTextComponent.EMPTY),
                             buf -> {
                                 buf.writeNbt(ifavor.serializeNBT());
+                                buf.writeBoolean(true);
                                 buf.writeResourceLocation(deity);
                             }
                     );

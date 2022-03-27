@@ -77,17 +77,30 @@ public class AltarItem extends Item {
         }
     }
 
+    public static void addAltarItems(List<ItemStack> items) {
+        // add altar item stacks for each registered altar
+        for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
+            ItemStack itemStack = new ItemStack(RGRegistry.ItemReg.ALTAR);
+            itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
+            items.add(itemStack);
+        }
+    }
 
+    public static void addStatueItemsOnly(List<ItemStack> items) {
+        // add altar item stacks for each registered altar that does not have a deity
+        for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
+            if(!RPGGods.ALTAR.get(altarId).get().getDeity().isPresent()) {
+                ItemStack itemStack = new ItemStack(RGRegistry.ItemReg.ALTAR);
+                itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
+                items.add(itemStack);
+            }
+        }
+    }
 
     @Override
     public void fillItemCategory(ItemGroup group, NonNullList<ItemStack> items) {
         if (this.allowdedIn(group)) {
-            // add altar item stacks for each registered altar
-            for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
-                ItemStack itemStack = new ItemStack(this);
-                itemStack.getOrCreateTag().putString(KEY_ALTAR, altarId.toString());
-                items.add(itemStack);
-            }
+            addAltarItems(items);
         }
     }
 

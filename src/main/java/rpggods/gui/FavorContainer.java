@@ -12,30 +12,30 @@ import rpggods.favor.IFavor;
 import java.util.Optional;
 
 public class FavorContainer extends Container {
-  
-  private IFavor favor;
-  private Optional<ResourceLocation> deity;
 
-  public FavorContainer(int id, final PlayerInventory inventory) {
-    this(id, inventory, RPGGods.FAVOR.getDefaultInstance(), null);
-  }
-  
-  public FavorContainer(final int id, final PlayerInventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
-    super(RGRegistry.ContainerReg.FAVOR_CONTAINER, id);
-    favor = favorIn;
-    deity = Optional.ofNullable(deityIn);
-  }
+    private IFavor favor;
+    private Optional<ResourceLocation> deity;
 
-  @Override
-  public boolean stillValid(final PlayerEntity playerIn) {
-    return true;
-  }
-  
-  public IFavor getFavor() {
-    return favor;
-  }
-  
-  public Optional<ResourceLocation> getDeity() {
-    return deity;
-  }
+    public FavorContainer(int id, final PlayerInventory inventory) {
+        this(id, inventory, RPGGods.FAVOR.getDefaultInstance(), null);
+    }
+
+    public FavorContainer(final int id, final PlayerInventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
+        super(RGRegistry.ContainerReg.FAVOR_CONTAINER, id);
+        favor = favorIn;
+        deity = Optional.ofNullable(deityIn);
+    }
+
+    @Override
+    public boolean stillValid(final PlayerEntity playerIn) {
+        return true;
+    }
+
+    public IFavor getFavor() {
+        return favor;
+    }
+
+    public Optional<ResourceLocation> getDeity() {
+        return deity;
+    }
 }

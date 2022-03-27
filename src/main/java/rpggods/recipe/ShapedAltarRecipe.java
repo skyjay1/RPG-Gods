@@ -25,8 +25,15 @@ public class ShapedAltarRecipe extends ShapedRecipe {
 
     public ShapedAltarRecipe(ResourceLocation recipeId, final ItemStack outputItem, final Optional<ResourceLocation> altarId,
                              final int width, final int height, final NonNullList<Ingredient> recipeItemsIn) {
-        super(recipeId, CATEGORY, width, height, recipeItemsIn, outputItem);
+        super(recipeId, CATEGORY, width, height, recipeItemsIn, resultWithTag(outputItem, altarId));
         this.altarId = altarId;
+    }
+
+    private static ItemStack resultWithTag(final ItemStack item, final Optional<ResourceLocation> altarId) {
+        if(altarId.isPresent()) {
+            item.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.get().toString());
+        }
+        return item;
     }
 
     /**
