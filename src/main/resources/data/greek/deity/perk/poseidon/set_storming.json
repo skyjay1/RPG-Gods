@@ -4,7 +4,7 @@
         "color": 65535
     },
     "range": {
-        "deity": "greek:zeus",
+        "deity": "greek:poseidon",
         "minlevel": -7,
         "maxlevel": -10
     },
@@ -20,7 +20,8 @@
     "action": [
         {
             "type": "function",
-            "id": "greek:set_storming"
+            "id": "greek:set_storming",
+            "data": "perk.function.set_storming"
         }
     ],
     "chance": 0.04,

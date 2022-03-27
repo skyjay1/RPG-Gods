@@ -111,11 +111,11 @@ public class PerkAction {
                 '}';
     }
 
-    public IFormattableTextComponent getDisplayName() {
+    public ITextComponent getDisplayName() {
         return this.getType().getDisplayName();
     }
 
-    public IFormattableTextComponent getDisplayDescription() {
+    public ITextComponent getDisplayDescription() {
         return getType().getDisplayDescription(dataToDisplay());
     }
 
@@ -174,7 +174,7 @@ public class PerkAction {
                 if(getMultiplier().isPresent()) {
                     // format multiplier as percentage
                     // EX: multiplier of 0.0 becomes -100%, 0.5 becomes -50%, 1.2 becomes +120%, etc.
-                    String prefix = getMultiplier().get() >= 0 ? "+" : "";
+                    String prefix = getMultiplier().get() >= 1.0F ? "+" : "";
                     return new StringTextComponent(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
                 }
                 return StringTextComponent.EMPTY;
@@ -183,7 +183,12 @@ public class PerkAction {
                     return Deity.getName(getId().get());
                 }
                 return StringTextComponent.EMPTY;
-            case FUNCTION: case AUTOSMELT: case UNSMELT: default:
+            case FUNCTION:
+                if(getString().isPresent()) {
+                    return new TranslationTextComponent(getString().get());
+                }
+                return new TranslationTextComponent("favor.perk.type.function.description.default");
+            case AUTOSMELT: case UNSMELT: default:
                 return StringTextComponent.EMPTY;
         }
     }
@@ -228,7 +233,7 @@ public class PerkAction {
          * @param data the data to pass to the translation key
          * @return Translation key for the description of this perk type, using the provided data
          */
-        public IFormattableTextComponent getDisplayDescription(final ITextComponent data) {
+        public ITextComponent getDisplayDescription(final ITextComponent data) {
             return new TranslationTextComponent("favor.perk.type." + getSerializedName() + ".description", data);
         }
 

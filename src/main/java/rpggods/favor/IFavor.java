@@ -130,14 +130,16 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
     }
 
     /**
-     * @return the time until the next perk
+     * @param key the cooldown category
+     * @return the amount of cooldown left for the given category, in ticks
      **/
     default long getPerkCooldown(final String key) {
         return getPerkCooldownMap().getOrDefault(key, 0L);
     }
 
     /**
-     * @param cooldown the amount of time until the next favor effect
+     * @param key the cooldown category
+     * @param cooldown the amount of cooldown for the given category, in ticks
      **/
     default void setPerkCooldown(final String key, long cooldown) {
         getPerkCooldownMap().put(key, cooldown);

@@ -114,6 +114,7 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.RecipeReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.LootModifierReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
+        FMLJavaModLoadingContext.get().getModEventBus().register(FavorEventHandler.ModEvents.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);

@@ -1,7 +1,15 @@
 {
   "item": {
     "id": "minecraft:enchanted_book",
-    "Count": 1
+    "Count": 1,
+    "tag": {
+      "StoredEnchantments": [
+        {
+          "id": "minecraft:sweeping",
+          "lvl": 1
+        }
+      ]
+    }
   },
   "trade": {
     "id": "minecraft:enchanted_book",
@@ -9,8 +17,8 @@
     "tag": {
       "StoredEnchantments": [
         {
-          "id": "minecraft:sweeping_edge",
-          "lvl": 1
+          "id": "minecraft:sweeping",
+          "lvl": 3
         }
       ]
     }

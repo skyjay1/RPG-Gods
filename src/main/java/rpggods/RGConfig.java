@@ -73,15 +73,19 @@ public class RGConfig {
         builder.push("affinity");
         FLEE_ENABLED = builder
                 .comment("True if mobs can be given AI to avoid the player")
+                .worldRestart()
                 .define("flee_enabled", true);
         HOSTILE_ENABLED = builder
                 .comment("True if mobs can be given AI to be hostile")
+                .worldRestart()
                 .define("hostile_enabled", true);
         PASSIVE_ENABLED = builder
                 .comment("True if mobs can be given AI to be passive")
+                .worldRestart()
                 .define("passive_enabled", true);
         TAMEABLE_ENABLED = builder
                 .comment("True if mobs can be given AI to become tamed")
+                .worldRestart()
                 .define("tameable_enabled", true);
         builder.pop();
         builder.push("sitting");
@@ -101,7 +105,7 @@ public class RGConfig {
                         EntityType.PIGLIN.getRegistryName().toString(),
                         EntityType.ZOMBIFIED_PIGLIN.getRegistryName().toString(),
                         EntityType.ENDERMAN.getRegistryName().toString()
-                ), o -> o instanceof String && ResourceLocation.isValidResourceLocation((String)o));
+                ), o -> o instanceof String && ((String)o).contains(":"));
         builder.pop();
     }
 

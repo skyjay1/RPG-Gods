@@ -17,6 +17,11 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.AttributeModifierMap;
+import net.minecraft.entity.ai.attributes.Attributes;
+import net.minecraft.entity.ai.attributes.GlobalEntityTypeAttributes;
+import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.RangedAttackGoal;
@@ -61,6 +66,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -98,6 +104,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class FavorEventHandler {
@@ -106,6 +113,7 @@ public class FavorEventHandler {
 
     /**
      * Called when the player attempts to give an offering
+     * @param entity the AltarEntity associated with this offering, if any
      * @param deity the deity ID
      * @param player the player
      * @param favor the player's favor
@@ -119,8 +127,7 @@ public class FavorEventHandler {
             Offering offering = null;
             for(ResourceLocation id : RPGGods.DEITY.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
                 Offering o = RPGGods.OFFERING.get(id).orElse(null);
-                // TODO: some reliable way of matching NBT
-                if(o != null && item.getCount() >= o.getAccept().getCount() && ItemStack.isSame(o.getAccept(), item)) {
+                if(o != null && o.matches(item)) {
                     offeringId = id;
                     offering = o;
                     break;
@@ -147,15 +154,16 @@ public class FavorEventHandler {
                 offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
                 // add cooldown
                 favor.getOfferingCooldown(offeringId).addUse();
+                // process trade, if any
+                Optional<ItemStack> trade = offering.getTrade(item);
+                if(trade.isPresent() && !trade.get().isEmpty()) {
+                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), trade.get().copy());
+                    itemEntity.setNoPickUpDelay();
+                    player.level.addFreshEntity(itemEntity);
+                }
                 // shrink item stack
                 if(!player.isCreative()) {
                     item.shrink(offering.getAccept().getCount());
-                }
-                // process trade, if any
-                if(offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty()) {
-                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), offering.getTrade().get().copy());
-                    itemEntity.setNoPickUpDelay();
-                    player.level.addFreshEntity(itemEntity);
                 }
                 // particles
                 if(entity.isPresent() && player.level instanceof ServerWorld) {
@@ -536,6 +544,7 @@ public class FavorEventHandler {
      * @param condition the PerkCondition
      * @param player the player
      * @param favor the player's favor
+     * @param data a ResourceLocation associated with the perk calling this condition, if any
      * @return True if the PerkCondition passed
      */
     public static boolean matchCondition(final ResourceLocation deity, final PerkCondition condition,
@@ -584,6 +593,10 @@ public class FavorEventHandler {
     public static Optional<EffectInstance> readEffectInstance(final CompoundNBT tag) {
         if(tag.contains("Potion", 8)) {
             final CompoundNBT nbt = tag.copy();
+            // "show particles" will default to false if not specified
+            if(!nbt.contains("ShowParticles")) {
+                nbt.putBoolean("ShowParticles", false);
+            }
             Effect potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")));
             if(potion != null) {
                 nbt.putByte("Id", (byte) Effect.getId(potion));
@@ -664,7 +677,7 @@ public class FavorEventHandler {
         while (attempts++ <= maxAttempts) {
             // get random block in radius
             final int x1 = rand.nextInt(radius * 2) - radius;
-            final int y1 = rand.nextInt(variationY * 2) - variationY + 1;
+            final int y1 = rand.nextInt(variationY * 2) - variationY;
             final int z1 = rand.nextInt(radius * 2) - radius;
             final BlockPos blockpos = player.blockPosition().offset(x1, y1, z1);
             final BlockState state = player.level.getBlockState(blockpos);
@@ -694,7 +707,16 @@ public class FavorEventHandler {
     }
 
     public static class ModEvents {
-        // TODO: not yet registered
+
+        @SubscribeEvent
+        public static void onAddEntityAttributes(final EntityAttributeModificationEvent event) {
+            RPGGods.LOGGER.debug("onAddEntityAttributes");
+            for(final EntityType<? extends LivingEntity> type : event.getTypes()) {
+                if(!event.has(type, Attributes.ATTACK_DAMAGE)) {
+                    event.add(type, Attributes.ATTACK_DAMAGE, 0);
+                }
+            }
+        }
     }
 
     public static class ForgeEvents {
@@ -786,6 +808,10 @@ public class FavorEventHandler {
             }
         }
 
+        private static final AttributeModifier MOB_ATTACK = new AttributeModifier(
+                UUID.fromString("2953b29d-7974-45e0-9a52-24b6ed738197"),
+                "mob_attack", 1.0D, AttributeModifier.Operation.ADDITION);
+
         @SubscribeEvent
         public static void onEntityJoinWorld(final EntityJoinWorldEvent event) {
             if(!event.getEntity().level.isClientSide && (event.getEntity() instanceof ArrowEntity || event.getEntity() instanceof SpectralArrowEntity)) {
@@ -843,7 +869,12 @@ public class FavorEventHandler {
                     }
                     // add attack goal if none was found
                     if(!hasAttackGoal) {
-                        mob.goalSelector.addGoal(3, new MeleeAttackGoal((CreatureEntity) event.getEntity(), 1.0D, false));
+                        mob.goalSelector.addGoal(3, new MeleeAttackGoal((CreatureEntity) event.getEntity(), 1.5D, false));
+                        // ensure mob has attack damage
+                        ModifiableAttributeInstance attack = mob.getAttribute(Attributes.ATTACK_DAMAGE);
+                        if(attack != null && attack.getBaseValue() < 0.5D && !attack.hasModifier(MOB_ATTACK)) {
+                            attack.addPermanentModifier(MOB_ATTACK);
+                        }
                     }
                 }
             }

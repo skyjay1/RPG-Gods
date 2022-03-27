@@ -24,6 +24,6 @@
             }
         }
     ],
-    "cooldown": 6000,
-    "chance": 0.8
+    "cooldown": 390,
+    "chance": 0.75
 }

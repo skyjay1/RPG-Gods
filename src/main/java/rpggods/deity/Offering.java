@@ -1,12 +1,19 @@
 package rpggods.deity;
 
+import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
+import rpggods.RPGGods;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -33,6 +40,7 @@ public class Offering {
     ).apply(instance, Offering::new));
 
     private final ItemStack accept;
+    private final Map<Enchantment, Integer> acceptEnchantments;
     private final int favor;
     private final Optional<ItemStack> trade;
     private final int tradeMinLevel;
@@ -52,6 +60,8 @@ public class Offering {
         this.tradeMinLevel = tradeMinLevel;
         this.function = function;
         this.functionText = functionText;
+        // parse enchantments for accepted item stack
+        this.acceptEnchantments = ImmutableMap.copyOf(EnchantmentHelper.getEnchantments(this.accept));
     }
 
     /**
@@ -66,6 +76,57 @@ public class Offering {
             return new ResourceLocation(offeringId.getNamespace(), path.substring(0, index));
         }
         return Deity.EMPTY.id;
+    }
+
+    /**
+     * Checks the given item stack to see if this offering can accept it.
+     * Examines item, count, and enchantments
+     * @param offering another item stack
+     * @return true if the given ItemStack matches the one in this offering
+     */
+    public boolean matches(ItemStack offering) {
+        // check item and stack size
+        if(!this.accept.sameItemStackIgnoreDurability(offering) || offering.getCount() < this.accept.getCount()) {
+            return false;
+        }
+        // check enchantments
+        if(!acceptEnchantments.isEmpty()) {
+            Map<Enchantment, Integer> offeringEnchantments = EnchantmentHelper.getEnchantments(offering);
+            // check each enchantment in accept map to see if a corresponding enchantment exists in the offering
+            for(Map.Entry<Enchantment, Integer> entry : acceptEnchantments.entrySet()) {
+                if(offeringEnchantments.getOrDefault(entry.getKey(), 0).intValue() != entry.getValue().intValue()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * ItemStack aware version of {@link #getTrade()} that allows
+     * the trade item to copy NBT data and enchantments from the offering item.
+     * @param offering the offering item
+     * @return the trade item (or empty if there is no trade)
+     */
+    public Optional<ItemStack> getTrade(final ItemStack offering) {
+        // special handling of trade when same item and NBT is present
+        if(trade.isPresent() && offering.sameItem(trade.get()) && trade.get().hasTag() && offering.hasTag()) {
+            RPGGods.LOGGER.debug("Copying NBT from offering: " + offering.getTag());
+            // create itemstack to modify and return
+            ItemStack tradeItem = offering.copy();
+            tradeItem.setCount(trade.get().getCount());
+            // determine enchantments
+            Map<Enchantment, Integer> currentEnchantments = EnchantmentHelper.getEnchantments(offering);
+            currentEnchantments.putAll(EnchantmentHelper.getEnchantments(trade.get()));
+            // merge NBT data
+            tradeItem.setTag(trade.get().getTag().merge(tradeItem.getTag()));
+            // set enchantments (they may not have merged correctly)
+            EnchantmentHelper.setEnchantments(currentEnchantments, tradeItem);
+            RPGGods.LOGGER.debug("Trade item NBT is now " + tradeItem.getTag());
+            return Optional.of(tradeItem);
+        }
+        return getTrade();
     }
 
     public ItemStack getAccept() {

@@ -1,16 +1,15 @@
 package rpggods.network;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.entity.AltarEntity;
 import rpggods.tameable.ITameable;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -67,13 +66,16 @@ public class SUpdateSittingPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                // locate the entity by ID
-                World world = net.minecraft.client.Minecraft.getInstance().level;
-                Entity entity = world.getEntity(message.entityId);
-                if (entity != null) {
-                    LazyOptional<ITameable> tameable = entity.getCapability(RPGGods.TAMEABLE);
-                    if(tameable.isPresent()) {
-                        tameable.orElse(null).setSitting(message.sitting);
+                // locate the level
+                Optional<World> world = NetworkHelper.getClientWorld(context);
+                if(world.isPresent()) {
+                    // locate the entity by ID
+                    Entity entity = world.get().getEntity(message.entityId);
+                    if (entity != null) {
+                        LazyOptional<ITameable> tameable = entity.getCapability(RPGGods.TAMEABLE);
+                        if (tameable.isPresent()) {
+                            tameable.orElse(null).setSitting(message.sitting);
+                        }
                     }
                 }
             });

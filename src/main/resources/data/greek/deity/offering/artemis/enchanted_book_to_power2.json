@@ -1,7 +1,15 @@
 {
   "item": {
     "id": "minecraft:enchanted_book",
-    "Count": 1
+    "Count": 1,
+    "tag": {
+      "StoredEnchantments": [
+        {
+          "id": "minecraft:power",
+          "lvl": 1
+        }
+      ]
+    }
   },
   "trade": {
     "id": "minecraft:enchanted_book",
@@ -10,7 +18,7 @@
       "StoredEnchantments": [
         {
           "id": "minecraft:power",
-          "lvl": 2
+          "lvl": 3
         }
       ]
     }

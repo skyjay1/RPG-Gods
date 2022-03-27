@@ -33,6 +33,7 @@
             "multiplier": 0
         }
     ],
-    "chance": 0.62,
+    "chance": 0.062,
+    "cooldown_category": "riding_horse",
     "cooldown": 8000
 }

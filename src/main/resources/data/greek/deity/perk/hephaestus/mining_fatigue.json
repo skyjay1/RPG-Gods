@@ -24,5 +24,6 @@
         }
     ],
     "cooldown": 9400,
-    "chance": 0.11
+    "cooldown_category": "hephaestus:potion",
+    "chance": 0.011
 }

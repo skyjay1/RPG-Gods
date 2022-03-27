@@ -916,14 +916,14 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             if(perk != null) {
                 // add all perk action titles
                 for(PerkAction data : perk.getActions()) {
-                    perkTypes.add(data.getDisplayName().withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE));
-                    perkTypes.add(data.getDisplayDescription().withStyle(TextFormatting.BLUE));
+                    perkTypes.add(data.getDisplayName().copy().withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE));
+                    perkTypes.add(data.getDisplayDescription().copy().withStyle(TextFormatting.BLUE));
                 }
                 // add perk condition texts
                 for(PerkCondition condition : perk.getConditions()) {
                     // do not show "random tick" conditions
                     if(condition.getType() != PerkCondition.Type.RANDOM_TICK) {
-                        perkConditions.add(condition.getDisplayName().withStyle(TextFormatting.DARK_GRAY));
+                        perkConditions.add(condition.getDisplayName().copy().withStyle(TextFormatting.DARK_GRAY));
                     }
                 }
                 // add prefix to each condition based on plurality

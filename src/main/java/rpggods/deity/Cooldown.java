@@ -38,7 +38,7 @@ public class Cooldown implements INBTSerializable<CompoundNBT> {
         return cooldown;
     }
 
-    /** Adds or removes cooldown **/
+    /** @param add the amount of favor to add or remove **/
     public void addCooldown(long add) {
         this.cooldown += add;
     }

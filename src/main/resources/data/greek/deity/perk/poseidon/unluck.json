@@ -30,5 +30,6 @@
         }
     ],
     "cooldown": 8200,
-    "chance": 0.25
+    "cooldown_category": "poseidon:potion",
+    "chance": 0.15
 }

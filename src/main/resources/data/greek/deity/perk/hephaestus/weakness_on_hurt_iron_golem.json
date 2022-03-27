@@ -19,11 +19,12 @@
             "type": "potion",
             "tag": {
                 "id": "minecraft:weakness",
-                "Amplifier": 0,
+                "Amplifier": 1,
                 "Duration": 220
             }
         }
     ],
     "cooldown": 8200,
-    "chance": 0.084
+    "cooldown_category": "hephaestus:potion",
+    "chance": 0.034
 }

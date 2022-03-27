@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
@@ -52,6 +53,11 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
     public List<ItemStack> doApply(List<ItemStack> generatedLoot, LootContext context) {
         Entity entity = context.getParamOrNull(LootParameters.THIS_ENTITY);
         ItemStack itemStack = context.getParamOrNull(LootParameters.TOOL);
+        BlockState block = context.getParamOrNull(LootParameters.BLOCK_STATE);
+        // do not apply when missing entity or item or breaking non-ore block
+        if(entity == null || itemStack == null || block == null || !block.is(ores)) {
+            return generatedLoot;
+        }
         // do not apply when using silk touch tool
         if(EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, itemStack) > 0) {
             return generatedLoot;
@@ -64,9 +70,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
             unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.UNSMELT, ImmutableList.of()));
         }
         // make sure this is an ore mined by a non-creative player
-        if (entity instanceof PlayerEntity && context.hasParam(LootParameters.BLOCK_STATE)
-                && context.getParamOrNull(LootParameters.BLOCK_STATE).getBlock().is(ores)
-                && !entity.isSpectator() && !((PlayerEntity) entity).isCreative()
+        if (entity instanceof PlayerEntity && !entity.isSpectator() && !((PlayerEntity) entity).isCreative()
                 && (!autosmelt.isEmpty() || !unsmelt.isEmpty())) {
             final PlayerEntity player = (PlayerEntity) entity;
             final LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);

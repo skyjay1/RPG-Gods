@@ -97,7 +97,7 @@ public final class RGData {
      * Used to ensure that
      * 1. AltarEntity syncs inventory to client and
      * 2. Tameable entities sync sitting state to client
-     * @param event
+     * @param event the Player Start Tracking Entity event
      */
     @SubscribeEvent
     public static void onStartTracking(final PlayerEvent.StartTracking event) {

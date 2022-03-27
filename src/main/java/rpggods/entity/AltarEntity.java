@@ -417,7 +417,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     /**
-     * Creates a new Altar instance with the same properties as found in this entity.
+     * @return a new Altar instance with the same properties as found in this entity.
      */
     public Altar createAltarProperties() {
         AltarItems items;

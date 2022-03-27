@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -41,18 +42,19 @@ public class CropMultiplierModifier extends LootModifier {
 
     @Override
     public List<ItemStack> doApply(List<ItemStack> generatedLoot, LootContext context) {
-
-
         Entity entity = context.getParamOrNull(LootParameters.THIS_ENTITY);
+        BlockState block = context.getParamOrNull(LootParameters.BLOCK_STATE);
+        // do not apply when entity is null or breaking non-crops
+        if(entity == null || block == null || !block.is(crops)) {
+            return generatedLoot;
+        }
         // determine which of the mining effects can activate
         List<ResourceLocation> cropHarvest = Lists.newArrayList();
         for (Deity deity : RPGGods.DEITY.values()) {
             cropHarvest.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.CROP_HARVEST, ImmutableList.of()));
         }
         // make sure this is an ore mined by a non-creative player
-        if (entity instanceof PlayerEntity && context.hasParam(LootParameters.BLOCK_STATE)
-                && context.getParamOrNull(LootParameters.BLOCK_STATE).getBlock().is(crops)
-                && !entity.isSpectator() && !((PlayerEntity) entity).isCreative()
+        if (entity instanceof PlayerEntity && !entity.isSpectator() && !((PlayerEntity) entity).isCreative()
                 && !cropHarvest.isEmpty()) {
             final PlayerEntity player = (PlayerEntity) entity;
             final LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);

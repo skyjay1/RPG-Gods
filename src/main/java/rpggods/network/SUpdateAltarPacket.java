@@ -6,9 +6,9 @@ import net.minecraft.network.PacketBuffer;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
-import rpggods.RPGGods;
 import rpggods.entity.AltarEntity;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -67,13 +67,16 @@ public class SUpdateAltarPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                // locate the entity by ID
-                World world = net.minecraft.client.Minecraft.getInstance().level;
-                Entity entity = world.getEntity(message.entityId);
-                if (entity != null && entity instanceof AltarEntity) {
-                    AltarEntity altar = (AltarEntity) entity;
-                    // update block slot
-                    altar.setBlockSlot(message.block);
+                // locate the level
+                Optional<World> world = NetworkHelper.getClientWorld(context);
+                if(world.isPresent()) {
+                    // locate the entity by ID
+                    Entity entity = world.get().getEntity(message.entityId);
+                    if (entity != null && entity instanceof AltarEntity) {
+                        AltarEntity altar = (AltarEntity) entity;
+                        // update block slot
+                        altar.setBlockSlot(message.block);
+                    }
                 }
             });
         }

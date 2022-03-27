@@ -41,5 +41,6 @@
         }
     ],
     "cooldown": 11500,
+    "cooldown_category": "hades:bad_omen",
     "chance": 0.15
 }

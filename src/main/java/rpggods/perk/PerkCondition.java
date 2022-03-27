@@ -107,7 +107,7 @@ public class PerkCondition {
         return "PerkCondition: " + " type[" + type + "]" + " data[" + data + "]";
     }
 
-    public IFormattableTextComponent getDisplayName() {
+    public ITextComponent getDisplayName() {
         return this.getType().getDisplayName(dataToDisplay(getData().orElse("")));
     }
 
@@ -173,7 +173,7 @@ public class PerkCondition {
             return DataResult.error("Failed to parse perk condition '" + id + "'");
         }
 
-        public IFormattableTextComponent getDisplayName(ITextComponent data) {
+        public ITextComponent getDisplayName(ITextComponent data) {
             return new TranslationTextComponent("favor.perk.condition." + getSerializedName(), data);
         }
 

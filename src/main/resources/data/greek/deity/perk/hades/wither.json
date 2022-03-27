@@ -28,5 +28,6 @@
         }
     ],
     "cooldown": 9400,
-    "chance": 0.1
+    "cooldown_category": "hades:potion",
+    "chance": 0.01
 }

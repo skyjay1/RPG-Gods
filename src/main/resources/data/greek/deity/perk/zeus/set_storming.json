@@ -16,7 +16,8 @@
     "action": [
         {
             "type": "function",
-            "id": "greek:set_storming"
+            "id": "greek:set_storming",
+            "data": "perk.function.set_storming"
         }
     ],
     "chance": 0.03,

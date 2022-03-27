@@ -27,5 +27,6 @@
         }
     ],
     "cooldown": 9800,
-    "chance": 0.20
+    "cooldown_category": "zeus:potion",
+    "chance": 0.013
 }

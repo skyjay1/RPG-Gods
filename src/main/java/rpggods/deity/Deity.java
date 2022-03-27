@@ -59,6 +59,7 @@ public class Deity {
 
     /**
      * Add an Offering to this deity
+     * @param id the offering ID
      * @param offering the Offering to add
      */
     public void add(final ResourceLocation id, final Offering offering) {
@@ -71,6 +72,7 @@ public class Deity {
 
     /**
      * Add a Sacrifice to this deity
+     * @param id the sacrifice ID
      * @param sacrifice the Sacrifice to add
      */
     public void add(final ResourceLocation id, final Sacrifice sacrifice) {
@@ -83,6 +85,7 @@ public class Deity {
 
     /**
      * Adds a Perk to this deity
+     * @param id the Perk ID
      * @param perk the Perk to add
      */
     public void add(final ResourceLocation id, final Perk perk) {
