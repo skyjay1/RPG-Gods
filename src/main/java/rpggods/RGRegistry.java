@@ -177,7 +177,7 @@ public final class RGRegistry {
                     Collections.sort(altars, ResourceLocation::compareNamespaced);
                 }
                 ResourceLocation deity = ResourceLocation.tryParse(item.getOrCreateTag().getString(AltarItem.KEY_ALTAR));
-                int index = 1;
+                int index = 0;
                 int size = altars.size();
                 for(int i = 0; i < size; i++) {
                     if(altars.get(i).equals(deity)) {
@@ -185,7 +185,7 @@ public final class RGRegistry {
                         break;
                     }
                 }
-                return (float) (index + 1) / (float) size;
+                return (float) (index + 1) / (float) Math.max(1, size);
             });
         }
     }

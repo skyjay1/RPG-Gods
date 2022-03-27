@@ -57,7 +57,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private static final int GENDER_Y = 87;
     private static final int SLIM_X = 45;
     private static final int SLIM_Y = 87;
-    private static final int PRESET_X = PARTS_X;
+    private static final int PRESET_X = 104;
     private static final int PRESET_Y = 87;
     private static final int RESET_X = 123;
     private static final int RESET_Y = 87;
@@ -88,6 +88,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
     private boolean slim;
     private AltarItems items;
     private AltarPose pose;
+    private boolean poseLocked;
 
     protected AngleSlider sliderAngleX;
     protected AngleSlider sliderAngleY;
@@ -120,6 +121,7 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         slim = altar.isSlim();
         items = altar.getItems();
         pose = altar.getPose();
+        poseLocked = altar.isPoseLocked();
     }
 
     @Override
@@ -305,15 +307,16 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
         this.tabIndex = tabIndex;
         boolean tab0 = tabIndex == 0;
         boolean tab1 = tabIndex == 1;
-        sliderAngleX.visible = tab0;
-        sliderAngleY.visible = tab0;
-        sliderAngleZ.visible = tab0;
-        genderButton.visible = tab0;
-        slimButton.visible = tab0;
-        presetButton.visible = tab0;
-        resetButton.visible = tab0;
+        boolean tab0AndPose = tab0 && !poseLocked;
+        sliderAngleX.visible = tab0AndPose;
+        sliderAngleY.visible = tab0AndPose;
+        sliderAngleZ.visible = tab0AndPose;
+        genderButton.visible = tab0AndPose;
+        slimButton.visible = tab0AndPose;
+        presetButton.visible = tab0AndPose;
+        resetButton.visible = tab0AndPose;
         for(PartButton pb : partButtons) {
-            pb.visible = tab0;
+            pb.visible = tab0AndPose;
         }
         nameField.visible = tab1;
         this.setFocused(tab1 ? this.nameField : null);
@@ -374,9 +377,11 @@ public class AltarScreen extends ContainerScreen<AltarContainer> {
      * @param entity the AltarEntity to update
      **/
     private void updateAltarEntity(final AltarEntity entity) {
-        entity.setAltarPose(this.pose);
-        entity.setFemale(female);
-        entity.setSlim(slim);
+        if(!poseLocked) {
+            entity.setFemale(female);
+            entity.setSlim(slim);
+            entity.setAltarPose(this.pose);
+        }
         if(name.isPresent() && !nameField.isFocused() &&
                 (null == entity.getPlayerProfile() || !entity.getCustomName().getContents().equals(name.get()))) {
             entity.setCustomName(new StringTextComponent(name.get()));

@@ -411,7 +411,11 @@ public class FavorEventHandler {
                     LazyOptional<ITameable> tameable = entity.get().getCapability(RPGGods.TAMEABLE);
                     if(tameable.isPresent()) {
                         if(tameable.orElse(null).setTamedBy(player)) {
-                            entity.get().setCustomName(entity.get().getDisplayName());
+                            // set custom name
+                            if(!entity.get().hasCustomName()) {
+                                entity.get().setCustomName(entity.get().getDisplayName());
+                            }
+                            // send particle packet
                             if(entity.get().level instanceof ServerWorld) {
                                 Vector3d pos = entity.get().getEyePosition(1.0F);
                                 ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);

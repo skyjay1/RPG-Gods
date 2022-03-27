@@ -38,7 +38,7 @@ public class Altar {
             AltarItems.CODEC.optionalFieldOf("items", AltarItems.EMPTY).forGetter(Altar::getItems),
             ResourceLocation.CODEC.optionalFieldOf("material", MATERIAL).forGetter(Altar::getMaterial),
             AltarPose.CODEC.optionalFieldOf("pose", AltarPose.WALKING).forGetter(Altar::getPose),
-            Codec.BOOL.optionalFieldOf("pose_locked", true).forGetter(Altar::isPoseLocked)
+            Codec.BOOL.optionalFieldOf("pose_locked", false).forGetter(Altar::isPoseLocked)
     ).apply(instance, Altar::new));
 
     private final boolean enabled;
