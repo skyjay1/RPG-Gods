@@ -24,6 +24,11 @@ public class ScrollItem extends Item {
 
     @Override
     public ActionResult<ItemStack> use(World level, PlayerEntity player, Hand hand) {
+        // prevent use when there are no registered deities
+        if(RPGGods.DEITY.isEmpty()) {
+            return ActionResult.pass(player.getItemInHand(hand));
+        }
+        // begin using item (to enable texture change) and open GUI
         player.startUsingItem(hand);
         if(player instanceof ServerPlayerEntity) {
             LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);

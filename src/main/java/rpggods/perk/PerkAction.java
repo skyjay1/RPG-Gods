@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.entity.EntityType;
+import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.potion.EffectInstance;
@@ -154,7 +155,7 @@ public class PerkAction {
                 return StringTextComponent.EMPTY;
             case AFFINITY:
                 if(getAffinity().isPresent()) {
-                    return getAffinity().get().getDisplayName();
+                    return getAffinity().get().getDisplayDescription();
                 }
                 return StringTextComponent.EMPTY;
             case ARROW_COUNT:
@@ -167,12 +168,23 @@ public class PerkAction {
                     return new StringTextComponent(prefix + Math.round(getMultiplier().get()));
                 }
                 return StringTextComponent.EMPTY;
+            case DURABILITY:
+                if(getMultiplier().isPresent() && getString().isPresent()) {
+                    // format multiplier as percentage
+                    // EX: multiplier of -0.9 becomes -90%, 0.0 becomes +0%, 0.5 becomes +50%, 1.2 becomes +120%, etc.
+                    String prefix = getMultiplier().get() >= 0.0F ? "+" : "";
+                    ITextComponent durability = new StringTextComponent(prefix + Math.round((getMultiplier().get()) * 100.0F) + "%");
+                    ITextComponent slot = new TranslationTextComponent("equipment.type." + getString().get());
+                    return new TranslationTextComponent("favor.perk.type.durability.description.full", durability, slot);
+                }
+                return StringTextComponent.EMPTY;
+            case DAMAGE:
             case ARROW_DAMAGE:
             case CROP_HARVEST:
             case OFFSPRING:
             case XP:
                 if(getMultiplier().isPresent()) {
-                    // format multiplier as percentage
+                    // format multiplier as adjusted percentage
                     // EX: multiplier of 0.0 becomes -100%, 0.5 becomes -50%, 1.2 becomes +120%, etc.
                     String prefix = getMultiplier().get() >= 1.0F ? "+" : "";
                     return new StringTextComponent(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
@@ -209,6 +221,8 @@ public class PerkAction {
         AUTOSMELT("autosmelt"),
         UNSMELT("unsmelt"),
         SPECIAL_PRICE("special_price"),
+        DURABILITY("durability"),
+        DAMAGE("damage"),
         PATRON("patron"),
         XP("xp");
 

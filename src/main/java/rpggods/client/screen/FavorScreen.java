@@ -112,7 +112,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     private static final int PERK_WIDTH = 22;
     private static final int PERK_HEIGHT = 22;
     private static final int PERK_SPACE_X = 6;
-    private static final int PERK_SPACE_Y = 2;
+    private static final int PERK_SPACE_Y = 1;
     private static final int PERK_TOOLTIP_WIDTH = 101;
     private static final int PERK_TOOLTIP_HEIGHT = 122;
     private static final int PERK_BOUNDS_X = 23;
@@ -913,6 +913,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             this.perkConditions.clear();
             this.perkChance = StringTextComponent.EMPTY;
             this.perkRange = StringTextComponent.EMPTY;
+            boolean isRandomPerk = false;
             if(perk != null) {
                 // add all perk action titles
                 for(PerkAction data : perk.getActions()) {
@@ -924,6 +925,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     // do not show "random tick" conditions
                     if(condition.getType() != PerkCondition.Type.RANDOM_TICK) {
                         perkConditions.add(condition.getDisplayName().copy().withStyle(TextFormatting.DARK_GRAY));
+                    } else {
+                        isRandomPerk = true;
                     }
                 }
                 // add prefix to each condition based on plurality
@@ -952,7 +955,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 }
                 // add perk chance (formatted as 2 or fewer decimals)
                 if(perk.getChance() < 0.999999F) {
-                    String chanceString = String.format("%.2f", perk.getChance() * 100.0F).replaceAll("0*$", "").replaceAll("\\.$", "");
+                    float chance = perk.getChance();
+                    if(isRandomPerk) {
+                        chance *= RPGGods.CONFIG.getRandomPerkChance();
+                    }
+                    String chanceString = String.format("%.2f", chance * 100.0F).replaceAll("0*$", "").replaceAll("\\.$", "");
                     perkChance = new TranslationTextComponent("gui.favor.perk.chance", chanceString)
                             .withStyle(TextFormatting.BLACK);
                 }

@@ -39,11 +39,14 @@ public class Affinity {
         return entity;
     }
 
-    public IFormattableTextComponent getDisplayName() {
+    public ITextComponent getDisplayName() {
+        return getType().getDisplayName();
+    }
+
+    public ITextComponent getDisplayDescription() {
         Optional<EntityType<?>> entityType = EntityType.byString(getEntity().toString());
         ITextComponent entityName = entityType.isPresent() ? entityType.get().getDescription() : new StringTextComponent(getEntity().toString());
-        return new TranslationTextComponent("favor.affinity",
-                entityName, getType().getDisplayName());
+        return getType().getDisplayDescription(entityName);
     }
 
     public static enum Type implements IStringSerializable {
@@ -70,6 +73,10 @@ public class Affinity {
 
         public ITextComponent getDisplayName() {
             return new TranslationTextComponent("favor.affinity." + getSerializedName());
+        }
+
+        public ITextComponent getDisplayDescription(ITextComponent entityName) {
+            return new TranslationTextComponent("favor.affinity." + getSerializedName() + ".description", entityName);
         }
 
         @Override

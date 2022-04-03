@@ -3,6 +3,7 @@ package rpggods.event;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.IGrowable;
@@ -14,6 +15,7 @@ import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.IRangedAttackMob;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
@@ -40,6 +42,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.AbstractArrowEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.SpectralArrowEntity;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.MerchantOffer;
 import net.minecraft.nbt.CompoundNBT;
@@ -51,6 +55,9 @@ import net.minecraft.potion.EffectInstance;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.state.IntegerProperty;
 import net.minecraft.state.properties.BlockStateProperties;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ITag;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
@@ -495,6 +502,26 @@ public class FavorEventHandler {
             case CROP_HARVEST:
                 // This is handled using loot table modifiers
                 return action.getMultiplier().isPresent();
+            case DAMAGE:
+                if(action.getMultiplier().isPresent() && object.isPresent() && object.get() instanceof LivingHurtEvent) {
+                    LivingHurtEvent event = (LivingHurtEvent) object.get();
+                    float amount = event.getAmount();
+                    event.setAmount(amount * (action.getMultiplier().get()));
+                }
+                return false;
+            case DURABILITY:
+                if(action.getMultiplier().isPresent() && action.getString().isPresent()) {
+                    EquipmentSlotType slot = EquipmentSlotType.byName(action.getString().get());
+                    ItemStack item = player.getItemBySlot(slot);
+                    // add or remove durability
+                    if(!item.isEmpty() && item.isDamageableItem()) {
+                        float multiplier = Math.max(-1.0F, Math.min(1.0F, action.getMultiplier().get()));
+                        int durability = Math.round(multiplier * item.getMaxDamage());
+                        item.setDamageValue(item.getDamageValue() + durability);
+                        return true;
+                    }
+                }
+                return false;
             case AUTOSMELT:
             case UNSMELT:
                 // These are handled using loot table modifiers
@@ -560,7 +587,38 @@ public class FavorEventHandler {
             case NIGHT: return player.level.isNight();
             case RANDOM_TICK: return true;
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < COMBAT_TIMER;
-            case MAINHAND_ITEM: return condition.getId().isPresent() && condition.getId().get().equals(player.getMainHandItem().getItem().getRegistryName());
+            case PLAYER_CROUCHING: return player.isCrouching();
+            case MAINHAND_ITEM:
+                ItemStack heldItem = player.getMainHandItem();
+                if(condition.getData().isPresent() && condition.getData().get().startsWith("#")) {
+                    // match item tag
+                    ResourceLocation tagId = ResourceLocation.tryParse(condition.getData().get().substring(1));
+                    ITag<Item> tag = ItemTags.getAllTags().getTagOrEmpty(tagId);
+                    return tag.contains(heldItem.getItem());
+                }
+                if(condition.getId().isPresent()) {
+                    // match item ID
+                    return condition.getId().get().equals(heldItem.getItem().getRegistryName());
+                }
+                return false;
+            case PLAYER_INTERACT_BLOCK:
+                if(data.isPresent()) {
+                    Block block = ForgeRegistries.BLOCKS.getValue(data.get());
+                    if(null == block) {
+                        return false;
+                    }
+                    if(condition.getData().isPresent() && condition.getData().get().startsWith("#")) {
+                        // match block tag
+                        ResourceLocation tagId = ResourceLocation.tryParse(condition.getData().get().substring(1));
+                        ITag<Block> tag = BlockTags.getAllTags().getTagOrEmpty(tagId);
+                        return tag.contains(block);
+                    }
+                    if(condition.getId().isPresent()) {
+                        // match item ID
+                        return condition.getId().get().equals(data.get());
+                    }
+                }
+                return false;
             case PLAYER_RIDE_ENTITY:
                 return player.isPassenger() && player.getVehicle() != null && condition.getId().isPresent()
                         && condition.getId().get().equals(player.getVehicle().getType().getRegistryName());
@@ -747,22 +805,14 @@ public class FavorEventHandler {
                         onSacrifice(player, f, event.getEntityLiving());
                     });
                 }
-            }
-        }
-
-        @SubscribeEvent
-        public static void onPlayerAttack(final AttackEntityEvent event) {
-            if(!event.isCanceled() && !event.getPlayer().level.isClientSide() && event.getEntityLiving().isEffectiveAi()
-                    && event.getPlayer().isAlive() && !event.getPlayer().isSpectator() && !event.getPlayer().isCreative()) {
-                // onPlayerHurtEntity
-                event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
-                    triggerCondition(PerkCondition.Type.PLAYER_HURT_ENTITY, event.getPlayer(), f, Optional.of(event.getEntityLiving()),
-                            Optional.of(event.getEntityLiving().getType().getRegistryName()), Optional.empty());
-                    // onEnterCombat
-                    if(event.getPlayer().getCombatTracker().getCombatDuration() < COMBAT_TIMER) {
-                        triggerCondition(PerkCondition.Type.ENTER_COMBAT, event.getPlayer(), f,
-                                Optional.of(event.getEntityLiving()), Optional.of(event.getEntityLiving().getType().getRegistryName()),
-                                Optional.empty());
+                // onTameDeath
+                LazyOptional<ITameable> tameable = event.getEntity().getCapability(RPGGods.TAMEABLE);
+                tameable.ifPresent(t -> {
+                    Optional<LivingEntity> owner = t.getOwner(event.getEntityLiving().level);
+                    // send death message to owner
+                    if(owner.isPresent() && owner.get() instanceof PlayerEntity) {
+                        ITextComponent message = event.getSource().getLocalizedDeathMessage(event.getEntityLiving());
+                        ((PlayerEntity)owner.get()).displayClientMessage(message, false);
                     }
                 });
             }
@@ -770,15 +820,30 @@ public class FavorEventHandler {
 
         @SubscribeEvent
         public static void onLivingHurt(final LivingHurtEvent event) {
-            if(!event.isCanceled() && !event.getEntityLiving().level.isClientSide() && event.getEntityLiving().isEffectiveAi() && event.getEntityLiving().isAlive()
-                    && event.getSource().getEntity() instanceof LivingEntity && event.getEntityLiving() instanceof PlayerEntity) {
-                PlayerEntity player = (PlayerEntity)event.getEntityLiving();
-                Entity source = event.getSource().getDirectEntity();
-                if(!player.isSpectator() && !player.isCreative()) {
-                    // onEntityHurtPlayer
+            if(!event.isCanceled() && !event.getEntityLiving().level.isClientSide() && event.getEntityLiving().isEffectiveAi() && event.getEntityLiving().isAlive()) {
+                if(event.getSource().getDirectEntity() != null && event.getEntityLiving() instanceof PlayerEntity) {
+                    PlayerEntity player = (PlayerEntity)event.getEntityLiving();
+                    Entity source = event.getSource().getDirectEntity();
+                    if(!player.isSpectator() && !player.isCreative()) {
+                        // onEntityHurtPlayer
+                        player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                            triggerCondition(PerkCondition.Type.ENTITY_HURT_PLAYER, player, f, Optional.of(source),
+                                    Optional.of(source.getType().getRegistryName()), Optional.of(event));
+                        });
+                    }
+                } else if(event.getSource().getDirectEntity() instanceof PlayerEntity) {
+                    PlayerEntity player = (PlayerEntity)event.getSource().getDirectEntity();
+                    LivingEntity target = event.getEntityLiving();
+                    // onPlayerHurtEntity
                     player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
-                        triggerCondition(PerkCondition.Type.ENTITY_HURT_PLAYER, player, f, Optional.of(source),
-                                Optional.of(source.getType().getRegistryName()), Optional.empty());
+                        triggerCondition(PerkCondition.Type.PLAYER_HURT_ENTITY, player, f, Optional.of(target),
+                                Optional.of(target.getType().getRegistryName()), Optional.of(event));
+                        // onEnterCombat
+                        if(player.getCombatTracker().getCombatDuration() < COMBAT_TIMER) {
+                            triggerCondition(PerkCondition.Type.ENTER_COMBAT, player, f,
+                                    Optional.of(target), Optional.of(target.getType().getRegistryName()),
+                                    Optional.empty());
+                        }
                     });
                 }
             }
@@ -807,6 +872,21 @@ public class FavorEventHandler {
                                     new SUpdateSittingPacket(event.getTarget().getId(), t.isSitting()));
                             event.setCancellationResult(ActionResultType.SUCCESS);
                         }
+                    });
+                }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onInteractBlock(final PlayerInteractEvent.RightClickBlock event) {
+            if(!event.getPlayer().level.isClientSide) {
+                BlockState state = event.getPlayer().level.getBlockState(event.getHitVec().getBlockPos());
+                ResourceLocation blockId = state.getBlock().getRegistryName();
+                if(blockId != null) {
+                    // onPlayerInteractBlock
+                    event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                        triggerCondition(PerkCondition.Type.PLAYER_INTERACT_BLOCK, event.getPlayer(), f, Optional.empty(),
+                                Optional.of(blockId), Optional.empty());
                     });
                 }
             }
@@ -861,19 +941,18 @@ public class FavorEventHandler {
                     mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
                 }
                 // ensure target has attack goal
-                if(checkAttackGoal && event.getEntity() instanceof CreatureEntity) {
+                if(checkAttackGoal && event.getEntity() instanceof CreatureEntity && !(event.getEntity() instanceof IRangedAttackMob)) {
                     // check for existing attack goal
                     boolean hasAttackGoal = false;
                     for(Goal g : mob.goalSelector.getRunningGoals().collect(Collectors.toList())) {
-                        if(g instanceof MeleeAttackGoal || g instanceof RangedAttackGoal
-                                || g instanceof RangedBowAttackGoal || g instanceof RangedCrossbowAttackGoal) {
+                        if(g instanceof MeleeAttackGoal) {
                             hasAttackGoal = true;
                             break;
                         }
                     }
                     // add attack goal if none was found
                     if(!hasAttackGoal) {
-                        mob.goalSelector.addGoal(3, new MeleeAttackGoal((CreatureEntity) event.getEntity(), 1.5D, false));
+                        mob.goalSelector.addGoal(4, new MeleeAttackGoal((CreatureEntity) event.getEntity(), 1.2D, false));
                         // ensure mob has attack damage
                         ModifiableAttributeInstance attack = mob.getAttribute(Attributes.ATTACK_DAMAGE);
                         if(attack != null && attack.getBaseValue() < 0.5D && !attack.hasModifier(MOB_ATTACK)) {

@@ -154,7 +154,9 @@ public class PerkCondition {
         PLAYER_HURT_ENTITY("player_hurt_entity"),
         PLAYER_KILLED_ENTITY("player_killed_entity"),
         PLAYER_INTERACT_ENTITY("player_interact_entity"),
+        PLAYER_INTERACT_BLOCK("player_interact_block"),
         PLAYER_RIDE_ENTITY("player_ride_entity"),
+        PLAYER_CROUCHING("player_crouching"),
         ENTER_COMBAT("enter_combat");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();

@@ -3,11 +3,11 @@ loaderVersion="[36,)"
 # The license for your mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
 license="GNU GPLv3"
 # A URL to refer people to when problems occur with this mod
-# issueTrackerURL="https://github.com/skyjay1/GreekFantasy/issues"
+issueTrackerURL="https://github.com/skyjay1/RPG-Gods/issues"
 
 [[mods]]
     modId="rpggods"
-    version="16.5.0"
+    version="16.5.1"
     displayName="RPG Gods"
     credits=""
     authors="skyjay1"
