@@ -175,7 +175,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         super(screenContainer, inv, titleIn);
         this.imageWidth = SCREEN_WIDTH;
         this.imageHeight = SCREEN_HEIGHT;
-        this.openTimestamp = inv.player.level.getGameTime();
         // add all deities to list
         final IFavor favor = screenContainer.getFavor();
         deityList.clear();
@@ -253,6 +252,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
     public void init(Minecraft minecraft, int width, int height) {
         super.init(minecraft, width, height);
         this.inventoryLabelY = this.height;
+        this.openTimestamp = inventory.player.level.getGameTime();
         // clear button lists and maps
         perkButtonMap.clear();
         perkLevelButtonMap.clear();
@@ -736,9 +736,13 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             AltarEntity altarEntity = AltarEntity.createAltar(inventory.player.level, BlockPos.ZERO, Direction.SOUTH, deity);
             altarEntity.setNoGravity(true);
             altarEntity.noPhysics = true;
+            altarEntity.ignoreExplosion();
+            altarEntity.setInvulnerable(true);
             entityMap.put(deity, altarEntity);
         }
-        return entityMap.get(deity);
+        AltarEntity entity = entityMap.get(deity);
+        entity.setPos(0, 0, 0);
+        return entity;
     }
 
     @SuppressWarnings("deprecation")
@@ -887,14 +891,14 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(perk.getIcon().getItem(), this.x + (PERK_WIDTH - 16) / 2, this.y + (PERK_HEIGHT - 16) / 2);
                 // draw cooldown
-                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
                 long cooldown = getMenu().getFavor().getPerkCooldown(this.perk.getCategory()) - timeElapsed;
                 // render cooldown texture on top of item
                 if(cooldown > 0 && perk.getCooldown() > 0) {
                     matrixStack.pushPose();
                     matrixStack.translate(0, 0, FavorScreen.this.itemRenderer.blitOffset + 110);
                     // determine v offset
-                    int vOffset = Math.round((1.0F - MathHelper.clamp((float)cooldown / (float)perk.getCooldown(), 0.0F, 1.0F)) * PERK_HEIGHT);
+                    int vOffset = Math.round((MathHelper.clamp(1.0F - (float)cooldown / (float)perk.getCooldown(), 0.0F, 1.0F)) * PERK_HEIGHT);
                     // draw cooldown
                     RenderSystem.enableBlend();
                     RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
@@ -1077,7 +1081,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x + 18, this.y + textY, 113, 130, ARROW_WIDTH, ARROW_HEIGHT);
                 // draw strikethrough
-                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
                 if(this.cooldown - timeElapsed > 1) {
                     FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 2);
                 }
@@ -1166,7 +1170,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 2 - 2, this.y + textY, 0xFFFFFF);
                 }
                 // draw strikethrough
-                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
                 if(this.cooldown - timeElapsed > 1) {
                     FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 4);
                 }
@@ -1249,7 +1253,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 8, this.y, 0xFFFFFF);
                 }
                 // draw strikethrough
-                long timeElapsed = openTimestamp - inventory.player.level.getGameTime();
+                long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
                 if(this.cooldown - timeElapsed > 1) {
                     FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 2);
                 }

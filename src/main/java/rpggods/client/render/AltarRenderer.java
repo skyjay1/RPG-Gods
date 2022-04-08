@@ -71,7 +71,7 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
 
         // render base
         float baseHeight = -0.5F;
-        ItemStack blockItem = entityIn.getInventory().getItem(AltarEntity.INV_SIZE - 1);
+        ItemStack blockItem = entityIn.getBlockBySlot();
         if(!blockItem.isEmpty()) {
             final Block block = ForgeRegistries.BLOCKS.getValue(blockItem.getItem().getRegistryName());
             if(block != null) {

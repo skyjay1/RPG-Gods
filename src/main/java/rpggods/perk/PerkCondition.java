@@ -4,9 +4,11 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.block.Block;
 import net.minecraft.entity.EntityType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.potion.Effect;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
@@ -120,11 +122,26 @@ public class PerkCondition {
                 if(item != null) {
                     return new ItemStack(item).getDisplayName();
                 }
+                return new StringTextComponent(d);
             case BIOME:
                 // read data as either biome name or biome dictionary type
                 return d.contains(":")
                     ? new TranslationTextComponent("biome." + rl.getNamespace() + "." + rl.getPath())
                     : new StringTextComponent(d);
+            case PLAYER_INTERACT_BLOCK:
+                if(!d.startsWith("#")) {
+                    Block block = ForgeRegistries.BLOCKS.getValue(rl);
+                    if(block != null) {
+                        return block.getName();
+                    }
+                }
+                return new StringTextComponent(d);
+            case EFFECT_START:
+                Effect effect = ForgeRegistries.POTIONS.getValue(rl);
+                if(effect != null) {
+                    return effect.getDisplayName();
+                }
+                return new StringTextComponent(d);
             case DIMENSION: return new TranslationTextComponent("dimension." + rl.getNamespace() + "." + rl.getPath());
             case STRUCTURE: return new TranslationTextComponent("structure." + rl.getNamespace() + "." + rl.getPath());
             case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
@@ -133,8 +150,8 @@ public class PerkCondition {
                 Optional<EntityType<?>> entityType = EntityType.byString(d);
                 return entityType.isPresent()
                         ? new TranslationTextComponent(entityType.get().getDescriptionId())
-                        : new StringTextComponent("<Entity>");
-            case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: default:
+                        : new StringTextComponent("<ERR>");
+            case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: case PLAYER_CROUCHING: default:
                 return StringTextComponent.EMPTY;
         }
     }

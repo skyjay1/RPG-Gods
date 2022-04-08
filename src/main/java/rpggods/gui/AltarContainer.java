@@ -82,7 +82,7 @@ public class AltarContainer extends Container {
     @Override
     public boolean stillValid(final PlayerEntity playerIn) {
         final double maxDistanceSq = Math.pow(playerIn.getAttributeValue(ForgeMod.REACH_DISTANCE.get()) + 1.0D, 2);
-        return getEntity() != null && playerIn.distanceToSqr(getEntity()) < maxDistanceSq;
+        return getEntity() != null && getEntity().isAlive() && playerIn.distanceToSqr(getEntity()) < maxDistanceSq;
     }
 
     public Altar getAltar() { return altar; }

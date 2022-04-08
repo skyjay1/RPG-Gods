@@ -15,6 +15,7 @@ import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.IAngerable;
 import net.minecraft.entity.IRangedAttackMob;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
@@ -941,7 +942,9 @@ public class FavorEventHandler {
                     mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
                 }
                 // ensure target has attack goal
-                if(checkAttackGoal && event.getEntity() instanceof CreatureEntity && !(event.getEntity() instanceof IRangedAttackMob)) {
+                if(checkAttackGoal && event.getEntity() instanceof CreatureEntity
+                        && !(event.getEntity() instanceof IRangedAttackMob)
+                        && !(event.getEntity() instanceof IAngerable)) {
                     // check for existing attack goal
                     boolean hasAttackGoal = false;
                     for(Goal g : mob.goalSelector.getRunningGoals().collect(Collectors.toList())) {
