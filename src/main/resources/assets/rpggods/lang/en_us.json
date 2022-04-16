@@ -12,6 +12,7 @@
   "commands.favor.add.decay.success.single": "Gave %s decay rate with %s to %s",
   "commands.favor.query.levels": "%s has %s favor levels with %s",
   "commands.favor.query.points": "%s has %s favor points with %s",
+  "commands.favor.query.perk_bonus": "%s has %s perk chance bonus with %s",
   "commands.favor.query.decay": "%s has %s decay rate with %s",
   "commands.favor.query.patron.success": "Patron for %s is %s",
   "commands.favor.query.patron.empty": "%s has no patron",
