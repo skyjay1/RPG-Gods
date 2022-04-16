@@ -20,15 +20,15 @@ import java.util.function.Supplier;
  **/
 public class SAltarPacket {
 
-    protected ResourceLocation deityName;
+    protected ResourceLocation altarId;
     protected Altar altar;
 
     /**
-     * @param deityNameIn the ResourceLocation ID of the Deity
+     * @param altarNameIn the ResourceLocation ID of the Deity
      * @param altarIn     the Altar
      **/
-    public SAltarPacket(final ResourceLocation deityNameIn, final Altar altarIn) {
-        this.deityName = deityNameIn;
+    public SAltarPacket(final ResourceLocation altarNameIn, final Altar altarIn) {
+        this.altarId = altarNameIn;
         this.altar = altarIn;
     }
 
@@ -55,7 +55,7 @@ public class SAltarPacket {
     public static void toBytes(final SAltarPacket msg, final PacketBuffer buf) {
         DataResult<INBT> nbtResult = RPGGods.ALTAR.writeObject(msg.altar);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Altar to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.deityName);
+        buf.writeResourceLocation(msg.altarId);
         buf.writeNbt((CompoundNBT) tag);
     }
 
@@ -69,7 +69,7 @@ public class SAltarPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                RPGGods.ALTAR.put(message.deityName, message.altar);
+                RPGGods.ALTAR.put(message.altarId, message.altar);
             });
         }
         context.setPacketHandled(true);

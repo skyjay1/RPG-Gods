@@ -21,15 +21,11 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.attributes.GlobalEntityTypeAttributes;
 import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.RangedAttackGoal;
-import net.minecraft.entity.ai.goal.RangedBowAttackGoal;
-import net.minecraft.entity.ai.goal.RangedCrossbowAttackGoal;
+import net.minecraft.entity.effect.LightningBoltEntity;
 import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.merchant.IMerchant;
@@ -62,10 +58,13 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.concurrent.TickDelayedTask;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
@@ -81,20 +80,22 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingSetAttackTargetEvent;
 import net.minecraftforge.event.entity.living.PotionEvent;
-import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.entity.ai.AffinityGoal;
+import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Affinity;
@@ -129,11 +130,12 @@ public class FavorEventHandler {
      * @return the ItemStack to replace the one provided, if any
      */
     public static Optional<ItemStack> onOffering(final Optional<AltarEntity> entity, final ResourceLocation deity, final PlayerEntity player, final IFavor favor, final ItemStack item) {
-        if(favor.isEnabled() && !item.isEmpty()) {
+        boolean deityEnabled = favor.getFavor(deity).isEnabled();
+        if(favor.isEnabled() && deityEnabled && !item.isEmpty()) {
             // find first matching offering for the given deity
             ResourceLocation offeringId = null;
             Offering offering = null;
-            for(ResourceLocation id : RPGGods.DEITY.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
+            for(ResourceLocation id : RPGGods.DEITY_HELPER.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
                 Offering o = RPGGods.OFFERING.get(id).orElse(null);
                 if(o != null && o.matches(item)) {
                     offeringId = id;
@@ -179,6 +181,8 @@ public class FavorEventHandler {
                     IParticleData particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
                     ((ServerWorld)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
                 }
+                // send player message
+                favor.getFavor(deity).sendStatusMessage(player, deity);
                 return Optional.of(item);
             }
         }
@@ -197,7 +201,7 @@ public class FavorEventHandler {
         if(favor.isEnabled()) {
             // find and process all matching sacrifices
             ResourceLocation entityId = entity.getType().getRegistryName();
-            ResourceLocation deity;
+            ResourceLocation deityId;
             Sacrifice sacrifice;
             Cooldown cooldown;
             for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
@@ -207,12 +211,13 @@ public class FavorEventHandler {
                     if(entityId.equals(sacrifice.getEntity())) {
                         // check sacrifice cooldown
                         cooldown = favor.getSacrificeCooldown(entry.getKey());
-                        deity = Sacrifice.getDeity(entry.getKey());
-                        if(cooldown.canUse()) {
+                        deityId = Sacrifice.getDeity(entry.getKey());
+                        boolean deityEnabled = favor.getFavor(deityId).isEnabled();
+                        if(deityEnabled && cooldown.canUse()) {
                             // add sacrifice cooldown
                             cooldown.addUse();
                             // add favor and run function, if any
-                            favor.getFavor(deity).addFavor(player, deity, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
+                            favor.getFavor(deityId).addFavor(player, deityId, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
                             sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
                         }
                     }
@@ -240,8 +245,11 @@ public class FavorEventHandler {
         if(favor.isEnabled()) {
             // find matching perks (use set to ensure no duplicates)
             Set<ResourceLocation> perks = new HashSet<>();
-            for(Deity deity : RPGGods.DEITY.values()) {
-                perks.addAll(deity.perkByConditionMap.getOrDefault(type, ImmutableList.of()));
+            for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+                boolean deityEnabled = favor.getFavor(helper.id).isEnabled();
+                if(deityEnabled) {
+                    perks.addAll(helper.perkByConditionMap.getOrDefault(type, ImmutableList.of()));
+                }
             }
             // shuffle perks
             List<ResourceLocation> perkList = Lists.newArrayList(perks);
@@ -285,8 +293,11 @@ public class FavorEventHandler {
         if(favor.isEnabled()) {
             // find matching perks
             List<ResourceLocation> perks = new ArrayList<>();
-            for(Deity deity : RPGGods.DEITY.values()) {
-                perks.addAll(deity.perkByTypeMap.getOrDefault(type, ImmutableList.of()));
+            for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+                boolean deityEnabled = favor.getFavor(helper.id).isEnabled();
+                if(deityEnabled) {
+                    perks.addAll(helper.perkByTypeMap.getOrDefault(type, ImmutableList.of()));
+                }
             }
             // shuffle perks
             Collections.shuffle(perks);
@@ -353,7 +364,9 @@ public class FavorEventHandler {
                                   final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         // check favor range, perk cooldown, and random chance
         if(perk != null && !player.level.isClientSide && perk.getRange().isInRange(favor)
-                && favor.hasNoPerkCooldown(perk.getCategory()) && Math.random() < perk.getChance()) {
+                && favor.getFavor(perk.getDeity()).isEnabled()
+                && favor.hasNoPerkCooldown(perk.getCategory())
+                && Math.random() < perk.getAdjustedChance(favor.getFavor(perk.getDeity()))) {
             // check perk conditions
             for(final PerkCondition condition : perk.getConditions()) {
                 if(!matchCondition(perk.getDeity(), condition, player, favor, data)) {
@@ -559,7 +572,23 @@ public class FavorEventHandler {
                 }
                 return false;
             case PATRON:
-                return favor.setPatron(player, action.getId(), action.getMultiplier().orElse(0F), action.getFavor().orElse(0L));
+                if(action.getPatron().isPresent()) {
+                    return favor.setPatron(player, action.getPatron().get());
+                }
+                return false;
+            case UNLOCK:
+                if(action.getId().isPresent()) {
+                    FavorLevel level = favor.getFavor(action.getId().get());
+                    if(!level.isEnabled()) {
+                        favor.getFavor(action.getId().get()).setEnabled(true);
+                        // send player feedback
+                        ITextComponent message = action.getDisplayDescription();
+                        player.displayClientMessage(message.copy().withStyle(TextFormatting.BOLD, TextFormatting.LIGHT_PURPLE), true);
+                        // play sound
+                        player.level.playSound(player, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                        return false; // hacky solution to prevent feedback, since we don't need cooldown anyway
+                    }}
+                return false;
             case XP:
                 if(entity.isPresent() && action.getMultiplier().isPresent() && entity.get() instanceof ExperienceOrbEntity) {
                     ((ExperienceOrbEntity)entity.get()).value *= action.getMultiplier().get();
@@ -589,6 +618,7 @@ public class FavorEventHandler {
             case RANDOM_TICK: return true;
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < COMBAT_TIMER;
             case PLAYER_CROUCHING: return player.isCrouching();
+            case UNLOCKED: return condition.getId().isPresent() && favor.getFavor(condition.getId().get()).isEnabled();
             case MAINHAND_ITEM:
                 ItemStack heldItem = player.getMainHandItem();
                 if(condition.getData().isPresent() && condition.getData().get().startsWith("#")) {
@@ -626,6 +656,7 @@ public class FavorEventHandler {
             case DIMENSION: return condition.getId().isPresent() && condition.getId().get().equals(player.level.dimension().location());
             case STRUCTURE: return player.level instanceof ServerWorld && condition.isInStructure((ServerWorld) player.level, player.blockPosition());
             // match data to perk condition data
+            case RITUAL:
             case EFFECT_START:
             case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER:
@@ -641,7 +672,7 @@ public class FavorEventHandler {
 
     public static void sendPerkFeedback(ResourceLocation deity, PlayerEntity player, IFavor favor) {
         if(RPGGods.CONFIG.canGiveFeedback()) {
-            final ITextComponent deityName = Deity.getName(deity);
+            final ITextComponent deityName = DeityHelper.getName(deity);
             final boolean positive = favor.getFavor(deity).getLevel() >= 0;
             final ITextComponent message;
             if(positive) {
@@ -769,6 +800,67 @@ public class FavorEventHandler {
         return false;
     }
 
+    /**
+     * @param altar the altar entity
+     * @return true if a ritual was detected and patron was changed
+     */
+    public static boolean performRitual(final AltarEntity altar, final ResourceLocation deityId) {
+        Vector3i facing = altar.getDirection().getNormal();
+        BlockPos pos = altar.blockPosition().offset(facing);
+        AxisAlignedBB aabb = new AxisAlignedBB(pos).inflate(0.15D, 1.0D, 0.15D);
+        List<ItemEntity> list = altar.level.getEntitiesOfClass(ItemEntity.class, aabb, e -> e.isOnFire());
+        // detect first burning item in list
+        if(list.isEmpty()) {
+            return false;
+        }
+        ItemEntity item = list.get(0);
+        // detect player who threw the item
+        if(null == item.getThrower()) {
+            return false;
+        }
+        PlayerEntity player = altar.level.getPlayerByUUID(item.getThrower());
+        if(null == player) {
+            return false;
+        }
+        // detect ritual perks for this deity
+        ResourceLocation itemId = item.getItem().getItem().getRegistryName();
+        DeityHelper deity = RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new);
+        List<ResourceLocation> perkIds = deity.perkByConditionMap
+                .getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of());
+        // create list using perk IDs
+        List<Perk> perks = new ArrayList<>();
+        for(ResourceLocation perkId : perkIds) {
+            perks.add(RPGGods.PERK.get(perkId).orElse(Perk.EMPTY));
+        }
+        // load favor
+        boolean success = false;
+        LazyOptional<IFavor> ifavor = player.getCapability(RPGGods.FAVOR);
+        if(ifavor.isPresent()) {
+            IFavor favor = ifavor.orElse(null);
+            // attempt to run the perks
+            if(favor.isEnabled()) {
+                for(Perk perk : perks) {
+                    success |= runPerk(perk, player, favor, Optional.of(altar), Optional.of(itemId), Optional.empty());
+                }
+            }
+        }
+        // send feedback
+        if(success) {
+            // summon visual lightning bolt
+            LightningBoltEntity bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
+            bolt.setVisualOnly(true);
+            Vector3d position = Vector3d.atBottomCenterOf(pos.below());
+            bolt.setPos(position.x, position.y, position.z);
+            altar.level.addFreshEntity(bolt);
+            // send message
+            ITextComponent message = new TranslationTextComponent("favor.perk.type.patron.description.add", DeityHelper.getName(deityId))
+                    .withStyle(TextFormatting.LIGHT_PURPLE, TextFormatting.BOLD);
+            player.displayClientMessage(message, true);
+        }
+
+        return false;
+    }
+
     public static class ModEvents {
 
         @SubscribeEvent
@@ -890,6 +982,16 @@ public class FavorEventHandler {
                                 Optional.of(blockId), Optional.empty());
                     });
                 }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onChangeFavor(FavorChangedEvent.Post event) {
+            if(!event.getPlayer().level.isClientSide && event.isLevelChange()) {
+                // onFavorChanged
+                event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                    triggerPerks(PerkAction.Type.UNLOCK, event.getPlayer(), f, Optional.empty());
+                });
             }
         }
 

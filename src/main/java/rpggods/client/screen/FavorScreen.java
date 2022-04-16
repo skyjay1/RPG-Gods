@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
@@ -29,6 +30,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.deity.Deity;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
@@ -178,9 +180,12 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         // add all deities to list
         final IFavor favor = screenContainer.getFavor();
         deityList.clear();
-        for(Map.Entry<ResourceLocation, Optional<Altar>> entry : RPGGods.ALTAR.getEntries()) {
-            if(entry.getValue().isPresent() && entry.getValue().get().getDeity().isPresent()) {
-                deityList.add(entry.getKey());
+        for(Map.Entry<ResourceLocation, Optional<Deity>> entry : RPGGods.DEITY.getEntries()) {
+            if(entry.getValue().isPresent()) {
+                boolean unlocked = favor.getFavor(entry.getKey()).isEnabled();
+                if(unlocked) {
+                    deityList.add(entry.getKey());
+                }
             }
         }
         deityList.sort((d1, d2) -> favor.getFavor(d2).compareToAbs(favor.getFavor(d1)));
@@ -236,7 +241,9 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 else if(min <= 0 && max <= 0) unlock = max;
                 else unlock = Math.min(Math.abs(min), Math.abs(max));
                 // actually add the perk to the map
-                perkMap.get(perk.getDeity()).get(unlock).add(perk);
+                if(perkMap.get(perk.getDeity()).containsKey(unlock)) {
+                    perkMap.get(perk.getDeity()).get(unlock).add(perk);
+                }
             }
         }
         // determine current page
@@ -245,7 +252,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         }
         // initialize number of tabs
         tabCount = Math.min(deityList.size(), TAB_COUNT);
-        tabGroupCount = Math.max(1, deityList.size() / TAB_COUNT);
+        tabGroupCount = Math.max(1, (int)Math.ceil((double)deityList.size() / (double)TAB_COUNT));
     }
 
     @Override
@@ -438,24 +445,34 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         // draw preview pane
         this.minecraft.getTextureManager().bind(SCREEN_WIDGETS);
         this.blit(matrixStack, this.leftPos + PREVIEW_X, this.topPos + PREVIEW_Y, 202, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
-        // draw favor amounts
+        // prepare to draw favor amounts
         final FavorLevel level = getMenu().getFavor().getFavor(deity);
-        this.font.draw(matrixStack, new TranslationTextComponent("favor.favor").withStyle(TextFormatting.DARK_GRAY, TextFormatting.ITALIC),
-                leftPos + SUMMARY_X, topPos + SUMMARY_Y, 0xFFFFFF);
         final long curFavor = level.getFavor();
         final long nextFavor = level.getFavorToNextLevel();
+        int startY = topPos + SUMMARY_Y;
+        // draw "Patron" text
+        Optional<ResourceLocation> patron = getMenu().getFavor().getPatron();
+        if(patron.isPresent() && patron.get().equals(this.deity)) {
+            this.font.draw(matrixStack, new TranslationTextComponent("favor.patron")
+                            .withStyle(TextFormatting.WHITE),
+                    leftPos + SUMMARY_X, startY + 1, 0xFFFFFF);
+            startY += font.lineHeight * 3 / 2;
+        }
+        // draw favor amounts
+        this.font.draw(matrixStack, new TranslationTextComponent("favor.favor").withStyle(TextFormatting.DARK_GRAY, TextFormatting.ITALIC),
+                leftPos + SUMMARY_X, startY, 0xFFFFFF);
         this.font.draw(matrixStack, new StringTextComponent(curFavor + " / " + nextFavor)
                         .withStyle(TextFormatting.DARK_PURPLE),
-                leftPos + SUMMARY_X, topPos + SUMMARY_Y + font.lineHeight * 1 + 1, 0xFFFFFF);
+                leftPos + SUMMARY_X, startY + font.lineHeight * 1 + 1, 0xFFFFFF);
         this.font.draw(matrixStack, new TranslationTextComponent("favor.level").withStyle(TextFormatting.DARK_GRAY, TextFormatting.ITALIC),
-                leftPos + SUMMARY_X, topPos + SUMMARY_Y + font.lineHeight * 5 / 2, 0xFFFFFF);
+                leftPos + SUMMARY_X, startY + font.lineHeight * 5 / 2, 0xFFFFFF);
         this.font.draw(matrixStack, new StringTextComponent(String.valueOf(level.getLevel() + " / " + (curFavor < 0 ? level.getMin() : level.getMax()))).withStyle(TextFormatting.DARK_PURPLE),
-                leftPos + SUMMARY_X, topPos + SUMMARY_Y + font.lineHeight * 7 / 2 + 1, 0xFFFFFF);
+                leftPos + SUMMARY_X, startY + font.lineHeight * 7 / 2 + 1, 0xFFFFFF);
         this.font.draw(matrixStack, new TranslationTextComponent("favor.next_level").withStyle(TextFormatting.DARK_GRAY, TextFormatting.ITALIC),
-                leftPos + SUMMARY_X, topPos + SUMMARY_Y + font.lineHeight * 5, 0xFFFFFF);
+                leftPos + SUMMARY_X, startY + font.lineHeight * 5, 0xFFFFFF);
         final boolean capped = level.getLevel() == level.getMin() || level.getLevel() == level.getMax();
         this.font.draw(matrixStack, new StringTextComponent(capped ? "--" : String.valueOf(nextFavor - curFavor)).withStyle(TextFormatting.DARK_PURPLE),
-                leftPos + SUMMARY_X, topPos + SUMMARY_Y + font.lineHeight * 6 + 1, 0xFFFFFF);
+                leftPos + SUMMARY_X, startY + font.lineHeight * 6 + 1, 0xFFFFFF);
         // draw entity
         drawEntityOnScreen(getOrCreateEntity(deity), matrixStack, this.leftPos + PREVIEW_X + 16, this.topPos + PREVIEW_Y + 6, (float) mouseX, (float) mouseY, partialTicks);
     }
@@ -516,10 +533,10 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
             this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
             // draw stretched texture
-            this.blit(matrixStack, 0, 0, 0, 220, 8, 8);
+            this.blit(matrixStack, 0, 0, 0, 240, 8, 8);
             // draw boundary texture
             matrixStack.scale(1 / scaleX, 1, 1);
-            this.blit(matrixStack, Math.round(sizeX), 0, 8, 220, 8, 8);
+            this.blit(matrixStack, Math.round(sizeX), 0, 8, 240, 8, 8);
             RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
             RenderSystem.disableBlend();
         }
@@ -856,14 +873,14 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         matrixStack.translate(x / scale, y, this.itemRenderer.blitOffset + 101);
         RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
-        this.blit(matrixStack, 0,0, 0, 230, 18, 2);
+        this.blit(matrixStack, 0,0, 0, 250, 18, 2);
         matrixStack.popPose();
     }
 
     protected class PerkButton extends Button {
 
         private Perk perk;
-        private List<ITextComponent> perkTypes;
+        private List<ITextComponent> perkActions;
         private List<ITextComponent> perkConditions;
         private ITextComponent perkChance;
         private ITextComponent perkRange;
@@ -872,7 +889,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
         public PerkButton(final FavorScreen gui, final Perk perk, int x, int y) {
             super(x, y, PERK_WIDTH, PERK_HEIGHT, StringTextComponent.EMPTY, b -> {});
-            this.perkTypes = new ArrayList<>();
+            this.perkActions = new ArrayList<>();
             this.perkConditions = new ArrayList<>();
             this.setPerk(perk);
             setEnabled(true);
@@ -881,13 +898,17 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         @Override
         public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible && this.enabled && perk != null) {
+                int blitY = 196;
+                if(perk.getIcon().isFancy()) {
+                    blitY += PERK_HEIGHT;
+                }
                 // draw color
                 RenderSystem.color4f(perk.getIcon().getColorRed(), perk.getIcon().getColorGreen(), perk.getIcon().getColorBlue(), 1.0F);
                 FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
-                this.blit(matrixStack, this.x, this.y, 0, 196, PERK_WIDTH, PERK_HEIGHT);
+                this.blit(matrixStack, this.x, this.y, 0, blitY, PERK_WIDTH, PERK_HEIGHT);
                 // draw bg
                 RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                this.blit(matrixStack, this.x, this.y, 22, 196, PERK_WIDTH, PERK_HEIGHT);
+                this.blit(matrixStack, this.x, this.y, 22, blitY, PERK_WIDTH, PERK_HEIGHT);
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(perk.getIcon().getItem(), this.x + (PERK_WIDTH - 16) / 2, this.y + (PERK_HEIGHT - 16) / 2);
                 // draw cooldown
@@ -903,7 +924,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     RenderSystem.enableBlend();
                     RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
                     FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
-                    this.blit(matrixStack, this.x, this.y + vOffset, 44, 196 + vOffset, PERK_WIDTH, PERK_HEIGHT - vOffset);
+                    this.blit(matrixStack, this.x, this.y + vOffset, 44, blitY + vOffset, PERK_WIDTH, PERK_HEIGHT - vOffset);
                     RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
                     RenderSystem.disableBlend();
                     matrixStack.popPose();
@@ -913,7 +934,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
         public void setPerk(final Perk perk) {
             this.perk = perk;
-            this.perkTypes.clear();
+            this.perkActions.clear();
             this.perkConditions.clear();
             this.perkChance = StringTextComponent.EMPTY;
             this.perkRange = StringTextComponent.EMPTY;
@@ -921,8 +942,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             if(perk != null) {
                 // add all perk action titles
                 for(PerkAction data : perk.getActions()) {
-                    perkTypes.add(data.getDisplayName().copy().withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE));
-                    perkTypes.add(data.getDisplayDescription().copy().withStyle(TextFormatting.BLUE));
+                    perkActions.add(data.getDisplayName().copy().withStyle(TextFormatting.BLACK, TextFormatting.UNDERLINE));
+                    perkActions.add(data.getDisplayDescription().copy().withStyle(TextFormatting.BLUE));
                 }
                 // add perk condition texts
                 for(PerkCondition condition : perk.getConditions()) {
@@ -957,13 +978,16 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     perkRange = new TranslationTextComponent("gui.favor.perk.range.between",
                             perk.getRange().getMinLevel(), perk.getRange().getMaxLevel()).withStyle(color);
                 }
-                // add perk chance (formatted as 2 or fewer decimals)
-                if(perk.getChance() < 0.999999F) {
-                    float chance = perk.getChance();
-                    if(isRandomPerk) {
-                        chance *= RPGGods.CONFIG.getRandomPerkChance();
-                    }
-                    String chanceString = String.format("%.2f", chance * 100.0F).replaceAll("0*$", "").replaceAll("\\.$", "");
+                // determine perk chance
+                float chance = MathHelper.clamp(perk.getAdjustedChance(favorLevel), 0.0F, 1.0F);
+                if(isRandomPerk) {
+                    chance *= RPGGods.CONFIG.getRandomPerkChance();
+                }
+                // add perk chance (formatted to 2 or fewer decimal places)
+                if(chance < 0.999999F) {
+                    String chanceString = String.format("%.2f", chance * 100.0F)
+                            .replaceAll("0*$", "")
+                            .replaceAll("\\.$", "");
                     perkChance = new TranslationTextComponent("gui.favor.perk.chance", chanceString)
                             .withStyle(TextFormatting.BLACK);
                 }
@@ -986,21 +1010,26 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         }
 
         public void renderPerkTooltip(MatrixStack matrixStack, final int mouseX, final int mouseY) {
+            int margin = 14;
+            // determine start coordinates
             int startX = mouseX + 10;
+            if(startX + tooltipWidth + margin > FavorScreen.this.width) {
+                startX = FavorScreen.this.width - tooltipWidth - margin - 10;
+            }
             int startY = mouseY - PERK_TOOLTIP_HEIGHT / 2;
             final int lineHeight = 11;
             // determine background size
-            int lines = perkTypes.size() + perkConditions.size() + 6;
+            int lines = perkActions.size() + perkConditions.size() + 6;
             if(perkChance.equals(StringTextComponent.EMPTY)) {
                 lines--;
             }
-            renderPerkTooltipBackground(matrixStack, startX, startY, tooltipWidth + 14, lines * lineHeight + 6);
-            startX += 6;
+            renderPerkTooltipBackground(matrixStack, startX, startY, tooltipWidth + margin, lines * lineHeight + 6);
+            startX += margin / 2;
             startY += 14;
             // draw perk data
             int line = 0;
-            // draw title(s)
-            for (ITextComponent t : perkTypes) {
+            // draw action(s)
+            for (ITextComponent t : perkActions) {
                 FavorScreen.this.font.draw(matrixStack, t, startX, startY + lineHeight * (line++), 0xFFFFFF);
             }
             // line space
@@ -1031,7 +1060,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
          */
         private int calculateWidth() {
             int maxWidth = 0;
-            for(ITextComponent t : perkTypes) {
+            for(ITextComponent t : perkActions) {
                 maxWidth = Math.max(maxWidth, FavorScreen.this.font.width(t));
             }
             for(ITextComponent t : perkConditions) {
@@ -1377,7 +1406,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                 this.visible = true;
                 this.deity = FavorScreen.this.deityList.get(deityId);
                 this.setMessage(new TranslationTextComponent(Altar.createTranslationKey(deity)));
-                this.item = RPGGods.ALTAR.get(deity).orElse(Altar.EMPTY).getIcon();
+                this.item = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY).getIcon();
             } else {
                 this.visible = false;
                 this.deity = null;

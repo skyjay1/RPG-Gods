@@ -9,7 +9,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
@@ -21,19 +21,19 @@ import java.util.function.Supplier;
 /**
  * Called when datapacks are (re)loaded.
  * Sent from the server to the client with a single ResourceLocation ID
- * and the corresponding Offering as it was read from JSON.
+ * and the corresponding Perk as it was read from JSON.
  **/
 public class SPerkPacket {
 
-    protected ResourceLocation perkName;
+    protected ResourceLocation perkId;
     protected Perk perk;
 
     /**
-     * @param perkNameIn the ResourceLocation ID of the Deity
+     * @param perkNameIn the ResourceLocation ID of the Perk
      * @param perkIn     the Perk
      **/
     public SPerkPacket(final ResourceLocation perkNameIn, final Perk perkIn) {
-        this.perkName = perkNameIn;
+        this.perkId = perkNameIn;
         this.perk = perkIn;
     }
 
@@ -60,7 +60,7 @@ public class SPerkPacket {
     public static void toBytes(final SPerkPacket msg, final PacketBuffer buf) {
         DataResult<INBT> nbtResult = RPGGods.PERK.writeObject(msg.perk);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Perk to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.perkName);
+        buf.writeResourceLocation(msg.perkId);
         buf.writeNbt((CompoundNBT) tag);
     }
 
@@ -75,15 +75,15 @@ public class SPerkPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 Perk perk = message.perk;
-                RPGGods.PERK.put(message.perkName, perk);
+                RPGGods.PERK.put(message.perkId, perk);
                 // add Perk to Deity
-                RPGGods.DEITY.computeIfAbsent(perk.getDeity(), Deity::new).add(message.perkName, perk);
+                RPGGods.DEITY_HELPER.computeIfAbsent(perk.getDeity(), DeityHelper::new).add(message.perkId, perk);
                 // add Perk to Affinity map if applicable
                 for(PerkAction action : perk.getActions()) {
                     if(action.getAffinity().isPresent()) {
                         Affinity affinity = action.getAffinity().get();
                         RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(message.perkName);
+                                .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(message.perkId);
                     }
                 }
             });

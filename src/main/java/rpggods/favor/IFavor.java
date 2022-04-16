@@ -11,6 +11,7 @@ import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.event.FavorChangedEvent;
 import rpggods.deity.Cooldown;
+import rpggods.perk.Patron;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -100,29 +101,28 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
      * Updates the player's patron deity by removing the previous patron, if any, and adjusting favor decay
      * @param player the player
      * @param patron the new patron deity, or empty to remove the current patron
-     * @param decayBonus the favor decay rate to add to the given patron
-     * @param favorPunish the amount of favor to add to the old patron (typically negative)
      * @return true if the patron deity was changed
      */
-    default boolean setPatron(final PlayerEntity player, final Optional<ResourceLocation> patron,
-                                    final float decayBonus, final long favorPunish) {
+    default boolean setPatron(final PlayerEntity player, final Patron patron) {
         Optional<ResourceLocation> old = getPatron();
         // attempt to change patron (if no existing patron OR given patron is empty OR existing and given are different)
-        if(!old.isPresent() || !patron.isPresent() || !patron.get().equals(old.get())) {
+        if(!old.isPresent() || !patron.getDeity().isPresent() || !patron.getDeity().get().equals(old.get())) {
             // remove old patron
             if (old.isPresent()) {
-                // reset favor decay
+                // reset favor decay and perk bonus
                 FavorLevel level = getFavor(old.get());
-                level.setDecayRate((float) RPGGods.CONFIG.getFavorDecayRate());
+                level.setDecayRate(0);
+                level.setPerkBonus(0);
                 // add favor to old patron
-                level.addFavor(player, old.get(), favorPunish, FavorChangedEvent.Source.OTHER);
+                level.addFavor(player, old.get(), patron.getFavorPenalty(), FavorChangedEvent.Source.PERK);
             }
             // set new patron
-            setPatron(patron);
-            // add multiplier to favor decay
-            if(patron.isPresent()) {
-                FavorLevel level = getFavor(patron.get());
-                level.setDecayRate(level.getDecayRate() + decayBonus);
+            setPatron(patron.getDeity());
+            // add favor decay and perk bonus multipliers
+            if(patron.getDeity().isPresent()) {
+                FavorLevel level = getFavor(patron.getDeity().get());
+                level.setDecayRate(level.getDecayRate() + patron.getFavorDecayModifier());
+                level.setPerkBonus(level.getPerkBonus() + patron.getPerkChanceModifier());
             }
             return true;
         }
@@ -273,10 +273,9 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         for (int i = 0, l = deities.size(); i < l; i++) {
             final CompoundNBT deity = deities.getCompound(i);
             final String name = deity.getString(NAME);
-            final FavorLevel level = deity.contains(FAVOR, 10)
-                    ? new FavorLevel(deity.getCompound(FAVOR))
-                    : new FavorLevel(deity.getLong(FAVOR));
-            setFavor(new ResourceLocation(name), level);
+            if (deity.contains(FAVOR, 10)) {
+                setFavor(new ResourceLocation(name), new FavorLevel(deity.getCompound(FAVOR)));
+            }
         }
         setEnabled((!nbt.contains(ENABLED)) || nbt.getBoolean(ENABLED));
         if(nbt.contains(PATRON)) {

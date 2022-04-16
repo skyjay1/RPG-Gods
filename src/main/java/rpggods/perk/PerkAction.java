@@ -4,28 +4,31 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.entity.EntityType;
-import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.PotionUtils;
+import net.minecraft.potion.Potions;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.Constants;
-import rpggods.deity.Deity;
+import rpggods.RPGGods;
+import rpggods.deity.Altar;
+import rpggods.deity.DeityHelper;
 import rpggods.event.FavorEventHandler;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class PerkAction {
 
     public static final PerkAction EMPTY = new PerkAction(PerkAction.Type.FAVOR, Optional.empty(),
             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-            Optional.empty(), Optional.empty(), true);
+            Optional.empty(), Optional.empty(), Optional.empty(), true);
 
     public static final Codec<PerkAction> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkAction.Type.CODEC.fieldOf("type").forGetter(PerkAction::getType),
@@ -36,6 +39,7 @@ public class PerkAction {
             Codec.LONG.optionalFieldOf("favor").forGetter(PerkAction::getFavor),
             Codec.FLOAT.optionalFieldOf("multiplier").forGetter(PerkAction::getMultiplier),
             Affinity.CODEC.optionalFieldOf("affinity").forGetter(PerkAction::getAffinity),
+            Patron.CODEC.optionalFieldOf("patron").forGetter(PerkAction::getPatron),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkAction::isHidden)
     ).apply(instance, PerkAction::new));
 
@@ -47,11 +51,12 @@ public class PerkAction {
     private final Optional<Long> favor;
     private final Optional<Float> multiplier;
     private final Optional<Affinity> affinity;
+    private final Optional<Patron> patron;
     private final boolean hidden;
 
     public PerkAction(Type type, Optional<String> string, Optional<ResourceLocation> id, Optional<CompoundNBT> tag,
                       Optional<ItemStack> item, Optional<Long> favor, Optional<Float> multiplier,
-                      Optional<Affinity> affinity, boolean hidden) {
+                      Optional<Affinity> affinity, Optional<Patron> patron, boolean hidden) {
         this.type = type;
         this.string = string;
         this.id = id;
@@ -60,6 +65,7 @@ public class PerkAction {
         this.favor = favor;
         this.multiplier = multiplier;
         this.affinity = affinity;
+        this.patron = patron;
         this.hidden = hidden;
     }
 
@@ -93,6 +99,10 @@ public class PerkAction {
 
     public Optional<Affinity> getAffinity() {
         return affinity;
+    }
+
+    public Optional<Patron> getPatron() {
+        return patron;
     }
 
     public boolean isHidden() {
@@ -191,8 +201,21 @@ public class PerkAction {
                 }
                 return StringTextComponent.EMPTY;
             case PATRON:
+                if(getPatron().isPresent()) {
+                    if (getPatron().get().getDeity().isPresent()) {
+                        ITextComponent deityName = DeityHelper.getName(getPatron().get().getDeity().get());
+                        return new TranslationTextComponent("favor.perk.type.patron.description.add", deityName);
+                    }
+                    return new TranslationTextComponent("favor.perk.type.patron.description.remove");
+                }
+                return StringTextComponent.EMPTY;
+            case UNLOCK:
                 if(getId().isPresent()) {
-                    return Deity.getName(getId().get());
+                    ResourceLocation deityId = getId().get();
+                    ITextComponent deityName = DeityHelper.getName(deityId);
+                    Altar altar = RPGGods.ALTAR.get(deityId).orElse(Altar.EMPTY);
+                    String suffix = altar.isFemale() ? "female" : "male";
+                    return new TranslationTextComponent("favor.perk.type.unlock.description." + suffix, deityName);
                 }
                 return StringTextComponent.EMPTY;
             case FUNCTION:
@@ -224,6 +247,7 @@ public class PerkAction {
         DURABILITY("durability"),
         DAMAGE("damage"),
         PATRON("patron"),
+        UNLOCK("unlock"),
         XP("xp");
 
         private static final Codec<PerkAction.Type> CODEC = Codec.STRING.comapFlatMap(PerkAction.Type::fromString, PerkAction.Type::getSerializedName).stable();
@@ -231,7 +255,7 @@ public class PerkAction {
         private final String name;
 
         private Type(final String id) {
-            name = id;
+            this.name = id;
         }
 
         public static DataResult<PerkAction.Type> fromString(String id) {

@@ -3,12 +3,10 @@ package rpggods.deity;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
 import rpggods.RPGGods;
@@ -67,7 +65,7 @@ public class Offering {
     /**
      * Attempts to parse the deity from the given offering id
      * @param offeringId the offering id in the form {@code namespace:deity/offering}
-     * @return the resource location if found, otherwise {@link Deity#EMPTY}
+     * @return the resource location if found, otherwise {@link DeityHelper#EMPTY}
      */
     public static ResourceLocation getDeity(final ResourceLocation offeringId) {
         String path = offeringId.getPath();
@@ -75,7 +73,7 @@ public class Offering {
         if(index > -1) {
             return new ResourceLocation(offeringId.getNamespace(), path.substring(0, index));
         }
-        return Deity.EMPTY.id;
+        return DeityHelper.EMPTY.id;
     }
 
     /**

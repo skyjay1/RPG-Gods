@@ -19,9 +19,8 @@ public class FavorChangedEvent extends PlayerEvent {
     private final ResourceLocation deity;
     private final long oldFavor;
     private final Source source;
-
-    private long newFavor;
-    private boolean isLevelChange;
+    private final long newFavor;
+    private final boolean isLevelChange;
 
     /**
      * @param playerIn  the player whose favor is changing
@@ -30,7 +29,7 @@ public class FavorChangedEvent extends PlayerEvent {
      * @param curFavor  the amount of favor after this event
      * @param sourceIn  the source of the change in favor
      */
-    public FavorChangedEvent(final PlayerEntity playerIn, final ResourceLocation deityIn,
+    private FavorChangedEvent(final PlayerEntity playerIn, final ResourceLocation deityIn,
                              final long prevFavor, final long curFavor, final Source sourceIn) {
         super(playerIn);
         deity = deityIn;
@@ -55,18 +54,10 @@ public class FavorChangedEvent extends PlayerEvent {
     }
 
     /**
-     * @return the amount of favor that will be applied after this event
+     * @return the new favor amount
      **/
     public long getNewFavor() {
         return newFavor;
-    }
-
-    /**
-     * @param favor the favor amount that should be applied instead
-     */
-    public void setNewFavor(final long favor) {
-        newFavor = favor;
-        isLevelChange = FavorLevel.calculateLevel(newFavor) != FavorLevel.calculateLevel(oldFavor);
     }
 
     /**
@@ -82,6 +73,65 @@ public class FavorChangedEvent extends PlayerEvent {
     public boolean isLevelChange() {
         return isLevelChange;
     }
+
+
+    public static class Pre extends FavorChangedEvent {
+
+        private long newFavorToApply;
+        private boolean isLevelChangeToApply;
+
+        /**
+         * @param playerIn  the player whose favor is changing
+         * @param deityIn   the deity whose favor is changing
+         * @param prevFavor the amount of favor before this event
+         * @param curFavor  the amount of favor after this event
+         * @param sourceIn  the source of the change in favor
+         */
+        public Pre(PlayerEntity playerIn, ResourceLocation deityIn, long prevFavor, long curFavor, Source sourceIn) {
+            super(playerIn, deityIn, prevFavor, curFavor, sourceIn);
+            setNewFavor(curFavor);
+        }
+
+        /**
+         * @param favor the favor amount that should be applied instead
+         */
+        public void setNewFavor(final long favor) {
+            newFavorToApply = favor;
+            isLevelChangeToApply = FavorLevel.calculateLevel(newFavorToApply) != FavorLevel.calculateLevel(getOldFavor());
+        }
+
+        /**
+         * @return the amount of favor that will be applied after this event
+         **/
+        @Override
+        public long getNewFavor() {
+            return newFavorToApply;
+        }
+
+        /**
+         * @return true if this change in favor also changes the favor level
+         **/
+        @Override
+        public boolean isLevelChange() {
+            return isLevelChangeToApply;
+        }
+    }
+
+
+    public static class Post extends FavorChangedEvent {
+
+        /**
+         * @param playerIn  the player whose favor is changing
+         * @param deityIn   the deity whose favor is changing
+         * @param prevFavor the amount of favor before this event
+         * @param curFavor  the amount of favor after this event
+         * @param sourceIn  the source of the change in favor
+         */
+        public Post(PlayerEntity playerIn, ResourceLocation deityIn, long prevFavor, long curFavor, Source sourceIn) {
+            super(playerIn, deityIn, prevFavor, curFavor, sourceIn);
+        }
+    }
+
 
     /**
      * This is used to indicate why the favor is changing

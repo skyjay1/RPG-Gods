@@ -13,6 +13,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkHooks;
 import rpggods.RPGGods;
+import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.gui.FavorContainer;
 
@@ -25,7 +26,7 @@ public class ScrollItem extends Item {
     @Override
     public ActionResult<ItemStack> use(World level, PlayerEntity player, Hand hand) {
         // prevent use when there are no registered deities
-        if(RPGGods.DEITY.isEmpty()) {
+        if(RPGGods.DEITY_HELPER.isEmpty()) {
             return ActionResult.pass(player.getItemInHand(hand));
         }
         // begin using item (to enable texture change) and open GUI
@@ -34,6 +35,22 @@ public class ScrollItem extends Item {
             LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
             if(favor.isPresent()) {
                 IFavor ifavor = favor.orElse(null);
+                // prevent use when favor is disabled
+                if(!ifavor.isEnabled()) {
+                    return ActionResult.pass(player.getItemInHand(hand));
+                }
+                // prevent use when there are no unlocked deities
+                boolean unlocked = false;
+                for(FavorLevel l : ifavor.getAllFavor().values()) {
+                    if(l.isEnabled()) {
+                        unlocked = true;
+                        break;
+                    }
+                }
+                if(!unlocked) {
+                    return ActionResult.pass(player.getItemInHand(hand));
+                }
+                // open Favor GUI
                 NetworkHooks.openGui((ServerPlayerEntity)player,
                         new SimpleNamedContainerProvider((id, inventory, p) ->
                                 new FavorContainer(id, inventory, ifavor, null),

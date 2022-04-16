@@ -11,7 +11,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.network.PacketDistributor;
@@ -19,12 +18,7 @@ import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
 import rpggods.favor.FavorCommand;
 import rpggods.favor.IFavor;
-import rpggods.network.SAltarPacket;
-import rpggods.network.SOfferingPacket;
-import rpggods.network.SPerkPacket;
-import rpggods.network.SSacrificePacket;
 import rpggods.network.SUpdateAltarPacket;
-import rpggods.network.SUpdateSittingPacket;
 import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 
@@ -43,6 +37,7 @@ public final class RGData {
     public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
         PlayerEntity player = event.getPlayer();
         if (player instanceof ServerPlayerEntity) {
+            RPGGods.DEITY.syncOnReload();
             RPGGods.ALTAR.syncOnReload();
             RPGGods.OFFERING.syncOnReload();
             RPGGods.SACRIFICE.syncOnReload();
@@ -57,8 +52,9 @@ public final class RGData {
     @SubscribeEvent
     public static void onReloadListeners(final AddReloadListenerEvent event) {
         RPGGods.LOGGER.debug("onReloadListeners");
-        RPGGods.DEITY.forEach((id, deity) -> deity.clear());
+        RPGGods.DEITY_HELPER.forEach((id, deity) -> deity.clear());
         RPGGods.AFFINITY.clear();
+        event.addListener(RPGGods.DEITY);
         event.addListener(RPGGods.ALTAR);
         event.addListener(RPGGods.OFFERING);
         event.addListener(RPGGods.SACRIFICE);

@@ -1,6 +1,5 @@
 package rpggods.perk;
 
-import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -13,7 +12,6 @@ import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
@@ -23,23 +21,16 @@ import net.minecraft.world.gen.feature.structure.Structure;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.registries.ForgeRegistries;
-import rpggods.RPGGods;
 import rpggods.deity.Altar;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 public class PerkCondition {
-
-//    public static final Codec<PerkCondition> LOSSY_CODEC = PerkCondition.Type.CODEC.comapFlatMap(PerkCondition::fromType, PerkCondition::getType).stable();
 
     public static final Codec<PerkCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkCondition.Type.CODEC.fieldOf("type").forGetter(PerkCondition::getType),
             Codec.STRING.optionalFieldOf("data").forGetter(PerkCondition::getData)
     ).apply(instance, PerkCondition::new));
-
-//    public static final Codec<PerkCondition> CODEC = Codec.either(LOSSY_CODEC, LOSSLESS_CODEC)
-//            .xmap(either -> either.map(Function.identity(), Function.identity()), p -> p.getData().isPresent() ? Either.right(p) : Either.left(p));
 
     private final PerkCondition.Type type;
     private final Optional<String> data;
@@ -116,8 +107,9 @@ public class PerkCondition {
     private ITextComponent dataToDisplay(final String d) {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
-            case PATRON: return new TranslationTextComponent(Altar.createTranslationKey(rl));
-            case MAINHAND_ITEM:
+            case PATRON: case UNLOCKED:
+                return new TranslationTextComponent(Altar.createTranslationKey(rl));
+            case MAINHAND_ITEM: case RITUAL:
                 Item item = ForgeRegistries.ITEMS.getValue(rl);
                 if(item != null) {
                     return new ItemStack(item).getDisplayName();
@@ -174,6 +166,8 @@ public class PerkCondition {
         PLAYER_INTERACT_BLOCK("player_interact_block"),
         PLAYER_RIDE_ENTITY("player_ride_entity"),
         PLAYER_CROUCHING("player_crouching"),
+        RITUAL("ritual"),
+        UNLOCKED("unlocked"),
         ENTER_COMBAT("enter_combat");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();

@@ -26,7 +26,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
-import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
@@ -65,7 +65,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         // determine which of the mining effects can activate
         List<ResourceLocation> autosmelt = Lists.newArrayList();
         List<ResourceLocation> unsmelt = Lists.newArrayList();
-        for (Deity deity : RPGGods.DEITY.values()) {
+        for (DeityHelper deity : RPGGods.DEITY_HELPER.values()) {
             autosmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.AUTOSMELT, ImmutableList.of()));
             unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.UNSMELT, ImmutableList.of()));
         }

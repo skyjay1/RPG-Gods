@@ -8,7 +8,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 
 import java.util.Optional;
@@ -21,15 +20,15 @@ import java.util.function.Supplier;
  **/
 public class SSacrificePacket {
 
-    protected ResourceLocation deityName;
+    protected ResourceLocation sacrificeId;
     protected Sacrifice sacrifice;
 
     /**
-     * @param deityNameIn the ResourceLocation ID of the Deity
+     * @param sacrificeId the ResourceLocation ID of the Sacrifice
      * @param sacrificeIn     the Sacrifice
      **/
-    public SSacrificePacket(final ResourceLocation deityNameIn, final Sacrifice sacrificeIn) {
-        this.deityName = deityNameIn;
+    public SSacrificePacket(final ResourceLocation sacrificeId, final Sacrifice sacrificeIn) {
+        this.sacrificeId = sacrificeId;
         this.sacrifice = sacrificeIn;
     }
 
@@ -56,7 +55,7 @@ public class SSacrificePacket {
     public static void toBytes(final SSacrificePacket msg, final PacketBuffer buf) {
         DataResult<INBT> nbtResult = RPGGods.SACRIFICE.writeObject(msg.sacrifice);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Sacrifice to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.deityName);
+        buf.writeResourceLocation(msg.sacrificeId);
         buf.writeNbt((CompoundNBT) tag);
     }
 
@@ -70,7 +69,7 @@ public class SSacrificePacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                RPGGods.SACRIFICE.put(message.deityName, message.sacrifice);
+                RPGGods.SACRIFICE.put(message.sacrificeId, message.sacrifice);
             });
         }
         context.setPacketHandled(true);

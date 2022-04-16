@@ -6,7 +6,9 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.ResourceLocation;
+import rpggods.favor.FavorLevel;
 import rpggods.favor.FavorRange;
+import rpggods.favor.IFavor;
 
 import java.util.List;
 import java.util.function.Function;
@@ -69,6 +71,14 @@ public class Perk {
 
     public float getChance() {
         return chance;
+    }
+
+    /**
+     * @param level the favor level to check
+     * @return the percent chance to run this perk with added bonus, if any
+     */
+    public float getAdjustedChance(FavorLevel level) {
+        return getChance() + level.getPerkBonus();
     }
 
     public String getCategory() {

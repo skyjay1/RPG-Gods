@@ -8,7 +8,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.deity.Offering;
 
 import java.util.Optional;
@@ -21,7 +20,7 @@ import java.util.function.Supplier;
  **/
 public class SOfferingPacket {
 
-    protected ResourceLocation deityName;
+    protected ResourceLocation offeringId;
     protected Offering offering;
 
     /**
@@ -29,7 +28,7 @@ public class SOfferingPacket {
      * @param offeringIn     the Offering
      **/
     public SOfferingPacket(final ResourceLocation deityNameIn, final Offering offeringIn) {
-        this.deityName = deityNameIn;
+        this.offeringId = deityNameIn;
         this.offering = offeringIn;
     }
 
@@ -56,7 +55,7 @@ public class SOfferingPacket {
     public static void toBytes(final SOfferingPacket msg, final PacketBuffer buf) {
         DataResult<INBT> nbtResult = RPGGods.OFFERING.writeObject(msg.offering);
         INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Offering to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.deityName);
+        buf.writeResourceLocation(msg.offeringId);
         buf.writeNbt((CompoundNBT) tag);
     }
 
@@ -70,7 +69,7 @@ public class SOfferingPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                RPGGods.OFFERING.put(message.deityName, message.offering);
+                RPGGods.OFFERING.put(message.offeringId, message.offering);
             });
         }
         context.setPacketHandled(true);

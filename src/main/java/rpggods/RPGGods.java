@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import rpggods.deity.Altar;
 import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.event.FavorEventHandler;
@@ -29,6 +30,7 @@ import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.network.CUpdateAltarPacket;
 import rpggods.network.SAltarPacket;
+import rpggods.network.SDeityPacket;
 import rpggods.network.SOfferingPacket;
 import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
@@ -61,36 +63,40 @@ public class RPGGods {
     @CapabilityInject(ITameable.class)
     public static final Capability<ITameable> TAMEABLE = null;
 
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, "channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
     // Map of Deity ID to Deity
-    public static final Map<ResourceLocation, Deity> DEITY = new HashMap<>();
+    public static final Map<ResourceLocation, DeityHelper> DEITY_HELPER = new HashMap<>();
     // Map of Entity ID to Affinity
     public static final Map<ResourceLocation, Map<Affinity.Type, List<ResourceLocation>>> AFFINITY = new HashMap<>();
     // Reloadable data resource listeners
+    public static final GenericJsonReloadListener<Deity> DEITY = new GenericJsonReloadListener<>("deity/deity", Deity.class, Deity.CODEC,
+            l -> l.getEntries().forEach(e -> {
+                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SDeityPacket(e.getKey(), e.getValue().get()));
+            }));
     public static final GenericJsonReloadListener<Altar> ALTAR = new GenericJsonReloadListener<>("deity/altar", Altar.class, Altar.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(a -> a.getDeity().ifPresent(d -> RPGGods.DEITY.computeIfAbsent(d, Deity::new).add(e.getKey(), a)));
+                e.getValue().ifPresent(a -> a.getDeity().ifPresent(d -> RPGGods.DEITY_HELPER.computeIfAbsent(d, DeityHelper::new).add(e.getKey(), a)));
             }));
     public static final GenericJsonReloadListener<Offering> OFFERING = new GenericJsonReloadListener<>("deity/offering", Offering.class, Offering.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SOfferingPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(o -> RPGGods.DEITY.computeIfAbsent(Offering.getDeity(e.getKey()), Deity::new).add(e.getKey(), o));
+                e.getValue().ifPresent(o -> RPGGods.DEITY_HELPER.computeIfAbsent(Offering.getDeity(e.getKey()), DeityHelper::new).add(e.getKey(), o));
             }));
     public static final GenericJsonReloadListener<Sacrifice> SACRIFICE = new GenericJsonReloadListener<>("deity/sacrifice", Sacrifice.class, Sacrifice.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SSacrificePacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(s -> RPGGods.DEITY.computeIfAbsent(Sacrifice.getDeity(e.getKey()), Deity::new).add(e.getKey(), s));
+                e.getValue().ifPresent(s -> RPGGods.DEITY_HELPER.computeIfAbsent(Sacrifice.getDeity(e.getKey()), DeityHelper::new).add(e.getKey(), s));
             }));
     public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
             l -> l.getEntries().forEach(e -> {
                 RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()));
                 e.getValue().ifPresent(p -> {
                     // add Perk to Deity
-                    RPGGods.DEITY.computeIfAbsent(p.getDeity(), Deity::new).add(e.getKey(), p);
+                    RPGGods.DEITY_HELPER.computeIfAbsent(p.getDeity(), DeityHelper::new).add(e.getKey(), p);
                     // add Perk to Affinity map if applicable
                     for(PerkAction action : p.getActions()) {
                         if(action.getAffinity().isPresent()) {
@@ -133,6 +139,7 @@ public class RPGGods {
         // Packets
         LOGGER.debug("registerNetwork");
         int messageId = 0;
+        CHANNEL.registerMessage(messageId++, SDeityPacket.class, SDeityPacket::toBytes, SDeityPacket::fromBytes, SDeityPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SAltarPacket.class, SAltarPacket::toBytes, SAltarPacket::fromBytes, SAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SOfferingPacket.class, SOfferingPacket::toBytes, SOfferingPacket::fromBytes, SOfferingPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SSacrificePacket.class, SSacrificePacket::toBytes, SSacrificePacket::fromBytes, SSacrificePacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));

@@ -16,27 +16,30 @@ import java.util.function.Function;
 
 public class PerkIcon {
 
-    public static final PerkIcon EMPTY = new PerkIcon(ItemStack.EMPTY, 0x000, true);
+    public static final PerkIcon EMPTY = new PerkIcon(ItemStack.EMPTY, 0x000, true, false);
 
     private static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Offering.ITEM_OR_STACK_CODEC;
 
     public static final Codec<PerkIcon> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ITEM_OR_STACK_CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(PerkIcon::getItem),
             Codec.INT.optionalFieldOf("color", 0x000).forGetter(PerkIcon::getColor),
-            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkIcon::isHidden)
+            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(PerkIcon::isHidden),
+            Codec.BOOL.optionalFieldOf("fancy", false).forGetter(PerkIcon::isFancy)
     ).apply(instance, PerkIcon::new));
 
     private final ItemStack item;
     private final int color;
     private final boolean hidden;
+    private final boolean fancy;
     private final float colorRed;
     private final float colorGreen;
     private final float colorBlue;
 
-    public PerkIcon(ItemStack item, int color, boolean hidden) {
+    public PerkIcon(ItemStack item, int color, boolean hidden, boolean fancy) {
         this.item = item;
         this.color = color;
         this.hidden = hidden;
+        this.fancy = fancy;
         // unpack color from int
         final Vector3f colorVec = unpackColor(color);
         this.colorRed = colorVec.x();
@@ -54,6 +57,10 @@ public class PerkIcon {
 
     public boolean isHidden() {
         return hidden;
+    }
+
+    public boolean isFancy() {
+        return fancy;
     }
 
     public float getColorRed() {

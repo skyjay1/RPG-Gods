@@ -10,6 +10,7 @@ import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
 import rpggods.deity.Cooldown;
+import rpggods.deity.Deity;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,8 +30,16 @@ public class Favor implements IFavor {
     }
 
     @Override
-    public FavorLevel getFavor(final ResourceLocation deity) {
-        return favorMap.computeIfAbsent(deity, id -> new FavorLevel(0));
+    public FavorLevel getFavor(final ResourceLocation deityId) {
+        return favorMap.computeIfAbsent(deityId, id -> {
+            final FavorLevel level = new FavorLevel(0);
+            Optional<Deity> deity = RPGGods.DEITY.get(deityId);
+            deity.ifPresent(d -> {
+                level.setEnabled(d.isUnlocked());
+                level.setLevelBounds(d.getMinLevel(), d.getMaxLevel());
+            });
+            return level;
+        });
     }
 
     @Override

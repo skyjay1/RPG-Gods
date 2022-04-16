@@ -24,7 +24,6 @@ public class Affinity {
 
     private final Affinity.Type type;
     private final ResourceLocation entity;
-    private ITextComponent translationKey;
 
     public Affinity(Type type, ResourceLocation entity) {
         this.type = type;

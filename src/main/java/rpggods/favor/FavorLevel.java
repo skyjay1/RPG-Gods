@@ -7,7 +7,7 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.INBTSerializable;
-import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 
 public class FavorLevel implements INBTSerializable<CompoundNBT> {
@@ -19,16 +19,21 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
     public static final String MIN_LEVEL = "MinLevel";
     public static final String MAX_LEVEL = "MaxLevel";
     public static final String DECAY_RATE = "DecayRate";
+    public static final String PERK_BONUS = "PerkBonus";
+    public static final String ENABLED = "Enabled";
 
     private long favor;
     private int level;
     private int minLevel = -MAX_FAVOR_LEVEL;
     private int maxLevel = MAX_FAVOR_LEVEL;
     private float decayRate;
+    private float perkBonus;
+    private boolean enabled;
 
     public FavorLevel(final long f) {
         setFavor(f);
-        setDecayRate(1.0F);
+        setDecayRate(0);
+        setPerkBonus(0);
     }
 
     public FavorLevel(final CompoundNBT nbt) {
@@ -43,7 +48,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      *
      * @param favorIn the new favor value
      */
-    public void setFavor(long favorIn) {
+    private void setFavor(long favorIn) {
         // update favor and level
         this.favor = clamp(favorIn, calculateFavor(minLevel - 1) + 1, calculateFavor(maxLevel + 1) - 1);
         this.level = calculateLevel(favor);
@@ -83,6 +88,13 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
     public float getDecayRate() { return decayRate; }
 
     /**
+     * @return The bonus percent chance to apply to perks
+     **/
+    public float getPerkBonus() { return perkBonus; }
+
+    public boolean isEnabled() { return enabled; }
+
+    /**
      * Context-aware method to add favor that also posts an event for any listeners.
      * If you don't want this, call {@link #setFavor(long)} directly.
      *
@@ -94,9 +106,13 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      */
     public long setFavor(final PlayerEntity playerIn, final ResourceLocation deityIn, final long newFavor, final FavorChangedEvent.Source source) {
         // Post a context-aware event to allow other modifiers
-        final FavorChangedEvent event = new FavorChangedEvent(playerIn, deityIn, favor, newFavor, source);
-        MinecraftForge.EVENT_BUS.post(event);
-        setFavor(event.getNewFavor());
+        final FavorChangedEvent.Pre eventPre = new FavorChangedEvent.Pre(playerIn, deityIn, favor, newFavor, source);
+        MinecraftForge.EVENT_BUS.post(eventPre);
+        final long eventOldFavor = eventPre.getOldFavor();
+        final long eventNewFavor = eventPre.getNewFavor();
+        setFavor(eventNewFavor);
+        final FavorChangedEvent.Post eventPost = new FavorChangedEvent.Post(playerIn, deityIn, eventOldFavor, eventNewFavor, source);
+        MinecraftForge.EVENT_BUS.post(eventPost);
         return favor;
     }
 
@@ -130,7 +146,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      */
     public long depleteFavor(final PlayerEntity playerIn, final ResourceLocation deityIn, final long toRemove,
                                 final FavorChangedEvent.Source source, final boolean forced) {
-        if(forced || Math.random() < decayRate) {
+        if(enabled && (forced || Math.random() < (decayRate + 1.0F))) {
             return addFavor(playerIn, deityIn, Math.min(Math.abs(favor), Math.abs(toRemove)) * -1 * (long) Math.signum(favor), source);
         }
         return favor;
@@ -142,8 +158,22 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
         setFavor(favor);
     }
 
+    /**
+     * @param decayRate the decay rate modifier, from -1 to 1
+     */
     public void setDecayRate(final float decayRate) {
         this.decayRate = decayRate;
+    }
+
+    /**
+     * @param perkBonus the perk chance modifier, from -1 to 1
+     */
+    public void setPerkBonus(float perkBonus) {
+        this.perkBonus = perkBonus;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 
     /**
@@ -173,7 +203,9 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
     public void sendStatusMessage(final PlayerEntity playerIn, final ResourceLocation deity) {
         long favorToNext = Math.min(calculateFavor(maxLevel), getFavorToNextLevel());
         String sFavorToNext = (favorToNext == 0 ? "--" : String.valueOf(favorToNext));
-        playerIn.displayClientMessage(new TranslationTextComponent("favor.current_favor", Deity.getName(deity), getFavor(), sFavorToNext, getLevel()).withStyle(TextFormatting.LIGHT_PURPLE), false);
+        playerIn.displayClientMessage(new TranslationTextComponent("favor.current_favor",
+                DeityHelper.getName(deity), getFavor(), sFavorToNext, getLevel())
+                .withStyle(TextFormatting.LIGHT_PURPLE), false);
     }
 
     @Override
@@ -183,6 +215,8 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
         nbt.putInt(MIN_LEVEL, minLevel);
         nbt.putInt(MAX_LEVEL, maxLevel);
         nbt.putFloat(DECAY_RATE, decayRate);
+        nbt.putFloat(PERK_BONUS, perkBonus);
+        nbt.putBoolean(ENABLED, enabled);
         return nbt;
     }
 
@@ -192,11 +226,13 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
         maxLevel = nbt.getInt(MAX_LEVEL);
         setFavor(nbt.getLong(FAVOR));
         decayRate = nbt.getFloat(DECAY_RATE);
+        perkBonus = nbt.getFloat(PERK_BONUS);
+        enabled = nbt.getBoolean(ENABLED);
     }
 
     @Override
     public String toString() {
-        return favor + " (" + level + ") range[" + minLevel + "," + maxLevel + "] decay[" + decayRate + "]";
+        return favor + " (" + level + ") range[" + minLevel + "," + maxLevel + "] enabled[" + enabled + "] decay[" + decayRate + "]";
     }
 
     /**
@@ -217,7 +253,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
     public static long calculateFavor(final int lv) {
         final int l = Math.abs(lv);
         final int sig = (int) Math.signum(lv);
-        return sig * (10 * l * (l + 10));
+        return sig * (10L * l * (l + 10L));
     }
 
     /**

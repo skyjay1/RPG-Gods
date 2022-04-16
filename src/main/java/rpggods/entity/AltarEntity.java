@@ -1,11 +1,10 @@
 package rpggods.entity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
-import com.mojang.serialization.DataResult;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
@@ -15,7 +14,6 @@ import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.Pose;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.item.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.entity.projectile.AbstractArrowEntity;
@@ -25,18 +23,14 @@ import net.minecraft.inventory.IInventoryChangedListener;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.container.SimpleNamedContainerProvider;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
 import net.minecraft.nbt.ListNBT;
-import net.minecraft.nbt.NBTDynamicOps;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.BlockParticleData;
 import net.minecraft.particles.ParticleTypes;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.SkullTileEntity;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
@@ -45,13 +39,10 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
@@ -63,15 +54,18 @@ import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.deity.Altar;
-import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
 import rpggods.network.SUpdateAltarPacket;
+import rpggods.perk.Perk;
+import rpggods.perk.PerkCondition;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 
 public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
@@ -291,6 +285,14 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             }
         }
         super.tick();
+        if(!level.isClientSide && getDeity().isPresent()) {
+            // check if there are any perk conditions for "ritual"
+            DeityHelper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityHelper::new);
+            if(!helper.perkByConditionMap.getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of()).isEmpty()) {
+                // onPerformRitual
+                FavorEventHandler.performRitual(this, getDeity().get());
+            }
+        }
     }
 
     private void showBreakingParticles() {
@@ -363,6 +365,10 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                 if (favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
+                    boolean enabled = ifavor.getFavor(deity).isEnabled();
+                    if(!enabled) {
+                        return ActionResultType.PASS;
+                    }
                     // detect item in mainhand
                     ItemStack heldItem = player.getItemInHand(hand);
                     // attempt to process held item as offering
@@ -532,7 +538,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         setBlockSlot(new ItemStack(altar.getItems().getBlock().asItem()));
         // custom name
         if (altar.getDeity().isPresent()) {
-            setCustomName(Deity.getName(altarId));
+            setCustomName(DeityHelper.getName(altarId));
         } else if (altar.getName().isPresent()) {
             setCustomName(new StringTextComponent(altar.getName().get()));
         }
@@ -557,7 +563,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
         ResourceLocation material = Altar.MATERIAL; // TODO
-        return new Altar(enabled, name, isFemale(), isSlim(), ItemStack.EMPTY, items,
+        return new Altar(enabled, name, isFemale(), isSlim(), items,
                 material, getAltarPose(), isAltarPoseLocked());
     }
 
