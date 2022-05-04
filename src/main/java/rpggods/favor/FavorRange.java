@@ -2,8 +2,8 @@ package rpggods.favor;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 import rpggods.RPGGods;
 
 import java.util.Objects;
@@ -54,7 +54,7 @@ public class FavorRange {
      * @param player the player
      * @return true if this is a server world and the player matches this favor range
      */
-    public boolean isInRange(final PlayerEntity player) {
+    public boolean isInRange(final Player player) {
         if (!player.level.isClientSide && player.isEffectiveAi() && player.getCapability(RPGGods.FAVOR).isPresent() && this != FavorRange.EMPTY) {
             return isInRange(player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()));
         }

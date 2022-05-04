@@ -1,8 +1,8 @@
 package rpggods.deity;
 
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 import rpggods.favor.FavorRange;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
@@ -104,8 +104,8 @@ public class DeityHelper {
         }
     }
 
-    public static ITextComponent getName(final ResourceLocation id) {
-        return new TranslationTextComponent(Altar.createTranslationKey(id));
+    public static Component getName(final ResourceLocation id) {
+        return new TranslatableComponent(Altar.createTranslationKey(id));
     }
 
     @Override

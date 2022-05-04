@@ -1,9 +1,9 @@
 package rpggods.gui;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.resources.ResourceLocation;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
@@ -11,23 +11,23 @@ import rpggods.favor.IFavor;
 
 import java.util.Optional;
 
-public class FavorContainer extends Container {
+public class FavorContainer extends AbstractContainerMenu {
 
     private IFavor favor;
     private Optional<ResourceLocation> deity;
 
-    public FavorContainer(int id, final PlayerInventory inventory) {
+    public FavorContainer(int id, final Inventory inventory) {
         this(id, inventory, RPGGods.FAVOR.getDefaultInstance(), null);
     }
 
-    public FavorContainer(final int id, final PlayerInventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
+    public FavorContainer(final int id, final Inventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
         super(RGRegistry.ContainerReg.FAVOR_CONTAINER, id);
         favor = favorIn;
         deity = Optional.ofNullable(deityIn);
     }
 
     @Override
-    public boolean stillValid(final PlayerEntity playerIn) {
+    public boolean stillValid(final Player playerIn) {
         return true;
     }
 

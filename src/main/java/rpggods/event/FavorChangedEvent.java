@@ -1,8 +1,8 @@
 package rpggods.event;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.IStringSerializable;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.Cancelable;
@@ -29,7 +29,7 @@ public class FavorChangedEvent extends PlayerEvent {
      * @param curFavor  the amount of favor after this event
      * @param sourceIn  the source of the change in favor
      */
-    private FavorChangedEvent(final PlayerEntity playerIn, final ResourceLocation deityIn,
+    private FavorChangedEvent(final Player playerIn, final ResourceLocation deityIn,
                              final long prevFavor, final long curFavor, final Source sourceIn) {
         super(playerIn);
         deity = deityIn;
@@ -87,7 +87,7 @@ public class FavorChangedEvent extends PlayerEvent {
          * @param curFavor  the amount of favor after this event
          * @param sourceIn  the source of the change in favor
          */
-        public Pre(PlayerEntity playerIn, ResourceLocation deityIn, long prevFavor, long curFavor, Source sourceIn) {
+        public Pre(Player playerIn, ResourceLocation deityIn, long prevFavor, long curFavor, Source sourceIn) {
             super(playerIn, deityIn, prevFavor, curFavor, sourceIn);
             setNewFavor(curFavor);
         }
@@ -127,7 +127,7 @@ public class FavorChangedEvent extends PlayerEvent {
          * @param curFavor  the amount of favor after this event
          * @param sourceIn  the source of the change in favor
          */
-        public Post(PlayerEntity playerIn, ResourceLocation deityIn, long prevFavor, long curFavor, Source sourceIn) {
+        public Post(Player playerIn, ResourceLocation deityIn, long prevFavor, long curFavor, Source sourceIn) {
             super(playerIn, deityIn, prevFavor, curFavor, sourceIn);
         }
     }
@@ -138,7 +138,7 @@ public class FavorChangedEvent extends PlayerEvent {
      *
      * @see FavorChangedEvent
      */
-    public static enum Source implements IStringSerializable {
+    public static enum Source implements StringRepresentable {
         DECAY("decay"),
         OFFERING("offering"),
         SACRIFICE("sacrifice"),

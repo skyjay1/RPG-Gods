@@ -6,13 +6,13 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.Commands;
-import net.minecraft.command.arguments.EntityArgument;
-import net.minecraft.command.arguments.ResourceLocationArgument;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.TranslatableComponent;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
@@ -21,10 +21,10 @@ import java.util.Collection;
 import java.util.Optional;
 
 public class FavorCommand {
-    private static final DynamicCommandExceptionType FAVOR_DISABLED_EXCEPTION = new DynamicCommandExceptionType(o -> new TranslationTextComponent("commands.favor.enabled.disabled", o));
+    private static final DynamicCommandExceptionType FAVOR_DISABLED_EXCEPTION = new DynamicCommandExceptionType(o -> new TranslatableComponent("commands.favor.enabled.disabled", o));
 
-    public static void register(CommandDispatcher<CommandSource> commandSource) {
-        LiteralCommandNode<CommandSource> commandNode = commandSource.register(
+    public static void register(CommandDispatcher<CommandSourceStack> commandSource) {
+        LiteralCommandNode<CommandSourceStack> commandNode = commandSource.register(
                 Commands.literal("favor")
                         .requires(p -> p.hasPermission(2))
                         .then(Commands.literal("add")
@@ -107,20 +107,20 @@ public class FavorCommand {
                 .redirect(commandNode));
     }
 
-    private static int queryFavor(CommandSource source, ServerPlayerEntity player, ResourceLocation deity, Type type) throws CommandSyntaxException {
+    private static int queryFavor(CommandSourceStack source, ServerPlayer player, ResourceLocation deity, Type type) throws CommandSyntaxException {
         final IFavor favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
         }
         int amount = type.favorGetter.accept(player, favor, deity, 0);
-        source.sendSuccess(new TranslationTextComponent("commands.favor.query." + type.name, player.getDisplayName(), amount, DeityHelper.getName(deity)), false);
+        source.sendSuccess(new TranslatableComponent("commands.favor.query." + type.name, player.getDisplayName(), amount, DeityHelper.getName(deity)), false);
         return amount;
     }
 
-    private static int setFavor(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int amount, Type type) throws CommandSyntaxException {
+    private static int setFavor(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity, int amount, Type type) throws CommandSyntaxException {
         // set favor for each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -129,18 +129,18 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set." + type.name + ".success.single", amount, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set." + type.name + ".success.single", amount, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set." + type.name + ".success.multiple", amount, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set." + type.name + ".success.multiple", amount, DeityHelper.getName(deity), players.size()), true);
         }
 
         return players.size();
     }
 
-    private static int addFavor(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int amount, Type type) throws CommandSyntaxException {
+    private static int addFavor(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity, int amount, Type type) throws CommandSyntaxException {
         // add favor to each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -149,46 +149,46 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.add." + type.name + ".success.single", amount, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.add." + type.name + ".success.single", amount, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.add." + type.name + ".success.multiple", amount, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.add." + type.name + ".success.multiple", amount, DeityHelper.getName(deity), players.size()), true);
         }
 
         return players.size();
     }
 
-    private static int queryEnabled(CommandSource source, ServerPlayerEntity player) {
+    private static int queryEnabled(CommandSourceStack source, ServerPlayer player) {
         final boolean enabled = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()).isEnabled();
         // send command feedback
-        source.sendSuccess(new TranslationTextComponent("commands.favor.enabled." + (enabled ? "enabled" : "disabled"), player.getDisplayName()), true);
+        source.sendSuccess(new TranslatableComponent("commands.favor.enabled." + (enabled ? "enabled" : "disabled"), player.getDisplayName()), true);
         return enabled ? 1 : 0;
     }
 
-    private static int setEnabled(CommandSource source, Collection<? extends ServerPlayerEntity> players, boolean enabled) {
-        for (final ServerPlayerEntity player : players) {
+    private static int setEnabled(CommandSourceStack source, Collection<? extends ServerPlayer> players, boolean enabled) {
+        for (final ServerPlayer player : players) {
             player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()).setEnabled(enabled);
         }
         // send command feedback
         final String sub = (enabled ? "enabled" : "disabled");
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor." + sub + ".success.single", players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor." + sub + ".success.single", players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor." + sub + ".success.multiple", players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor." + sub + ".success.multiple", players.size()), true);
         }
         return players.size();
     }
 
-    private static int queryUnlocked(CommandSource source, ServerPlayerEntity player, ResourceLocation deity) {
+    private static int queryUnlocked(CommandSourceStack source, ServerPlayer player, ResourceLocation deity) {
         final boolean enabled = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()).getFavor(deity).isEnabled();
         // send command feedback
         final String sub = (enabled ? "enabled" : "disabled");
-        source.sendSuccess(new TranslationTextComponent("commands.favor.deity.enabled." + sub, DeityHelper.getName(deity), player.getDisplayName()), true);
+        source.sendSuccess(new TranslatableComponent("commands.favor.deity.enabled." + sub, DeityHelper.getName(deity), player.getDisplayName()), true);
         return enabled ? 1 : 0;
     }
 
-    private static int setUnlocked(CommandSource source, Collection<ServerPlayerEntity> players, ResourceLocation deity, boolean enabled) throws CommandSyntaxException {
+    private static int setUnlocked(CommandSourceStack source, Collection<ServerPlayer> players, ResourceLocation deity, boolean enabled) throws CommandSyntaxException {
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -199,14 +199,14 @@ public class FavorCommand {
         // send command feedback
         final String sub = (enabled ? "enabled" : "disabled");
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.deity." + sub + ".success.single", DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.deity." + sub + ".success.single", DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.deity." + sub + ".success.multiple", DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.deity." + sub + ".success.multiple", DeityHelper.getName(deity), players.size()), true);
         }
         return players.size();
     }
 
-    private static int queryDecay(CommandSource source, ServerPlayerEntity target, ResourceLocation deity) throws CommandSyntaxException {
+    private static int queryDecay(CommandSourceStack source, ServerPlayer target, ResourceLocation deity) throws CommandSyntaxException {
         IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
@@ -214,15 +214,15 @@ public class FavorCommand {
         float fDecay = favor.getFavor(deity).getDecayRate();
         int decay = Math.round(fDecay * 100);
         // send command feedback
-        source.sendSuccess(new TranslationTextComponent("commands.favor.query.decay", target.getDisplayName(), decay, DeityHelper.getName(deity)), true);
+        source.sendSuccess(new TranslatableComponent("commands.favor.query.decay", target.getDisplayName(), decay, DeityHelper.getName(deity)), true);
         return decay;
     }
 
-    private static int setDecay(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int decay) throws CommandSyntaxException {
+    private static int setDecay(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity, int decay) throws CommandSyntaxException {
         // set decay rate to each player in the collection
         IFavor favor;
         float fDecay = decay / 100.0F;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -231,18 +231,18 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set.decay.success.single", decay, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set.decay.success.single", decay, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set.decay.success.multiple", decay, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set.decay.success.multiple", decay, DeityHelper.getName(deity), players.size()), true);
         }
         return players.size();
     }
 
-    private static int addDecay(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int decay) throws CommandSyntaxException {
+    private static int addDecay(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity, int decay) throws CommandSyntaxException {
         // add decay rate to each player in the collection
         IFavor favor;
         float fDecay = decay / 100.0F;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -252,14 +252,14 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.add.decay.success.single", decay, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.add.decay.success.single", decay, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.add.decay.success.multiple", decay, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.add.decay.success.multiple", decay, DeityHelper.getName(deity), players.size()), true);
         }
         return players.size();
     }
 
-    private static int queryPerkBonus(CommandSource source, ServerPlayerEntity target, ResourceLocation deity) throws CommandSyntaxException {
+    private static int queryPerkBonus(CommandSourceStack source, ServerPlayer target, ResourceLocation deity) throws CommandSyntaxException {
         IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
@@ -267,15 +267,15 @@ public class FavorCommand {
         float fPerkBonus = favor.getFavor(deity).getPerkBonus();
         int perkBonus = Math.round(fPerkBonus * 100);
         // send command feedback
-        source.sendSuccess(new TranslationTextComponent("commands.favor.query.perk_bonus", target.getDisplayName(), fPerkBonus, DeityHelper.getName(deity)), true);
+        source.sendSuccess(new TranslatableComponent("commands.favor.query.perk_bonus", target.getDisplayName(), fPerkBonus, DeityHelper.getName(deity)), true);
         return perkBonus;
     }
 
-    private static int setPerkBonus(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int bonus) throws CommandSyntaxException {
+    private static int setPerkBonus(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity, int bonus) throws CommandSyntaxException {
         // set decay rate to each player in the collection
         IFavor favor;
         float fPerkBonus = bonus / 100.0F;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -284,18 +284,18 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set.perk_bonus.success.single", bonus, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set.perk_bonus.success.single", bonus, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set.perk_bonus.success.multiple", bonus, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set.perk_bonus.success.multiple", bonus, DeityHelper.getName(deity), players.size()), true);
         }
         return players.size();
     }
 
-    private static int addPerkBonus(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity, int bonus) throws CommandSyntaxException {
+    private static int addPerkBonus(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity, int bonus) throws CommandSyntaxException {
         // add decay rate to each player in the collection
         IFavor favor;
         float fPerkBonus = bonus / 100.0F;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -305,14 +305,14 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.add.perk_bonus.success.single", bonus, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.add.perk_bonus.success.single", bonus, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.add.perk_bonus.success.multiple", bonus, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.add.perk_bonus.success.multiple", bonus, DeityHelper.getName(deity), players.size()), true);
         }
         return players.size();
     }
 
-    private static int queryPatron(CommandSource source, ServerPlayerEntity target) throws CommandSyntaxException {
+    private static int queryPatron(CommandSourceStack source, ServerPlayer target) throws CommandSyntaxException {
         IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
@@ -320,18 +320,18 @@ public class FavorCommand {
         Optional<ResourceLocation> deity = favor.getPatron();
         // send command feedback
         if(deity.isPresent()) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.query.patron.success", target.getDisplayName(), DeityHelper.getName(deity.get())), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.query.patron.success", target.getDisplayName(), DeityHelper.getName(deity.get())), true);
             return 1;
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.query.patron.empty", target.getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.query.patron.empty", target.getDisplayName()), true);
             return 0;
         }
     }
 
-    private static int setPatron(CommandSource source, Collection<ServerPlayerEntity> players, ResourceLocation deity) throws CommandSyntaxException {
+    private static int setPatron(CommandSourceStack source, Collection<ServerPlayer> players, ResourceLocation deity) throws CommandSyntaxException {
         // set decay rate to each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -340,35 +340,35 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set.patron.success.single", DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set.patron.success.single", DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.set.patron.success.multiple", DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.set.patron.success.multiple", DeityHelper.getName(deity), players.size()), true);
         }
         return players.size();
     }
 
 
-    private static int resetFavor(CommandSource source, Collection<? extends ServerPlayerEntity> players) {
+    private static int resetFavor(CommandSourceStack source, Collection<? extends ServerPlayer> players) {
         // reset favor for each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             favor.reset();
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.success.single", players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.success.single", players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.success.multiple", players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.success.multiple", players.size()), true);
         }
 
         return players.size();
     }
 
-    private static int resetFavor(CommandSource source, Collection<? extends ServerPlayerEntity> players, ResourceLocation deity) throws CommandSyntaxException {
+    private static int resetFavor(CommandSourceStack source, Collection<? extends ServerPlayer> players, ResourceLocation deity) throws CommandSyntaxException {
         // reset favor for a single deity for each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -377,18 +377,18 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.deity.success.single", DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.deity.success.single", DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.deity.success.multiple", DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.deity.success.multiple", DeityHelper.getName(deity), players.size()), true);
         }
 
         return players.size();
     }
 
-    private static int resetPatron(CommandSource source, Collection<ServerPlayerEntity> players) throws CommandSyntaxException {
+    private static int resetPatron(CommandSourceStack source, Collection<ServerPlayer> players) throws CommandSyntaxException {
         // add favor to each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -397,18 +397,18 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.patron.success.single", players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.patron.success.single", players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.patron.success.multiple", players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.patron.success.multiple", players.size()), true);
         }
 
         return players.size();
     }
 
-    private static int resetCooldown(CommandSource source, Collection<? extends ServerPlayerEntity> players) throws CommandSyntaxException {
+    private static int resetCooldown(CommandSourceStack source, Collection<? extends ServerPlayer> players) throws CommandSyntaxException {
         // add favor to each player in the collection
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -417,20 +417,20 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.cooldown.success.single", players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.cooldown.success.single", players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.reset.cooldown.success.multiple", players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.reset.cooldown.success.multiple", players.size()), true);
         }
 
         return players.size();
     }
 
-    private static int setCap(CommandSource source, Collection<ServerPlayerEntity> players, ResourceLocation deity, int min, int max, Type type) throws CommandSyntaxException {
+    private static int setCap(CommandSourceStack source, Collection<ServerPlayer> players, ResourceLocation deity, int min, int max, Type type) throws CommandSyntaxException {
         // cap favor for each player in the collection
         int actualMin = Math.min(min, max);
         int actualMax = Math.max(min, max);
         IFavor favor;
-        for (final ServerPlayerEntity player : players) {
+        for (final ServerPlayer player : players) {
             favor = player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
@@ -439,9 +439,9 @@ public class FavorCommand {
         }
         // send command feedback
         if (players.size() == 1) {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.cap." + type.name + ".success.single", actualMin, actualMax, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.cap." + type.name + ".success.single", actualMin, actualMax, DeityHelper.getName(deity), players.iterator().next().getDisplayName()), true);
         } else {
-            source.sendSuccess(new TranslationTextComponent("commands.favor.cap." + type.name + ".success.multiple", actualMin, actualMax, DeityHelper.getName(deity), players.size()), true);
+            source.sendSuccess(new TranslatableComponent("commands.favor.cap." + type.name + ".success.multiple", actualMin, actualMax, DeityHelper.getName(deity), players.size()), true);
         }
 
         return players.size();
@@ -497,11 +497,11 @@ public class FavorCommand {
 
     @FunctionalInterface
     private interface IFavorFunction {
-        public int accept(final ServerPlayerEntity player, final IFavor favor, final ResourceLocation deity, final int amount);
+        public int accept(final ServerPlayer player, final IFavor favor, final ResourceLocation deity, final int amount);
     }
 
     @FunctionalInterface
     private interface IXFavorFunction {
-        public int accept(final ServerPlayerEntity player, final IFavor favor, final ResourceLocation deity, final int amount1, final int amount2);
+        public int accept(final ServerPlayer player, final IFavor favor, final ResourceLocation deity, final int amount1, final int amount2);
     }
 }

@@ -3,13 +3,13 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.entity.EntityType;
-import net.minecraft.util.IStringSerializable;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.text.IFormattableTextComponent;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 
 import java.util.Optional;
 
@@ -38,17 +38,17 @@ public class Affinity {
         return entity;
     }
 
-    public ITextComponent getDisplayName() {
+    public Component getDisplayName() {
         return getType().getDisplayName();
     }
 
-    public ITextComponent getDisplayDescription() {
+    public Component getDisplayDescription() {
         Optional<EntityType<?>> entityType = EntityType.byString(getEntity().toString());
-        ITextComponent entityName = entityType.isPresent() ? entityType.get().getDescription() : new StringTextComponent(getEntity().toString());
+        Component entityName = entityType.isPresent() ? entityType.get().getDescription() : new TextComponent(getEntity().toString());
         return getType().getDisplayDescription(entityName);
     }
 
-    public static enum Type implements IStringSerializable {
+    public static enum Type implements StringRepresentable {
         PASSIVE("passive"),
         HOSTILE("hostile"),
         FLEE("flee"),
@@ -70,12 +70,12 @@ public class Affinity {
             return DataResult.error("Failed to parse affinity type '" + id + "'");
         }
 
-        public ITextComponent getDisplayName() {
-            return new TranslationTextComponent("favor.affinity." + getSerializedName());
+        public Component getDisplayName() {
+            return new TranslatableComponent("favor.affinity." + getSerializedName());
         }
 
-        public ITextComponent getDisplayDescription(ITextComponent entityName) {
-            return new TranslationTextComponent("favor.affinity." + getSerializedName() + ".description", entityName);
+        public Component getDisplayDescription(Component entityName) {
+            return new TranslatableComponent("favor.affinity." + getSerializedName() + ".description", entityName);
         }
 
         @Override

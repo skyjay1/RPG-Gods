@@ -3,54 +3,54 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.IGrowable;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.AgeableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntitySpawnPlacementRegistry;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.item.ExperienceOrbEntity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.merchant.IMerchant;
-import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
-import net.minecraft.entity.monster.DrownedEntity;
-import net.minecraft.entity.monster.GuardianEntity;
-import net.minecraft.entity.passive.WaterMobEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.AbstractArrowEntity;
-import net.minecraft.entity.projectile.ArrowEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BonemealableBlock;
+import net.minecraft.world.level.material.Material;
+import net.minecraft.world.entity.AgableMob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.trading.Merchant;
+import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.monster.Drowned;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.entity.animal.WaterAnimal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.MerchantOffer;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.particles.IParticleData;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.pathfinding.SwimmerPathNavigator;
-import net.minecraft.potion.Effect;
-import net.minecraft.potion.EffectInstance;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.potion.PotionUtils;
 import net.minecraft.potion.Potions;
-import net.minecraft.state.IntegerProperty;
-import net.minecraft.state.properties.BlockStateProperties;
-import net.minecraft.util.IStringSerializable;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.text.IFormattableTextComponent;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.IServerWorld;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -79,7 +79,7 @@ public class PerkAction {
             PerkAction.Type.CODEC.fieldOf("type").forGetter(PerkAction::getType),
             Codec.STRING.optionalFieldOf("data").forGetter(PerkAction::getString),
             ResourceLocation.CODEC.optionalFieldOf("id").forGetter(PerkAction::getId),
-            CompoundNBT.CODEC.optionalFieldOf("tag").forGetter(PerkAction::getTag),
+            CompoundTag.CODEC.optionalFieldOf("tag").forGetter(PerkAction::getTag),
             ItemStack.CODEC.optionalFieldOf("item").forGetter(PerkAction::getItem),
             Codec.LONG.optionalFieldOf("favor").forGetter(PerkAction::getFavor),
             Codec.FLOAT.optionalFieldOf("multiplier").forGetter(PerkAction::getMultiplier),
@@ -91,7 +91,7 @@ public class PerkAction {
     private final PerkAction.Type type;
     private final Optional<String> string;
     private final Optional<ResourceLocation> id;
-    private final Optional<CompoundNBT> tag;
+    private final Optional<CompoundTag> tag;
     private final Optional<ItemStack> item;
     private final Optional<Long> favor;
     private final Optional<Float> multiplier;
@@ -99,7 +99,7 @@ public class PerkAction {
     private final Optional<Patron> patron;
     private final boolean hidden;
 
-    public PerkAction(Type type, Optional<String> string, Optional<ResourceLocation> id, Optional<CompoundNBT> tag,
+    public PerkAction(Type type, Optional<String> string, Optional<ResourceLocation> id, Optional<CompoundTag> tag,
                       Optional<ItemStack> item, Optional<Long> favor, Optional<Float> multiplier,
                       Optional<Affinity> affinity, Optional<Patron> patron, boolean hidden) {
         this.type = type;
@@ -126,13 +126,13 @@ public class PerkAction {
      * @param object the Event to reference when running the perk, if any
      * @return True if the action ran successfully
      */
-    public boolean run(final ResourceLocation deity, final PlayerEntity player, final IFavor favor,
+    public boolean run(final ResourceLocation deity, final Player player, final IFavor favor,
                                         final Optional<Entity> entity, final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         switch (this.getType()) {
             case FUNCTION: return getId().isPresent() && FavorEventHandler.runFunction(player.level, player, getId().get());
             case POTION:
                 if(getTag().isPresent()) {
-                    Optional<EffectInstance> effect = readEffectInstance(getTag().get());
+                    Optional<MobEffectInstance> effect = readEffectInstance(getTag().get());
                     if(effect.isPresent()) {
                         return player.addEffect(effect.get());
                     }
@@ -160,9 +160,9 @@ public class PerkAction {
                                 entity.get().setCustomName(entity.get().getDisplayName());
                             }
                             // send particle packet
-                            if(entity.get().level instanceof ServerWorld) {
-                                Vector3d pos = entity.get().getEyePosition(1.0F);
-                                ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);
+                            if(entity.get().level instanceof ServerLevel) {
+                                Vec3 pos = entity.get().getEyePosition(1.0F);
+                                ((ServerLevel)entity.get().level).sendParticles(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);
                             }
                             return true;
                         }
@@ -170,60 +170,60 @@ public class PerkAction {
                 }
                 return false;
             case ARROW_DAMAGE:
-                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof ArrowEntity) {
-                    ArrowEntity arrow = (ArrowEntity) entity.get();
+                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof Arrow) {
+                    Arrow arrow = (Arrow) entity.get();
                     arrow.setBaseDamage(arrow.getBaseDamage() * getMultiplier().get());
                     return true;
                 }
                 return false;
             case ARROW_EFFECT:
-                if(entity.isPresent() && getTag().isPresent() && entity.get() instanceof ArrowEntity) {
-                    ArrowEntity arrow = (ArrowEntity) entity.get();
+                if(entity.isPresent() && getTag().isPresent() && entity.get() instanceof Arrow) {
+                    Arrow arrow = (Arrow) entity.get();
                     readEffectInstance(getTag().get()).ifPresent(e -> arrow.addEffect(e));
                     return true;
                 }
                 return false;
             case ARROW_COUNT:
-                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof AbstractArrowEntity) {
-                    AbstractArrowEntity arrow = (AbstractArrowEntity) entity.get();
+                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof AbstractArrow) {
+                    AbstractArrow arrow = (AbstractArrow) entity.get();
                     int arrowCount = Math.round(getMultiplier().get());
                     double motionScale = 0.8;
                     for(int i = 0; i < arrowCount; i++) {
-                        AbstractArrowEntity arrow2 = (AbstractArrowEntity) arrow.getType().create(arrow.level);
+                        AbstractArrow arrow2 = (AbstractArrow) arrow.getType().create(arrow.level);
                         arrow2.copyPosition(arrow);
                         arrow2.setDeltaMovement(arrow.getDeltaMovement().multiply(
                                 (Math.random() * 2.0D - 1.0D) * motionScale,
                                 (Math.random() * 2.0D - 1.0D) * motionScale,
                                 (Math.random() * 2.0D - 1.0D) * motionScale));
-                        arrow2.pickup = AbstractArrowEntity.PickupStatus.CREATIVE_ONLY;
+                        arrow2.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
                         arrow.level.addFreshEntity(arrow2);
                     }
                     return true;
                 }
                 return false;
             case OFFSPRING:
-                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof AgeableEntity
+                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof AgableMob
                         && object.isPresent() && object.get() instanceof BabyEntitySpawnEvent) {
                     int childCount = Math.round(getMultiplier().get());
                     if(childCount < 1) {
                         // number of babies is zero, so cancel the event
                         object.get().setCanceled(true);
-                        if(entity.get().level instanceof ServerWorld) {
-                            Vector3d pos = entity.get().getEyePosition(1.0F);
-                            ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 6, 0.5D, 0.5D, 0.5D, 0);
+                        if(entity.get().level instanceof ServerLevel) {
+                            Vec3 pos = entity.get().getEyePosition(1.0F);
+                            ((ServerLevel)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 6, 0.5D, 0.5D, 0.5D, 0);
                         }
                     } else if(childCount > 1) {
                         // number of babies is more than one, so spawn additional mobs
-                        AgeableEntity parent = (AgeableEntity) entity.get();
+                        AgableMob parent = (AgableMob) entity.get();
                         for(int i = 1; i < childCount; i++) {
-                            AgeableEntity bonusChild = (AgeableEntity) parent.getType().create(parent.level);
+                            AgableMob bonusChild = (AgableMob) parent.getType().create(parent.level);
                             if(bonusChild != null) {
                                 bonusChild.copyPosition(parent);
                                 bonusChild.setBaby(true);
                                 parent.level.addFreshEntity(bonusChild);
-                                if(parent.level instanceof ServerWorld) {
-                                    Vector3d pos = bonusChild.getEyePosition(1.0F);
-                                    ((ServerWorld)parent.level).sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
+                                if(parent.level instanceof ServerLevel) {
+                                    Vec3 pos = bonusChild.getEyePosition(1.0F);
+                                    ((ServerLevel)parent.level).sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
                                 }
                             }
                         }
@@ -248,7 +248,7 @@ public class PerkAction {
                 return false;
             case DURABILITY:
                 if(getMultiplier().isPresent() && getString().isPresent()) {
-                    EquipmentSlotType slot = EquipmentSlotType.byName(getString().get());
+                    EquipmentSlot slot = EquipmentSlot.byName(getString().get());
                     ItemStack item = player.getItemBySlot(slot);
                     // add or remove durability
                     if(!item.isEmpty() && item.isDamageableItem()) {
@@ -264,21 +264,21 @@ public class PerkAction {
                 // These are handled using loot table modifiers
                 return true;
             case SPECIAL_PRICE:
-                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof IMerchant) {
+                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof Merchant) {
                     final int diff = Math.round(getMultiplier().get());
-                    final IMerchant merchant = (IMerchant) entity.get();
+                    final Merchant merchant = (Merchant) entity.get();
                     // cancel event if the diff is ridiculously high
                     if(diff >= 100 && object.isPresent()) {
                         object.get().setCanceled(true);
                         // cause villager to shake head and play unhappy sound
-                        if(entity.get() instanceof AbstractVillagerEntity) {
-                            ((AbstractVillagerEntity)entity.get()).setUnhappyCounter(40);
+                        if(entity.get() instanceof AbstractVillager) {
+                            ((AbstractVillager)entity.get()).setUnhappyCounter(40);
                             entity.get().playSound(SoundEvents.VILLAGER_NO, 0.5F, 1.0F);
                         }
                         // spawn angry particles
-                        if(entity.get().level instanceof ServerWorld) {
-                            Vector3d pos = entity.get().getEyePosition(1.0F);
-                            ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 4, 0.5D, 0.5D, 0.5D, 0);
+                        if(entity.get().level instanceof ServerLevel) {
+                            Vec3 pos = entity.get().getEyePosition(1.0F);
+                            ((ServerLevel)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 4, 0.5D, 0.5D, 0.5D, 0);
                         }
                         return true;
                     }
@@ -305,16 +305,16 @@ public class PerkAction {
                     if(!level.isEnabled()) {
                         favor.getFavor(getId().get()).setEnabled(true);
                         // send player feedback
-                        ITextComponent message = getDisplayDescription();
-                        player.displayClientMessage(message.copy().withStyle(TextFormatting.BOLD, TextFormatting.LIGHT_PURPLE), true);
+                        Component message = getDisplayDescription();
+                        player.displayClientMessage(message.copy().withStyle(ChatFormatting.BOLD, ChatFormatting.LIGHT_PURPLE), true);
                         // play sound
-                        player.level.playSound(player, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                        player.level.playSound(player, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
                         return false; // hacky solution to prevent feedback, since we don't need cooldown anyway
                     }}
                 return false;
             case XP:
-                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof ExperienceOrbEntity) {
-                    ((ExperienceOrbEntity)entity.get()).value *= getMultiplier().get();
+                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof ExperienceOrb) {
+                    ((ExperienceOrb)entity.get()).value *= getMultiplier().get();
                     return true;
                 }
                 return false;
@@ -322,17 +322,17 @@ public class PerkAction {
         return false;
     }
 
-    public static Optional<EffectInstance> readEffectInstance(final CompoundNBT tag) {
+    public static Optional<MobEffectInstance> readEffectInstance(final CompoundTag tag) {
         if(tag.contains("Potion", 8)) {
-            final CompoundNBT nbt = tag.copy();
+            final CompoundTag nbt = tag.copy();
             // "show particles" will default to false if not specified
             if(!nbt.contains("ShowParticles")) {
                 nbt.putBoolean("ShowParticles", false);
             }
-            Effect potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")));
+            MobEffect potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")));
             if(potion != null) {
-                nbt.putByte("Id", (byte) Effect.getId(potion));
-                return Optional.of(EffectInstance.load(nbt));
+                nbt.putByte("Id", (byte) MobEffect.getId(potion));
+                return Optional.of(MobEffectInstance.load(nbt));
             }
         }
         return Optional.empty();
@@ -348,14 +348,14 @@ public class PerkAction {
      * @param distance the maximum distance from the player to summon. Using 0 will skip the usual canSpawn checks.
      * @return the entity if it was summoned, or an empty optional
      **/
-    public static Optional<Entity> summonEntityNearPlayer(final World worldIn, final PlayerEntity playerIn,
-                                                          final Optional<CompoundNBT> entityTag, final float distance) {
-        if(entityTag.isPresent() && worldIn instanceof IServerWorld) {
+    public static Optional<Entity> summonEntityNearPlayer(final Level worldIn, final Player playerIn,
+                                                          final Optional<CompoundTag> entityTag, final float distance) {
+        if(entityTag.isPresent() && worldIn instanceof ServerLevelAccessor) {
             final Optional<EntityType<?>> entityType = EntityType.by(entityTag.get());
             if(entityType.isPresent()) {
                 Entity entity = entityType.get().create(worldIn);
-                final boolean waterMob = entity instanceof WaterMobEntity || entity instanceof DrownedEntity || entity instanceof GuardianEntity
-                        || (entity instanceof MobEntity && ((MobEntity)entity).getNavigation() instanceof SwimmerPathNavigator);
+                final boolean waterMob = entity instanceof WaterAnimal || entity instanceof Drowned || entity instanceof Guardian
+                        || (entity instanceof Mob && ((Mob)entity).getNavigation() instanceof WaterBoundPathNavigation);
                 // find a place to spawn the entity
                 Random rand = playerIn.getRandom();
                 BlockPos spawnPos;
@@ -367,7 +367,7 @@ public class PerkAction {
                     }
                     // check if this is a valid position
                     boolean canSpawnHere = (range == 1)
-                            || EntitySpawnPlacementRegistry.checkSpawnRules(entityType.get(), (IServerWorld)worldIn, SpawnReason.SPAWN_EGG, spawnPos, rand)
+                            || SpawnPlacements.checkSpawnRules(entityType.get(), (ServerLevelAccessor)worldIn, MobSpawnType.SPAWN_EGG, spawnPos, rand)
                             || (waterMob && worldIn.getBlockState(spawnPos).is(Blocks.WATER))
                             || (!waterMob && worldIn.getBlockState(spawnPos.below()).canOcclude()
                             && worldIn.getBlockState(spawnPos).getMaterial() == Material.AIR
@@ -394,7 +394,7 @@ public class PerkAction {
      * @param amount the amount of growth to add (can be negative to remove growth)
      * @return whether a crop was found and its age was changed
      **/
-    public static boolean growCropsNearPlayer(final PlayerEntity player, final IFavor favor, final int amount) {
+    public static boolean growCropsNearPlayer(final Player player, final IFavor favor, final int amount) {
         if(amount == 0) {
             return false;
         }
@@ -416,7 +416,7 @@ public class PerkAction {
             final BlockPos blockpos = player.blockPosition().offset(x1, y1, z1);
             final BlockState state = player.level.getBlockState(blockpos);
             // if the block can be grown, grow it and return
-            if (state.getBlock() instanceof IGrowable) {
+            if (state.getBlock() instanceof BonemealableBlock) {
                 // determine which age property applies to this state
                 for(final IntegerProperty AGE : AGES) {
                     if(state.hasProperty(AGE)) {
@@ -427,9 +427,9 @@ public class PerkAction {
                             // update the block age
                             player.level.setBlock(blockpos, state.setValue(AGE, newAge), 2);
                             // spawn particles
-                            if(player.level instanceof ServerWorld) {
-                                IParticleData particle = (amount > 0) ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
-                                ((ServerWorld)player.level).sendParticles(particle, blockpos.getX() + 0.5D, blockpos.getY() + 0.25D, blockpos.getZ() + 0.5D, 10, 0.5D, 0.5D, 0.5D, 0);
+                            if(player.level instanceof ServerLevel) {
+                                ParticleOptions particle = (amount > 0) ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+                                ((ServerLevel)player.level).sendParticles(particle, blockpos.getX() + 0.5D, blockpos.getY() + 0.25D, blockpos.getZ() + 0.5D, 10, 0.5D, 0.5D, 0.5D, 0);
                             }
                             return true;
                         }
@@ -452,7 +452,7 @@ public class PerkAction {
         return string;
     }
 
-    public Optional<CompoundNBT> getTag() {
+    public Optional<CompoundTag> getTag() {
         return tag;
     }
 
@@ -493,37 +493,37 @@ public class PerkAction {
                 '}';
     }
 
-    public ITextComponent getDisplayName() {
+    public Component getDisplayName() {
         return this.getType().getDisplayName();
     }
 
-    public ITextComponent getDisplayDescription() {
+    public Component getDisplayDescription() {
         return getType().getDisplayDescription(dataToDisplay());
     }
 
-    private ITextComponent dataToDisplay() {
+    private Component dataToDisplay() {
         switch (getType()) {
             case POTION:
             case ARROW_EFFECT:
                 if(tag.isPresent()) {
                     // format potion ID as effect name (with amplifier)
-                    Optional<EffectInstance> effect = readEffectInstance(tag.get());
+                    Optional<MobEffectInstance> effect = readEffectInstance(tag.get());
                     if(effect.isPresent()) {
                         String potencyKey = "potion.potency." + effect.get().getAmplifier();
-                        return new TranslationTextComponent(effect.get().getDescriptionId())
+                        return new TranslatableComponent(effect.get().getDescriptionId())
                                 .append(" ")
-                                .append(new TranslationTextComponent(potencyKey));
+                                .append(new TranslatableComponent(potencyKey));
                     }
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case SUMMON:
                 if(tag.isPresent()) {
                     // format entity ID as name
                     String entity = tag.get().getString("id");
                     Optional<EntityType<?>> type = EntityType.byString(entity);
-                    return type.isPresent() ? type.get().getDescription() : new StringTextComponent(entity);
+                    return type.isPresent() ? type.get().getDescription() : new TextComponent(entity);
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case ITEM:
                 return getItem().orElse(ItemStack.EMPTY).getHoverName();
             case FAVOR:
@@ -531,14 +531,14 @@ public class PerkAction {
                     // format favor as discrete amount
                     // EX: multiplier of -1.1 becomes -1, 0.6 becomes +1, 1.2 becomes +1, etc.
                     String prefix = (favor.get() > 0) ? "+" : "";
-                    return new StringTextComponent(prefix + Math.round(getFavor().get()));
+                    return new TextComponent(prefix + Math.round(getFavor().get()));
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case AFFINITY:
                 if(getAffinity().isPresent()) {
                     return getAffinity().get().getDisplayDescription();
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case ARROW_COUNT:
             case SPECIAL_PRICE:
             case CROP_GROWTH:
@@ -546,19 +546,19 @@ public class PerkAction {
                     // format multiplier as discrete bonus
                     // EX: multiplier of 0.0 becomes +0, 0.6 becomes +1, 1.2 becomes +1, etc.
                     String prefix = (getMultiplier().get() > 0) ? "+" : "";
-                    return new StringTextComponent(prefix + Math.round(getMultiplier().get()));
+                    return new TextComponent(prefix + Math.round(getMultiplier().get()));
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case DURABILITY:
                 if(getMultiplier().isPresent() && getString().isPresent()) {
                     // format multiplier as percentage
                     // EX: multiplier of -0.9 becomes -90%, 0.0 becomes +0%, 0.5 becomes +50%, 1.2 becomes +120%, etc.
                     String prefix = getMultiplier().get() >= 0.0F ? "+" : "";
-                    ITextComponent durability = new StringTextComponent(prefix + Math.round((getMultiplier().get()) * 100.0F) + "%");
-                    ITextComponent slot = new TranslationTextComponent("equipment.type." + getString().get());
-                    return new TranslationTextComponent("favor.perk.type.durability.description.full", durability, slot);
+                    Component durability = new TextComponent(prefix + Math.round((getMultiplier().get()) * 100.0F) + "%");
+                    Component slot = new TranslatableComponent("equipment.type." + getString().get());
+                    return new TranslatableComponent("favor.perk.type.durability.description.full", durability, slot);
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case DAMAGE:
             case ARROW_DAMAGE:
             case CROP_HARVEST:
@@ -568,38 +568,38 @@ public class PerkAction {
                     // format multiplier as adjusted percentage
                     // EX: multiplier of 0.0 becomes -100%, 0.5 becomes -50%, 1.2 becomes +120%, etc.
                     String prefix = getMultiplier().get() >= 1.0F ? "+" : "";
-                    return new StringTextComponent(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
+                    return new TextComponent(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case PATRON:
                 if(getPatron().isPresent()) {
                     if (getPatron().get().getDeity().isPresent()) {
-                        ITextComponent deityName = DeityHelper.getName(getPatron().get().getDeity().get());
-                        return new TranslationTextComponent("favor.perk.type.patron.description.add", deityName);
+                        Component deityName = DeityHelper.getName(getPatron().get().getDeity().get());
+                        return new TranslatableComponent("favor.perk.type.patron.description.add", deityName);
                     }
-                    return new TranslationTextComponent("favor.perk.type.patron.description.remove");
+                    return new TranslatableComponent("favor.perk.type.patron.description.remove");
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case UNLOCK:
                 if(getId().isPresent()) {
                     ResourceLocation deityId = getId().get();
-                    ITextComponent deityName = DeityHelper.getName(deityId);
+                    Component deityName = DeityHelper.getName(deityId);
                     Altar altar = RPGGods.ALTAR.get(deityId).orElse(Altar.EMPTY);
                     String suffix = altar.isFemale() ? "female" : "male";
-                    return new TranslationTextComponent("favor.perk.type.unlock.description." + suffix, deityName);
+                    return new TranslatableComponent("favor.perk.type.unlock.description." + suffix, deityName);
                 }
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
             case FUNCTION:
                 if(getString().isPresent()) {
-                    return new TranslationTextComponent(getString().get());
+                    return new TranslatableComponent(getString().get());
                 }
-                return new TranslationTextComponent("favor.perk.type.function.description.default");
+                return new TranslatableComponent("favor.perk.type.function.description.default");
             case AUTOSMELT: case UNSMELT: default:
-                return StringTextComponent.EMPTY;
+                return TextComponent.EMPTY;
         }
     }
 
-    public static enum Type implements IStringSerializable {
+    public static enum Type implements StringRepresentable {
         FUNCTION("function"),
         POTION("potion"),
         SUMMON("summon"),
@@ -642,15 +642,15 @@ public class PerkAction {
          * @param data the data to pass to the translation key
          * @return Translation key for the description of this perk type, using the provided data
          */
-        public ITextComponent getDisplayDescription(final ITextComponent data) {
-            return new TranslationTextComponent("favor.perk.type." + getSerializedName() + ".description", data);
+        public Component getDisplayDescription(final Component data) {
+            return new TranslatableComponent("favor.perk.type." + getSerializedName() + ".description", data);
         }
 
         /**
          * @return Translation key for the name of this perk type
          */
-        public IFormattableTextComponent getDisplayName() {
-            return new TranslationTextComponent("favor.perk.type." + getSerializedName());
+        public MutableComponent getDisplayName() {
+            return new TranslatableComponent("favor.perk.type." + getSerializedName());
         }
 
         @Override

@@ -1,8 +1,8 @@
 package rpggods.network;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
@@ -39,7 +39,7 @@ public class SUpdateSittingPacket {
      * @param buf the PacketBuffer
      * @return a new instance of a SUpdateSittingPacket based on the PacketBuffer
      */
-    public static SUpdateSittingPacket fromBytes(final PacketBuffer buf) {
+    public static SUpdateSittingPacket fromBytes(final FriendlyByteBuf buf) {
         final int id = buf.readInt();
         final boolean sitting = buf.readBoolean();
         return new SUpdateSittingPacket(id, sitting);
@@ -51,7 +51,7 @@ public class SUpdateSittingPacket {
      * @param msg the SUpdateSittingPacket
      * @param buf the PacketBuffer
      */
-    public static void toBytes(final SUpdateSittingPacket msg, final PacketBuffer buf) {
+    public static void toBytes(final SUpdateSittingPacket msg, final FriendlyByteBuf buf) {
         buf.writeInt(msg.entityId);
         buf.writeBoolean(msg.sitting);
     }
@@ -67,7 +67,7 @@ public class SUpdateSittingPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 // locate the level
-                Optional<World> world = NetworkHelper.getClientWorld(context);
+                Optional<Level> world = NetworkHelper.getClientWorld(context);
                 if(world.isPresent()) {
                     // locate the entity by ID
                     Entity entity = world.get().getEntity(message.entityId);

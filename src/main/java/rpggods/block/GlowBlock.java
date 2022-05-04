@@ -1,28 +1,28 @@
 package rpggods.block;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.IWaterLoggable;
-import net.minecraft.entity.Entity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.state.IntegerProperty;
-import net.minecraft.state.StateContainer;
-import net.minecraft.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.shapes.ISelectionContext;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.math.shapes.VoxelShapes;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.util.Constants;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
@@ -32,7 +32,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Random;
 
-public class GlowBlock extends Block implements IWaterLoggable {
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
+
+public class GlowBlock extends Block implements SimpleWaterloggedBlock {
 
     public static final IntegerProperty LIGHT_LEVEL = IntegerProperty.create("light", 0, 15);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
@@ -44,7 +46,7 @@ public class GlowBlock extends Block implements IWaterLoggable {
                 .setValue(LIGHT_LEVEL, 15));
     }
 
-    protected static boolean removeGlowBlock(final World worldIn, final BlockState state, final BlockPos pos, final int flag) {
+    protected static boolean removeGlowBlock(final Level worldIn, final BlockState state, final BlockPos pos, final int flag) {
         // remove this block and replace with air or water
         final BlockState replaceWith = state.getValue(BlockStateProperties.WATERLOGGED) ? Fluids.WATER.defaultFluidState().createLegacyBlock()
                 : Blocks.AIR.defaultBlockState();
@@ -53,7 +55,7 @@ public class GlowBlock extends Block implements IWaterLoggable {
     }
 
     @Override
-    protected void createBlockStateDefinition(final StateContainer.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(WATERLOGGED).add(LIGHT_LEVEL);
     }
 
@@ -63,7 +65,7 @@ public class GlowBlock extends Block implements IWaterLoggable {
     }
 
     @Override
-    public void onPlace(final BlockState state, final World worldIn, final BlockPos pos, final BlockState oldState, final boolean isMoving) {
+    public void onPlace(final BlockState state, final Level worldIn, final BlockPos pos, final BlockState oldState, final boolean isMoving) {
         state.setValue(WATERLOGGED, oldState.getFluidState().is(FluidTags.WATER));
         // schedule next tick
         worldIn.getBlockTicks().scheduleTick(pos, this, 4);
@@ -73,7 +75,7 @@ public class GlowBlock extends Block implements IWaterLoggable {
     }
 
     @Override
-    public void tick(final BlockState state, final ServerWorld worldIn, final BlockPos pos, final Random rand) {
+    public void tick(final BlockState state, final ServerLevel worldIn, final BlockPos pos, final Random rand) {
         super.tick(state, worldIn, pos, rand);
         // schedule next tick
         worldIn.getBlockTicks().scheduleTick(pos, this, 4);
@@ -81,7 +83,7 @@ public class GlowBlock extends Block implements IWaterLoggable {
             worldIn.getLiquidTicks().scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(worldIn));
         }
         // check for altar entity
-        AxisAlignedBB aabb = new AxisAlignedBB(pos);
+        AABB aabb = new AABB(pos);
         List<AltarEntity> list = worldIn.getEntitiesOfClass(AltarEntity.class, aabb);
         // check if any altar entity has light level
         boolean hasAltar = false;
@@ -99,53 +101,53 @@ public class GlowBlock extends Block implements IWaterLoggable {
     }
 
     @Override
-    public boolean isAir(BlockState state, IBlockReader world, BlockPos pos) {
+    public boolean isAir(BlockState state, BlockGetter world, BlockPos pos) {
         return true;
     }
 
     @Override
-    public VoxelShape getShape(final BlockState state, final IBlockReader worldIn, final BlockPos pos, final ISelectionContext cxt) {
-        return VoxelShapes.empty();
+    public VoxelShape getShape(final BlockState state, final BlockGetter worldIn, final BlockPos pos, final CollisionContext cxt) {
+        return Shapes.empty();
     }
 
     @Override
-    public VoxelShape getCollisionShape(final BlockState state, final IBlockReader worldIn, final BlockPos pos, final ISelectionContext cxt) {
-        return VoxelShapes.empty();
+    public VoxelShape getCollisionShape(final BlockState state, final BlockGetter worldIn, final BlockPos pos, final CollisionContext cxt) {
+        return Shapes.empty();
     }
 
     @Override
-    public VoxelShape getOcclusionShape(final BlockState state, final IBlockReader worldIn, final BlockPos pos) {
-        return VoxelShapes.empty();
+    public VoxelShape getOcclusionShape(final BlockState state, final BlockGetter worldIn, final BlockPos pos) {
+        return Shapes.empty();
     }
 
     @Override
-    public VoxelShape getInteractionShape(final BlockState state, final IBlockReader worldIn, final BlockPos pos) {
-        return VoxelShapes.empty();
+    public VoxelShape getInteractionShape(final BlockState state, final BlockGetter worldIn, final BlockPos pos) {
+        return Shapes.empty();
     }
 
     @Override
-    public ItemStack getCloneItemStack(final IBlockReader worldIn, final BlockPos pos, final BlockState state) {
+    public ItemStack getCloneItemStack(final BlockGetter worldIn, final BlockPos pos, final BlockState state) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public boolean canBeReplaced(final BlockState state, final BlockItemUseContext useContext) {
+    public boolean canBeReplaced(final BlockState state, final BlockPlaceContext useContext) {
         return true;
     }
 
     @Nullable
     @Override
-    public BlockState getStateForPlacement(final BlockItemUseContext context) {
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
         return defaultBlockState();
     }
 
     @Override
-    public BlockRenderType getRenderShape(final BlockState state) {
-        return BlockRenderType.INVISIBLE;
+    public RenderShape getRenderShape(final BlockState state) {
+        return RenderShape.INVISIBLE;
     }
 
     @Override
-    public void fallOn(final World worldIn, final BlockPos pos, final Entity entityIn, final float fallDistance) {
+    public void fallOn(final Level worldIn, final BlockPos pos, final Entity entityIn, final float fallDistance) {
         // do nothing
     }
 }

@@ -1,16 +1,16 @@
 package rpggods.altar;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.FloatNBT;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.FloatTag;
+import com.mojang.math.Vector3f;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.deity.Altar;
 
 import java.util.EnumMap;
 import java.util.Map.Entry;
 
-public class AltarPose implements INBTSerializable<CompoundNBT> {
+public class AltarPose implements INBTSerializable<CompoundTag> {
 
   public static final AltarPose EMPTY = new AltarPose();
 
@@ -57,7 +57,7 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
           .set(ModelPart.RIGHT_LEG, 0, 0, 4);
 
 
-  public static final Codec<AltarPose> CODEC = CompoundNBT.CODEC.xmap(AltarPose::new, AltarPose::serializeNBT);
+  public static final Codec<AltarPose> CODEC = CompoundTag.CODEC.xmap(AltarPose::new, AltarPose::serializeNBT);
 
   private final EnumMap<ModelPart, Vector3f> angles = new EnumMap<>(ModelPart.class);
   
@@ -71,7 +71,7 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
     angles.put(ModelPart.OFFSET, new Vector3f(0, 0, 0));
   }
   
-  public AltarPose(final CompoundNBT tag) {
+  public AltarPose(final CompoundTag tag) {
     deserializeNBT(tag);
   }
   
@@ -109,23 +109,23 @@ public class AltarPose implements INBTSerializable<CompoundNBT> {
   }
   
   @Override
-  public CompoundNBT serializeNBT() {
-    CompoundNBT tag = new CompoundNBT();
+  public CompoundTag serializeNBT() {
+    CompoundTag tag = new CompoundTag();
     for(final Entry<ModelPart, Vector3f> e : angles.entrySet()) {
-      final CompoundNBT eTag = new CompoundNBT();
-      eTag.put("x", FloatNBT.valueOf(e.getValue().x()));
-      eTag.put("y", FloatNBT.valueOf(e.getValue().y()));
-      eTag.put("z", FloatNBT.valueOf(e.getValue().z()));
+      final CompoundTag eTag = new CompoundTag();
+      eTag.put("x", FloatTag.valueOf(e.getValue().x()));
+      eTag.put("y", FloatTag.valueOf(e.getValue().y()));
+      eTag.put("z", FloatTag.valueOf(e.getValue().z()));
       tag.put(e.getKey().getSerializedName(), eTag);
     }
     return tag;
   }
 
   @Override
-  public void deserializeNBT(CompoundNBT nbt) {
+  public void deserializeNBT(CompoundTag nbt) {
     String key;
     for (final ModelPart m : ModelPart.values()) {
-      final CompoundNBT eTag = nbt.getCompound(m.getSerializedName());
+      final CompoundTag eTag = nbt.getCompound(m.getSerializedName());
       float x = 0.0F;
       float y = 0.0F;
       float z = 0.0F;

@@ -1,9 +1,9 @@
 package rpggods.favor;
 
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.Capability.IStorage;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
@@ -109,21 +109,21 @@ public class Favor implements IFavor {
     public static class Storage implements IStorage<IFavor> {
 
         @Override
-        public INBT writeNBT(Capability<IFavor> capability, IFavor instance, Direction side) {
+        public Tag writeNBT(Capability<IFavor> capability, IFavor instance, Direction side) {
             return instance.serializeNBT();
         }
 
         @Override
-        public void readNBT(Capability<IFavor> capability, IFavor instance, Direction side, INBT nbt) {
-            if (nbt instanceof CompoundNBT) {
-                instance.deserializeNBT((CompoundNBT) nbt);
+        public void readNBT(Capability<IFavor> capability, IFavor instance, Direction side, Tag nbt) {
+            if (nbt instanceof CompoundTag) {
+                instance.deserializeNBT((CompoundTag) nbt);
             } else {
                 RPGGods.LOGGER.error("Failed to read Favor capability from NBT of type " + (nbt != null ? nbt.getType().getName() : "null"));
             }
         }
     }
 
-    public static class Provider implements ICapabilitySerializable<CompoundNBT> {
+    public static class Provider implements ICapabilitySerializable<CompoundTag> {
         public IFavor instance = RPGGods.FAVOR.getDefaultInstance();
 
         @Override
@@ -132,12 +132,12 @@ public class Favor implements IFavor {
         }
 
         @Override
-        public CompoundNBT serializeNBT() {
-            return (CompoundNBT) RPGGods.FAVOR.getStorage().writeNBT(RPGGods.FAVOR, this.instance, null);
+        public CompoundTag serializeNBT() {
+            return (CompoundTag) RPGGods.FAVOR.getStorage().writeNBT(RPGGods.FAVOR, this.instance, null);
         }
 
         @Override
-        public void deserializeNBT(CompoundNBT nbt) {
+        public void deserializeNBT(CompoundTag nbt) {
             RPGGods.FAVOR.getStorage().readNBT(RPGGods.FAVOR, this.instance, null, nbt);
         }
     }

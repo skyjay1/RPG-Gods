@@ -1,9 +1,9 @@
 package rpggods.deity;
 
-import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraftforge.common.util.INBTSerializable;
 
-public class Cooldown implements INBTSerializable<CompoundNBT> {
+public class Cooldown implements INBTSerializable<CompoundTag> {
 
     public static Cooldown EMPTY = new Cooldown(1, 0);
 
@@ -17,7 +17,7 @@ public class Cooldown implements INBTSerializable<CompoundNBT> {
     private long maxCooldown;
     private long cooldown;
 
-    public Cooldown(CompoundNBT nbt) {
+    public Cooldown(CompoundTag nbt) {
         deserializeNBT(nbt);
     }
 
@@ -94,8 +94,8 @@ public class Cooldown implements INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    public CompoundNBT serializeNBT() {
-        CompoundNBT tag = new CompoundNBT();
+    public CompoundTag serializeNBT() {
+        CompoundTag tag = new CompoundTag();
         tag.putInt(MAX_USES, maxUses);
         tag.putLong(MAX_COOLDOWN, maxCooldown);
         tag.putLong(COOLDOWN, cooldown);
@@ -104,7 +104,7 @@ public class Cooldown implements INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    public void deserializeNBT(CompoundNBT nbt) {
+    public void deserializeNBT(CompoundTag nbt) {
         this.maxUses = nbt.getInt(MAX_USES);
         this.maxCooldown = nbt.getLong(MAX_COOLDOWN);
         this.cooldown = nbt.getLong(COOLDOWN);

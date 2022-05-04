@@ -1,29 +1,29 @@
 package rpggods.item;
 
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUseContext;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.ActionResultType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import rpggods.RGRegistry;
@@ -36,7 +36,7 @@ import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
-import net.minecraft.item.Item.Properties;
+import net.minecraft.world.item.Item.Properties;
 
 public class AltarItem extends Item {
 
@@ -47,7 +47,7 @@ public class AltarItem extends Item {
     }
 
     @Override
-    public ITextComponent getName(ItemStack stack) {
+    public Component getName(ItemStack stack) {
         String sAltarId = stack.getOrCreateTag().getString(KEY_ALTAR);
         // create translation key using altar information
         if(sAltarId != null && !sAltarId.isEmpty()) {
@@ -55,16 +55,16 @@ public class AltarItem extends Item {
             // determine if altar is a deity
             Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && altar.get().getDeity().isPresent()) {
-                return new TranslationTextComponent("item.rpggods.altar_x",
-                        new TranslationTextComponent(Altar.createTranslationKey(altarId)));
+                return new TranslatableComponent("item.rpggods.altar_x",
+                        new TranslatableComponent(Altar.createTranslationKey(altarId)));
             }
         }
         // fallback when no altar information provided
-        return new TranslationTextComponent(this.getDescriptionId(stack));
+        return new TranslatableComponent(this.getDescriptionId(stack));
     }
 
     @OnlyIn(Dist.CLIENT)
-    public void appendHoverText(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
+    public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
         String sAltarId = stack.getOrCreateTag().getString(KEY_ALTAR);
         // create translation key using altar information
         if(!sAltarId.isEmpty()) {
@@ -72,7 +72,7 @@ public class AltarItem extends Item {
             // determine if altar is not a deity but has a name
             Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && !altar.get().getDeity().isPresent() && altar.get().getName().isPresent()) {
-                tooltip.add(new StringTextComponent(altar.get().getName().get()));
+                tooltip.add(new TextComponent(altar.get().getName().get()));
             }
         }
     }
@@ -98,44 +98,44 @@ public class AltarItem extends Item {
     }
 
     @Override
-    public void fillItemCategory(ItemGroup group, NonNullList<ItemStack> items) {
+    public void fillItemCategory(CreativeModeTab group, NonNullList<ItemStack> items) {
         if (this.allowdedIn(group)) {
             addAltarItems(items);
         }
     }
 
     @Override
-    public ActionResultType useOn(ItemUseContext context) {
+    public InteractionResult useOn(UseOnContext context) {
         Direction direction = context.getClickedFace();
         if (direction == Direction.DOWN) {
-            return ActionResultType.FAIL;
+            return InteractionResult.FAIL;
         } else {
-            World world = context.getLevel();
-            BlockItemUseContext blockitemusecontext = new BlockItemUseContext(context);
+            Level world = context.getLevel();
+            BlockPlaceContext blockitemusecontext = new BlockPlaceContext(context);
             BlockPos blockpos = blockitemusecontext.getClickedPos();
             ItemStack itemstack = context.getItemInHand();
-            Vector3d vector3d = Vector3d.atBottomCenterOf(blockpos);
-            AxisAlignedBB axisalignedbb = RGRegistry.EntityReg.ALTAR.getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
+            Vec3 vector3d = Vec3.atBottomCenterOf(blockpos);
+            AABB axisalignedbb = RGRegistry.EntityReg.ALTAR.getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
             if (world.noCollision((Entity)null, axisalignedbb, (entity) -> true)
                     && world.getEntities((Entity)null, axisalignedbb).isEmpty()) {
-                if (world instanceof ServerWorld) {
-                    ServerWorld serverworld = (ServerWorld)world;
+                if (world instanceof ServerLevel) {
+                    ServerLevel serverworld = (ServerLevel)world;
                     // determine altar properties to apply
                     String sAltarId = context.getItemInHand().getOrCreateTag().getString(KEY_ALTAR);
                     ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
                     // crate altar entity
                     AltarEntity altarEntity = AltarEntity.createAltar(world, blockpos, context.getHorizontalDirection().getOpposite(), altarId);
                     if (altarEntity == null) {
-                        return ActionResultType.FAIL;
+                        return InteractionResult.FAIL;
                     }
                     serverworld.addFreshEntity(altarEntity);
-                    world.playSound((PlayerEntity)null, altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundCategory.BLOCKS, 0.75F, 0.8F);
+                    world.playSound((Player)null, altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundSource.BLOCKS, 0.75F, 0.8F);
                 }
 
                 itemstack.shrink(1);
-                return ActionResultType.sidedSuccess(world.isClientSide);
+                return InteractionResult.sidedSuccess(world.isClientSide);
             } else {
-                return ActionResultType.FAIL;
+                return InteractionResult.FAIL;
             }
         }
     }

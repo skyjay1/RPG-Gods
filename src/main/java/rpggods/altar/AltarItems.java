@@ -3,11 +3,11 @@ package rpggods.altar;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.Registry;
 import rpggods.deity.Offering;
 
 public class AltarItems {
@@ -18,12 +18,12 @@ public class AltarItems {
     private static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Offering.ITEM_OR_STACK_CODEC;
 
     public static final Codec<AltarItems> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ITEM_OR_STACK_CODEC.optionalFieldOf("head", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.HEAD)),
-            ITEM_OR_STACK_CODEC.optionalFieldOf("chest", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.CHEST)),
-            ITEM_OR_STACK_CODEC.optionalFieldOf("legs", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.LEGS)),
-            ITEM_OR_STACK_CODEC.optionalFieldOf("feet", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.FEET)),
-            ITEM_OR_STACK_CODEC.optionalFieldOf("mainhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.MAINHAND)),
-            ITEM_OR_STACK_CODEC.optionalFieldOf("offhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlotType.OFFHAND)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("head", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.HEAD)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("chest", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.CHEST)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("legs", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.LEGS)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("feet", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.FEET)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("mainhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.MAINHAND)),
+            ITEM_OR_STACK_CODEC.optionalFieldOf("offhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.OFFHAND)),
             Registry.BLOCK.optionalFieldOf("block", Blocks.AIR).forGetter(AltarItems::getBlock),
             Codec.BOOL.optionalFieldOf("armor_locked", false).forGetter(AltarItems::isArmorLocked),
             Codec.BOOL.optionalFieldOf("hands_locked", false).forGetter(AltarItems::isHandsLocked),
@@ -48,7 +48,7 @@ public class AltarItems {
         this.blockLocked = blockLocked;
     }
 
-    public ItemStack getItemStackFromSlot(EquipmentSlotType slotIn) {
+    public ItemStack getItemStackFromSlot(EquipmentSlot slotIn) {
         switch(slotIn.getType()) {
             case HAND:
                 return handItems.get(slotIn.getIndex());

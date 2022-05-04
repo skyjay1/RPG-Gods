@@ -2,32 +2,32 @@ package rpggods.client.render;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
-import net.minecraft.block.Block;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.renderer.entity.LivingRenderer;
-import net.minecraft.client.renderer.entity.layers.BipedArmorLayer;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
-import net.minecraft.client.renderer.entity.layers.HeadLayer;
-import net.minecraft.client.renderer.entity.layers.HeldItemLayer;
-import net.minecraft.client.renderer.entity.layers.LayerRenderer;
+import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.model.ArmorStandArmorModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.world.phys.Vec3;
+import com.mojang.math.Vector3f;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.model.data.EmptyModelData;
 import net.minecraftforge.common.MinecraftForge;
@@ -42,24 +42,24 @@ import rpggods.entity.AltarEntity;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
+public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel> {
 
     protected static final ResourceLocation STEVE_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/steve.png");
     protected static final ResourceLocation ALEX_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/alex.png");
 
     private final Map<ResourceLocation, ResourceLocation> DEITY_TEXTURES = new HashMap<>();
 
-    public AltarRenderer(final EntityRendererManager renderManagerIn) {
+    public AltarRenderer(final EntityRenderDispatcher renderManagerIn) {
         super(renderManagerIn, new AltarModel(0.0F, 0.0F), 0.5F);
-        this.addLayer(new BipedArmorLayer(this, new AltarArmorModel(0.5F), new AltarArmorModel(1.0F)));
-        this.addLayer(new HeldItemLayer<>(this));
+        this.addLayer(new HumanoidArmorLayer(this, new AltarArmorModel(0.5F), new AltarArmorModel(1.0F)));
+        this.addLayer(new ItemInHandLayer<>(this));
         this.addLayer(new ElytraLayer<>(this));
-        this.addLayer(new HeadLayer<>(this));
+        this.addLayer(new CustomHeadLayer<>(this));
     }
 
     @Override
-    public void render(AltarEntity entityIn, float entityYaw, float partialTicks, MatrixStack matrixStackIn,
-                       IRenderTypeBuffer bufferIn, int packedLightIn) {
+    public void render(AltarEntity entityIn, float entityYaw, float partialTicks, PoseStack matrixStackIn,
+                       MultiBufferSource bufferIn, int packedLightIn) {
         // intentional omission of super call
         // pre-render event
         if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
@@ -102,14 +102,14 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
         matrixStackIn.translate(0.0F, 2.0F + baseHeight, 0.0F);
         matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(180.0F));
         if (rendertype != null) {
-            IVertexBuilder ivertexbuilder = bufferIn.getBuffer(rendertype);
+            VertexConsumer ivertexbuilder = bufferIn.getBuffer(rendertype);
             getModel().render(entityIn, matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
                     entityIn.isFemale(), entityIn.isSlim(), 1.0F, 1.0F, 1.0F, 1.0F);
         }
 
         // render layers
         if (!entityIn.isSpectator()) {
-            for(LayerRenderer layerrenderer : this.layers) {
+            for(RenderLayer layerrenderer : this.layers) {
                 layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, entityIn.animationPosition, entityIn.animationSpeed, partialTicks, entityIn.tickCount, entityIn.getYHeadRot(), entityIn.getViewXRot(partialTicks));
             }
         }
@@ -132,7 +132,7 @@ public class AltarRenderer extends LivingRenderer<AltarEntity, AltarModel> {
         if(mc.screen instanceof AltarScreen) {
             return false;
         }
-        final Vector3d pos = entityIn.position().add(0, entityIn.getType().getDimensions().height / 2D, 0);
+        final Vec3 pos = entityIn.position().add(0, entityIn.getType().getDimensions().height / 2D, 0);
         return super.shouldShowName(entityIn) && mc.crosshairPickEntity == entityIn;
     }
 

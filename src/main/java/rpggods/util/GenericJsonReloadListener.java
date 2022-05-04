@@ -5,12 +5,12 @@ import com.google.gson.JsonElement;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
-import net.minecraft.client.resources.JsonReloadListener;
-import net.minecraft.nbt.INBT;
-import net.minecraft.nbt.NBTDynamicOps;
-import net.minecraft.profiler.IProfiler;
-import net.minecraft.resources.IResourceManager;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.LogicalSidedProvider;
 import rpggods.RPGGods;
@@ -20,7 +20,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 
-public class GenericJsonReloadListener<T> extends JsonReloadListener {
+public class GenericJsonReloadListener<T> extends SimpleJsonResourceReloadListener {
 
     private final Codec<T> codec;
     private final Consumer<GenericJsonReloadListener<T>> syncOnReload;
@@ -75,9 +75,9 @@ public class GenericJsonReloadListener<T> extends JsonReloadListener {
         return OBJECTS.entrySet();
     }
 
-    public DataResult<INBT> writeObject(final T obj) {
+    public DataResult<Tag> writeObject(final T obj) {
         // write Object T to NBT
-        return codec.encodeStart(NBTDynamicOps.INSTANCE, obj);
+        return codec.encodeStart(NbtOps.INSTANCE, obj);
     }
 
     public DataResult<T> jsonToObject(final JsonElement json) {
@@ -85,9 +85,9 @@ public class GenericJsonReloadListener<T> extends JsonReloadListener {
         return codec.parse(JsonOps.INSTANCE, json);
     }
 
-    public DataResult<T> readObject(final INBT nbt) {
+    public DataResult<T> readObject(final Tag nbt) {
         // read Object T from nbt
-        return codec.parse(NBTDynamicOps.INSTANCE, nbt);
+        return codec.parse(NbtOps.INSTANCE, nbt);
     }
 
     public void syncOnReload() {
@@ -95,7 +95,7 @@ public class GenericJsonReloadListener<T> extends JsonReloadListener {
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> jsons, IResourceManager manager, IProfiler profile) {
+    protected void apply(Map<ResourceLocation, JsonElement> jsons, ResourceManager manager, ProfilerFiller profile) {
         // build the maps
         OBJECTS.clear();
         RPGGods.LOGGER.debug("Parsing Reloadable JSON map of type " + objClass.getName());

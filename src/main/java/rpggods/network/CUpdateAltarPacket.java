@@ -1,10 +1,10 @@
 package rpggods.network;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
@@ -53,9 +53,9 @@ public class CUpdateAltarPacket {
      * @param buf the PacketBuffer
      * @return a new instance of a CUpdateAltarPacket based on the PacketBuffer
      */
-    public static CUpdateAltarPacket fromBytes(final PacketBuffer buf) {
+    public static CUpdateAltarPacket fromBytes(final FriendlyByteBuf buf) {
         final int id = buf.readInt();
-        final CompoundNBT nbt = buf.readNbt();
+        final CompoundTag nbt = buf.readNbt();
         final boolean female = buf.readBoolean();
         final boolean slim = buf.readBoolean();
         final String customName = buf.readUtf(NAME_LEN);
@@ -68,7 +68,7 @@ public class CUpdateAltarPacket {
      * @param msg the CUpdateAltarPacket
      * @param buf the PacketBuffer
      */
-    public static void toBytes(final CUpdateAltarPacket msg, final PacketBuffer buf) {
+    public static void toBytes(final CUpdateAltarPacket msg, final FriendlyByteBuf buf) {
         buf.writeInt(msg.entityId);
         buf.writeNbt(msg.pose.serializeNBT());
         buf.writeBoolean(msg.female);
@@ -90,7 +90,7 @@ public class CUpdateAltarPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.SERVER) {
             context.enqueueWork(() -> {
-                final ServerPlayerEntity player = context.getSender();
+                final ServerPlayer player = context.getSender();
                 Entity entity = context.getSender().getCommandSenderWorld().getEntity(message.entityId);
                 double maxDistance = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
                 if (entity != null && entity instanceof AltarEntity && player.distanceToSqr(entity) < Math.pow(maxDistance, 2)) {
@@ -98,7 +98,7 @@ public class CUpdateAltarPacket {
                     AltarEntity altar = (AltarEntity) entity;
                     altar.setAltarPose(message.pose);
                     if (message.customName != null && !message.customName.isEmpty()) {
-                        altar.setCustomName(new StringTextComponent(message.customName));
+                        altar.setCustomName(new TextComponent(message.customName));
                     }
                 }
             });

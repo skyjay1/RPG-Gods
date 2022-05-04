@@ -1,10 +1,10 @@
 package rpggods.network;
 
 import com.mojang.serialization.DataResult;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
@@ -38,9 +38,9 @@ public class SDeityPacket {
      * @param buf the PacketBuffer
      * @return a new instance of a SDeityPacket based on the PacketBuffer
      */
-    public static SDeityPacket fromBytes(final PacketBuffer buf) {
+    public static SDeityPacket fromBytes(final FriendlyByteBuf buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readNbt();
+        final CompoundTag sNBT = buf.readNbt();
         final Optional<Deity> sEffect = RPGGods.DEITY.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Deity from NBT for packet\n" + error));
         return new SDeityPacket(sName, sEffect.orElse(Deity.EMPTY));
@@ -52,11 +52,11 @@ public class SDeityPacket {
      * @param msg the SDeityPacket
      * @param buf the PacketBuffer
      */
-    public static void toBytes(final SDeityPacket msg, final PacketBuffer buf) {
-        DataResult<INBT> nbtResult = RPGGods.DEITY.writeObject(msg.deity);
-        INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Deity to NBT for packet\n" + error)).get();
+    public static void toBytes(final SDeityPacket msg, final FriendlyByteBuf buf) {
+        DataResult<Tag> nbtResult = RPGGods.DEITY.writeObject(msg.deity);
+        Tag tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Deity to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.deityId);
-        buf.writeNbt((CompoundNBT) tag);
+        buf.writeNbt((CompoundTag) tag);
     }
 
     /**

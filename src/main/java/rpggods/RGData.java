@@ -1,12 +1,12 @@
 package rpggods;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.passive.horse.AbstractHorseEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
@@ -35,8 +35,8 @@ public final class RGData {
      **/
     @SubscribeEvent
     public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
-        PlayerEntity player = event.getPlayer();
-        if (player instanceof ServerPlayerEntity) {
+        Player player = event.getPlayer();
+        if (player instanceof ServerPlayer) {
             RPGGods.DEITY.syncOnReload();
             RPGGods.ALTAR.syncOnReload();
             RPGGods.OFFERING.syncOnReload();
@@ -67,11 +67,11 @@ public final class RGData {
      */
     @SubscribeEvent
     public static void onAttachCapabilities(final AttachCapabilitiesEvent<Entity> event) {
-        if(event.getObject() instanceof PlayerEntity) {
+        if(event.getObject() instanceof Player) {
             event.addCapability(IFavor.REGISTRY_NAME, new Favor.Provider());
-        } else if(event.getObject() instanceof MobEntity
-                && !(event.getObject() instanceof TameableEntity)
-                && !(event.getObject() instanceof AbstractHorseEntity)) {
+        } else if(event.getObject() instanceof Mob
+                && !(event.getObject() instanceof TamableAnimal)
+                && !(event.getObject() instanceof AbstractHorse)) {
             event.addCapability(ITameable.REGISTRY_NAME, new Tameable.Provider());
         }
     }

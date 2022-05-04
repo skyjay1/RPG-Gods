@@ -3,23 +3,23 @@ package rpggods.loot;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.FurnaceRecipe;
-import net.minecraft.item.crafting.IRecipeType;
-import net.minecraft.loot.LootContext;
-import net.minecraft.loot.LootParameters;
-import net.minecraft.loot.conditions.ILootCondition;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ITag;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.tags.Tag;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
 import net.minecraftforge.common.loot.LootModifier;
 import net.minecraftforge.common.util.LazyOptional;
@@ -40,9 +40,9 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
 
     private final Block stone;
     private final ResourceLocation oresTag;
-    private final ITag<Block> ores;
+    private final Tag<Block> ores;
 
-    protected AutosmeltOrCobbleModifier(final ILootCondition[] conditionsIn, final Block stoneIn, final ResourceLocation oresTagIn) {
+    protected AutosmeltOrCobbleModifier(final LootItemCondition[] conditionsIn, final Block stoneIn, final ResourceLocation oresTagIn) {
         super(conditionsIn);
         stone = stoneIn;
         oresTag = oresTagIn;
@@ -51,9 +51,9 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
 
     @Override
     public List<ItemStack> doApply(List<ItemStack> generatedLoot, LootContext context) {
-        Entity entity = context.getParamOrNull(LootParameters.THIS_ENTITY);
-        ItemStack itemStack = context.getParamOrNull(LootParameters.TOOL);
-        BlockState block = context.getParamOrNull(LootParameters.BLOCK_STATE);
+        Entity entity = context.getParamOrNull(LootContextParams.THIS_ENTITY);
+        ItemStack itemStack = context.getParamOrNull(LootContextParams.TOOL);
+        BlockState block = context.getParamOrNull(LootContextParams.BLOCK_STATE);
         // do not apply when missing entity or item or breaking non-ore block
         if(entity == null || itemStack == null || block == null || !block.is(ores)) {
             return generatedLoot;
@@ -70,9 +70,9 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
             unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.UNSMELT, ImmutableList.of()));
         }
         // make sure this is an ore mined by a non-creative player
-        if (entity instanceof PlayerEntity && !entity.isSpectator() && !((PlayerEntity) entity).isCreative()
+        if (entity instanceof Player && !entity.isSpectator() && !((Player) entity).isCreative()
                 && (!autosmelt.isEmpty() || !unsmelt.isEmpty())) {
-            final PlayerEntity player = (PlayerEntity) entity;
+            final Player player = (Player) entity;
             final LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
             // determine results using player favor
             if(favor.isPresent() && favor.orElse(null).isEnabled()) {
@@ -110,8 +110,8 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
      * @return the item that would normally result from smelting the given item
      */
     private static ItemStack smelt(ItemStack stack, LootContext context) {
-        return context.getLevel().getRecipeManager().getRecipeFor(IRecipeType.SMELTING, new Inventory(stack), context.getLevel())
-                .map(FurnaceRecipe::getResultItem)
+        return context.getLevel().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SimpleContainer(stack), context.getLevel())
+                .map(SmeltingRecipe::getResultItem)
                 .filter(itemStack -> !itemStack.isEmpty())
                 .map(itemStack -> ItemHandlerHelper.copyStackWithSize(itemStack, stack.getCount() * itemStack.getCount()))
                 .orElse(stack);
@@ -127,9 +127,9 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         private static final String ORES = "ores";
 
         @Override
-        public AutosmeltOrCobbleModifier read(ResourceLocation name, JsonObject object, ILootCondition[] conditionsIn) {
-            Block stone = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(JSONUtils.getAsString(object, STONE)));
-            ResourceLocation oresTag = new ResourceLocation(JSONUtils.getAsString(object, ORES));
+        public AutosmeltOrCobbleModifier read(ResourceLocation name, JsonObject object, LootItemCondition[] conditionsIn) {
+            Block stone = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(GsonHelper.getAsString(object, STONE)));
+            ResourceLocation oresTag = new ResourceLocation(GsonHelper.getAsString(object, ORES));
             return new AutosmeltOrCobbleModifier(conditionsIn, stone, oresTag);
         }
 

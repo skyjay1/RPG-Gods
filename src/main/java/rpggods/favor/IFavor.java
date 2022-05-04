@@ -1,10 +1,10 @@
 package rpggods.favor;
 
 import com.google.common.collect.Iterables;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.RPGGods;
 import rpggods.deity.Offering;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
-public interface IFavor extends INBTSerializable<CompoundNBT> {
+public interface IFavor extends INBTSerializable<CompoundTag> {
 
     ResourceLocation REGISTRY_NAME = new ResourceLocation(RPGGods.MODID, "favor");
 
@@ -103,7 +103,7 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
      * @param patron the new patron deity, or empty to remove the current patron
      * @return true if the patron deity was changed
      */
-    default boolean setPatron(final PlayerEntity player, final Patron patron) {
+    default boolean setPatron(final Player player, final Patron patron) {
         Optional<ResourceLocation> old = getPatron();
         // attempt to change patron (if no existing patron OR given patron is empty OR existing and given are different)
         if(!old.isPresent() || !patron.getDeity().isPresent() || !patron.getDeity().get().equals(old.get())) {
@@ -221,7 +221,7 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         }
     }
 
-    default void depleteFavor(final PlayerEntity player) {
+    default void depleteFavor(final Player player) {
         final int amount = RPGGods.CONFIG.getFavorDecayAmount();
         for(Entry<ResourceLocation, FavorLevel> entry : getAllFavor().entrySet()) {
             entry.getValue().depleteFavor(player, entry.getKey(), amount, FavorChangedEvent.Source.DECAY, false);
@@ -229,12 +229,12 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    default CompoundNBT serializeNBT() {
-        final CompoundNBT nbt = new CompoundNBT();
-        final ListNBT deities = new ListNBT();
+    default CompoundTag serializeNBT() {
+        final CompoundTag nbt = new CompoundTag();
+        final ListTag deities = new ListTag();
         // write favor levels
         for (final Entry<ResourceLocation, FavorLevel> entry : getAllFavor().entrySet()) {
-            final CompoundNBT deityTag = new CompoundNBT();
+            final CompoundTag deityTag = new CompoundTag();
             deityTag.putString(NAME, entry.getKey().toString());
             deityTag.put(FAVOR, entry.getValue().serializeNBT());
             deities.add(deityTag);
@@ -245,19 +245,19 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
         // write enabled
         nbt.putBoolean(ENABLED, isEnabled());
         // write perk cooldowns
-        CompoundNBT perkCooldowns = new CompoundNBT();
+        CompoundTag perkCooldowns = new CompoundTag();
         for(Entry<String, Long> entry : getPerkCooldownMap().entrySet()) {
             perkCooldowns.putLong(entry.getKey(), entry.getValue());
         }
         nbt.put(PERK_COOLDOWN, perkCooldowns);
         // write offering cooldowns
-        CompoundNBT offeringCooldowns = new CompoundNBT();
+        CompoundTag offeringCooldowns = new CompoundTag();
         for(Entry<ResourceLocation, Cooldown> entry : getOfferingCooldownMap().entrySet()) {
             offeringCooldowns.put(entry.getKey().toString(), entry.getValue().serializeNBT());
         }
         nbt.put(OFFERING_COOLDOWN, offeringCooldowns);
         // write sacrifice cooldowns
-        CompoundNBT sacrificeCooldowns = new CompoundNBT();
+        CompoundTag sacrificeCooldowns = new CompoundTag();
         for(Entry<ResourceLocation, Cooldown> entry : getOfferingCooldownMap().entrySet()) {
             sacrificeCooldowns.put(entry.getKey().toString(), entry.getValue().serializeNBT());
         }
@@ -268,10 +268,10 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    default void deserializeNBT(final CompoundNBT nbt) {
-        final ListNBT deities = nbt.getList(FAVOR_LEVELS, 10);
+    default void deserializeNBT(final CompoundTag nbt) {
+        final ListTag deities = nbt.getList(FAVOR_LEVELS, 10);
         for (int i = 0, l = deities.size(); i < l; i++) {
-            final CompoundNBT deity = deities.getCompound(i);
+            final CompoundTag deity = deities.getCompound(i);
             final String name = deity.getString(NAME);
             if (deity.contains(FAVOR, 10)) {
                 setFavor(new ResourceLocation(name), new FavorLevel(deity.getCompound(FAVOR)));
@@ -282,17 +282,17 @@ public interface IFavor extends INBTSerializable<CompoundNBT> {
             setPatron(Optional.ofNullable(ResourceLocation.tryParse(nbt.getString(PATRON))));
         }
         // read perk cooldowns
-        CompoundNBT perks = nbt.getCompound(PERK_COOLDOWN);
+        CompoundTag perks = nbt.getCompound(PERK_COOLDOWN);
         for(String key : perks.getAllKeys()) {
             setPerkCooldown(key, perks.getLong(key));
         }
         // read offering cooldowns
-        CompoundNBT offerings = nbt.getCompound(OFFERING_COOLDOWN);
+        CompoundTag offerings = nbt.getCompound(OFFERING_COOLDOWN);
         for(String key : offerings.getAllKeys()) {
             setOfferingCooldown(ResourceLocation.tryParse(key), new Cooldown(offerings.getCompound(key)));
         }
         // read sacrifice cooldowns
-        CompoundNBT sacrifices = nbt.getCompound(SACRIFICE_COOLDOWN);
+        CompoundTag sacrifices = nbt.getCompound(SACRIFICE_COOLDOWN);
         for(String key : sacrifices.getAllKeys()) {
             setSacrificeCooldown(ResourceLocation.tryParse(key), new Cooldown(sacrifices.getCompound(key)));
         }

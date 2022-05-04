@@ -1,9 +1,9 @@
 package rpggods.client.render;
 
-import net.minecraft.client.renderer.entity.model.BipedModel;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.model.ModelRenderer;
 import net.minecraft.entity.item.ArmorStandEntity;
-import net.minecraft.util.math.vector.Vector3f;
+import com.mojang.math.Vector3f;
 import rpggods.altar.AltarPose;
 import rpggods.altar.ModelPart;
 import rpggods.entity.AltarEntity;
@@ -11,7 +11,7 @@ import rpggods.entity.AltarEntity;
 import java.util.Collection;
 import java.util.Map;
 
-public class AltarArmorModel extends BipedModel<AltarEntity> {
+public class AltarArmorModel extends HumanoidModel<AltarEntity> {
 
     public AltarArmorModel(float modelSize) {
         this(modelSize, 64, 32);

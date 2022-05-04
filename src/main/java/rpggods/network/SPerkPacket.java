@@ -2,10 +2,10 @@ package rpggods.network;
 
 import com.google.common.collect.Lists;
 import com.mojang.serialization.DataResult;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
@@ -43,9 +43,9 @@ public class SPerkPacket {
      * @param buf the PacketBuffer
      * @return a new instance of a SPerkPacket based on the PacketBuffer
      */
-    public static SPerkPacket fromBytes(final PacketBuffer buf) {
+    public static SPerkPacket fromBytes(final FriendlyByteBuf buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readNbt();
+        final CompoundTag sNBT = buf.readNbt();
         final Optional<Perk> sEffect = RPGGods.PERK.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Perk from NBT for packet\n" + error));
         return new SPerkPacket(sName, sEffect.orElse(Perk.EMPTY));
@@ -57,11 +57,11 @@ public class SPerkPacket {
      * @param msg the SPerkPacket
      * @param buf the PacketBuffer
      */
-    public static void toBytes(final SPerkPacket msg, final PacketBuffer buf) {
-        DataResult<INBT> nbtResult = RPGGods.PERK.writeObject(msg.perk);
-        INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Perk to NBT for packet\n" + error)).get();
+    public static void toBytes(final SPerkPacket msg, final FriendlyByteBuf buf) {
+        DataResult<Tag> nbtResult = RPGGods.PERK.writeObject(msg.perk);
+        Tag tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Perk to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.perkId);
-        buf.writeNbt((CompoundNBT) tag);
+        buf.writeNbt((CompoundTag) tag);
     }
 
     /**

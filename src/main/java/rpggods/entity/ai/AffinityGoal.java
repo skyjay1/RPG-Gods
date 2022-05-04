@@ -2,27 +2,27 @@ package rpggods.entity.ai;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.CreatureEntity;
-import net.minecraft.entity.EntityPredicate;
-import net.minecraft.entity.IAngerable;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.goal.AvoidEntityGoal;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.ai.goal.TargetGoal;
-import net.minecraft.entity.monster.CreeperEntity;
-import net.minecraft.entity.monster.GhastEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.passive.horse.AbstractHorseEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.pathfinding.PathNavigator;
-import net.minecraft.pathfinding.PathNodeType;
-import net.minecraft.pathfinding.WalkNodeProcessor;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.TargetGoal;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Tuple;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.PacketDistributor;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -41,19 +41,21 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
+
 public class AffinityGoal {
 
     private static boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-        if (!(target instanceof CreeperEntity) && !(target instanceof GhastEntity)) {
-            if (target instanceof MobEntity) {
+        if (!(target instanceof Creeper) && !(target instanceof Ghast)) {
+            if (target instanceof Mob) {
                 ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(RPGGods.TAMEABLE.getDefaultInstance());
                 return !t.isTamed() || !t.getOwnerId().isPresent() || !t.getOwnerId().get().equals(owner.getUUID());
-            } else if (target instanceof PlayerEntity && owner instanceof PlayerEntity && !((PlayerEntity)owner).canHarmPlayer((PlayerEntity)target)) {
+            } else if (target instanceof Player && owner instanceof Player && !((Player)owner).canHarmPlayer((Player)target)) {
                 return false;
-            } else if (target instanceof AbstractHorseEntity && ((AbstractHorseEntity)target).isTamed()) {
+            } else if (target instanceof AbstractHorse && ((AbstractHorse)target).isTamed()) {
                 return false;
             } else {
-                return !(target instanceof TameableEntity) || !((TameableEntity)target).isTame();
+                return !(target instanceof TamableAnimal) || !((TamableAnimal)target).isTame();
             }
         } else {
             return false;
@@ -136,22 +138,22 @@ public class AffinityGoal {
         return false;
     }
 
-    public static class NearestAttackableGoal extends NearestAttackableTargetGoal<PlayerEntity> {
+    public static class NearestAttackableGoal extends NearestAttackableTargetGoal<Player> {
 
-        public NearestAttackableGoal(final MobEntity entity, float chance) {
-            super(entity, PlayerEntity.class, Math.round(chance * 100), true, false, e -> getPassiveAndHostile(entity, e).getRight());
+        public NearestAttackableGoal(final Mob entity, float chance) {
+            super(entity, Player.class, Math.round(chance * 100), true, false, e -> getPassiveAndHostile(entity, e).getRight());
         }
     }
 
     public static class NearestAttackableResetGoal extends Goal {
-        protected MobEntity entity;
+        protected Mob entity;
         protected int interval;
 
         protected final Predicate<LivingEntity> passivePredicate;
 
-        public NearestAttackableResetGoal(final MobEntity entityIn) { this(entityIn, 10, e -> getPassiveAndHostile(entityIn, e).getLeft()); }
+        public NearestAttackableResetGoal(final Mob entityIn) { this(entityIn, 10, e -> getPassiveAndHostile(entityIn, e).getLeft()); }
 
-        public NearestAttackableResetGoal(final MobEntity entityIn, int intervalIn, Predicate<LivingEntity> passivePredicate) {
+        public NearestAttackableResetGoal(final Mob entityIn, int intervalIn, Predicate<LivingEntity> passivePredicate) {
             entity = entityIn;
             interval = intervalIn;
             this.passivePredicate = passivePredicate;
@@ -161,9 +163,9 @@ public class AffinityGoal {
         @Override
         public boolean canUse() {
             final LivingEntity target = entity.getTarget();
-            if(entity.tickCount % interval == 0 && entity.isAlive() && target instanceof PlayerEntity
+            if(entity.tickCount % interval == 0 && entity.isAlive() && target instanceof Player
                     && target != entity.getLastHurtByMob()
-                    && !(entity instanceof IAngerable && target.getUUID().equals(((IAngerable)entity).getPersistentAngerTarget()))) {
+                    && !(entity instanceof NeutralMob && target.getUUID().equals(((NeutralMob)entity).getPersistentAngerTarget()))) {
                 return passivePredicate.test(target);
             }
             return false;
@@ -178,20 +180,20 @@ public class AffinityGoal {
         }
     }
 
-    public static class FleeGoal extends AvoidEntityGoal<PlayerEntity> {
+    public static class FleeGoal extends AvoidEntityGoal<Player> {
 
-        public FleeGoal(final CreatureEntity entityIn) {
+        public FleeGoal(final PathfinderMob entityIn) {
             this(entityIn, 8.0F);
         }
 
-        public FleeGoal(final CreatureEntity owner, float distanceIn) {
-            super(owner, PlayerEntity.class, distanceIn, 1.30D, 1.20D, createAvoidPredicate(owner));
+        public FleeGoal(final PathfinderMob owner, float distanceIn) {
+            super(owner, Player.class, distanceIn, 1.30D, 1.20D, createAvoidPredicate(owner));
         }
 
-        private static Predicate<LivingEntity> createAvoidPredicate(final CreatureEntity creature) {
+        private static Predicate<LivingEntity> createAvoidPredicate(final PathfinderMob creature) {
             final ResourceLocation id = creature.getType().getRegistryName();
             return e -> {
-                if(e instanceof PlayerEntity && e != creature.getLastHurtByMob() && !isOwnerOrTeam(creature, e)) {
+                if(e instanceof Player && e != creature.getLastHurtByMob() && !isOwnerOrTeam(creature, e)) {
                     List<ResourceLocation> perks = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.FLEE, ImmutableList.of());
                     if(perks.size() > 0) {
                         IFavor favor = e.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
@@ -212,9 +214,9 @@ public class AffinityGoal {
     }
 
     public static class SittingGoal extends Goal {
-        private final MobEntity entity;
+        private final Mob entity;
 
-        public SittingGoal(MobEntity entity) {
+        public SittingGoal(Mob entity) {
             this.entity = entity;
             this.setFlags(EnumSet.of(Flag.MOVE, Flag.JUMP, Flag.TARGET));
         }
@@ -236,9 +238,9 @@ public class AffinityGoal {
     }
 
     public static class SittingResetGoal extends Goal {
-        private final MobEntity entity;
+        private final Mob entity;
 
-        public SittingResetGoal(MobEntity entity) {
+        public SittingResetGoal(Mob entity) {
             this.entity = entity;
         }
 
@@ -257,17 +259,17 @@ public class AffinityGoal {
     }
 
     public static class FollowOwnerGoal extends Goal {
-        private final MobEntity entity;
+        private final Mob entity;
         private LivingEntity owner;
         private final double followSpeed;
-        private final PathNavigator navigator;
+        private final PathNavigation navigator;
         private int timeToRecalcPath;
         private final float closeDist;
         private final float farDist;
         private float oldWaterCost;
         private final boolean teleportToLeaves;
 
-        public FollowOwnerGoal(MobEntity entityIn, double followSpeedIn, float farDistance, float closeDistance, boolean teleportToLeavesIn) {
+        public FollowOwnerGoal(Mob entityIn, double followSpeedIn, float farDistance, float closeDistance, boolean teleportToLeavesIn) {
             this.entity = entityIn;
             this.followSpeed = followSpeedIn;
             this.navigator = entityIn.getNavigation();
@@ -306,15 +308,15 @@ public class AffinityGoal {
         @Override
         public void start() {
             this.timeToRecalcPath = 0;
-            this.oldWaterCost = this.entity.getPathfindingMalus(PathNodeType.WATER);
-            this.entity.setPathfindingMalus(PathNodeType.WATER, 0.0F);
+            this.oldWaterCost = this.entity.getPathfindingMalus(BlockPathTypes.WATER);
+            this.entity.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
         }
 
         @Override
         public void stop() {
             this.owner = null;
             this.navigator.stop();
-            this.entity.setPathfindingMalus(PathNodeType.WATER, this.oldWaterCost);
+            this.entity.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
         }
 
         @Override
@@ -366,14 +368,14 @@ public class AffinityGoal {
         }
 
         private boolean isTeleportFriendlyBlock(BlockPos pos) {
-            PathNodeType pathType = WalkNodeProcessor.getBlockPathTypeStatic(this.entity.level, pos.mutable());
+            BlockPathTypes pathType = WalkNodeEvaluator.getBlockPathTypeStatic(this.entity.level, pos.mutable());
 
-            if (pathType != PathNodeType.WALKABLE) {
+            if (pathType != BlockPathTypes.WALKABLE) {
                 return false;
             }
 
             BlockState posDown = this.entity.level.getBlockState(pos.below());
-            if (!this.teleportToLeaves && posDown.getBlock() instanceof net.minecraft.block.LeavesBlock) {
+            if (!this.teleportToLeaves && posDown.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) {
                 return false;
             }
 
@@ -395,7 +397,7 @@ public class AffinityGoal {
         private LivingEntity owner;
         private int timestamp;
 
-        public OwnerHurtByTargetGoal(MobEntity entity) {
+        public OwnerHurtByTargetGoal(Mob entity) {
             super(entity, false);
             this.setFlags(EnumSet.of(Goal.Flag.TARGET));
         }
@@ -413,7 +415,7 @@ public class AffinityGoal {
             this.owner = owner.get();
             this.attacker = this.owner.getLastHurtByMob();
             int i = this.owner.getLastHurtByMobTimestamp();
-            return i != this.timestamp && this.canAttack(this.attacker, EntityPredicate.DEFAULT) && AffinityGoal.shouldAttackEntity(this.attacker, this.owner);
+            return i != this.timestamp && this.canAttack(this.attacker, TargetingConditions.DEFAULT) && AffinityGoal.shouldAttackEntity(this.attacker, this.owner);
         }
 
         /**
@@ -429,12 +431,12 @@ public class AffinityGoal {
     }
 
     public static class OwnerHurtTargetGoal extends TargetGoal {
-        private final MobEntity entity;
+        private final Mob entity;
         private LivingEntity owner;
         private LivingEntity attacker;
         private int timestamp;
 
-        public OwnerHurtTargetGoal(MobEntity entity) {
+        public OwnerHurtTargetGoal(Mob entity) {
             super(entity, false);
             this.entity = entity;
             this.setFlags(EnumSet.of(Goal.Flag.TARGET));
@@ -453,7 +455,7 @@ public class AffinityGoal {
             this.owner = owner.get();
             this.attacker = this.owner.getLastHurtMob();
             int i = this.owner.getLastHurtMobTimestamp();
-            return i != this.timestamp && this.canAttack(this.attacker, EntityPredicate.DEFAULT) && AffinityGoal.shouldAttackEntity(this.attacker, this.owner);
+            return i != this.timestamp && this.canAttack(this.attacker, TargetingConditions.DEFAULT) && AffinityGoal.shouldAttackEntity(this.attacker, this.owner);
         }
 
         /**

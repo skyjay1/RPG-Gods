@@ -1,16 +1,16 @@
 package rpggods.favor;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 
-public class FavorLevel implements INBTSerializable<CompoundNBT> {
+public class FavorLevel implements INBTSerializable<CompoundTag> {
 
     public static final int MAX_FAVOR_LEVEL = 10;
     public static final long MAX_FAVOR_POINTS = calculateFavor(MAX_FAVOR_LEVEL + 1) - 1;
@@ -36,7 +36,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
         setPerkBonus(0);
     }
 
-    public FavorLevel(final CompoundNBT nbt) {
+    public FavorLevel(final CompoundTag nbt) {
         this.deserializeNBT(nbt);
     }
 
@@ -104,7 +104,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      * @param source   the cause for the change in favor
      * @return the updated favor value
      */
-    public long setFavor(final PlayerEntity playerIn, final ResourceLocation deityIn, final long newFavor, final FavorChangedEvent.Source source) {
+    public long setFavor(final Player playerIn, final ResourceLocation deityIn, final long newFavor, final FavorChangedEvent.Source source) {
         // Post a context-aware event to allow other modifiers
         final FavorChangedEvent.Pre eventPre = new FavorChangedEvent.Pre(playerIn, deityIn, favor, newFavor, source);
         MinecraftForge.EVENT_BUS.post(eventPre);
@@ -126,7 +126,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      * @param source   the cause for the change in favor
      * @return the updated favor value
      */
-    public long addFavor(final PlayerEntity playerIn, final ResourceLocation deityIn, final long toAdd, final FavorChangedEvent.Source source) {
+    public long addFavor(final Player playerIn, final ResourceLocation deityIn, final long toAdd, final FavorChangedEvent.Source source) {
         // Post a context-aware event to allow other modifiers
         if(toAdd != 0) {
             return setFavor(playerIn, deityIn, favor + toAdd, source);
@@ -144,7 +144,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      * @param forced true to ignore decay rate and force the favor to change
      * @return the updated favor value
      */
-    public long depleteFavor(final PlayerEntity playerIn, final ResourceLocation deityIn, final long toRemove,
+    public long depleteFavor(final Player playerIn, final ResourceLocation deityIn, final long toRemove,
                                 final FavorChangedEvent.Source source, final boolean forced) {
         if(enabled && (forced || Math.random() < (decayRate + 1.0F))) {
             return addFavor(playerIn, deityIn, Math.min(Math.abs(favor), Math.abs(toRemove)) * -1 * (long) Math.signum(favor), source);
@@ -200,17 +200,17 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
      * @param playerIn the player
      * @param deity    the deity associated with this favor level
      */
-    public void sendStatusMessage(final PlayerEntity playerIn, final ResourceLocation deity) {
+    public void sendStatusMessage(final Player playerIn, final ResourceLocation deity) {
         long favorToNext = Math.min(calculateFavor(maxLevel), getFavorToNextLevel());
         String sFavorToNext = (favorToNext == 0 ? "--" : String.valueOf(favorToNext));
-        playerIn.displayClientMessage(new TranslationTextComponent("favor.current_favor",
+        playerIn.displayClientMessage(new TranslatableComponent("favor.current_favor",
                 DeityHelper.getName(deity), getFavor(), sFavorToNext, getLevel())
-                .withStyle(TextFormatting.LIGHT_PURPLE), false);
+                .withStyle(ChatFormatting.LIGHT_PURPLE), false);
     }
 
     @Override
-    public CompoundNBT serializeNBT() {
-        final CompoundNBT nbt = new CompoundNBT();
+    public CompoundTag serializeNBT() {
+        final CompoundTag nbt = new CompoundTag();
         nbt.putLong(FAVOR, favor);
         nbt.putInt(MIN_LEVEL, minLevel);
         nbt.putInt(MAX_LEVEL, maxLevel);
@@ -221,7 +221,7 @@ public class FavorLevel implements INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    public void deserializeNBT(CompoundNBT nbt) {
+    public void deserializeNBT(CompoundTag nbt) {
         minLevel = nbt.getInt(MIN_LEVEL);
         maxLevel = nbt.getInt(MAX_LEVEL);
         setFavor(nbt.getLong(FAVOR));

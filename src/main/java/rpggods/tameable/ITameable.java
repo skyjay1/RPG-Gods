@@ -1,11 +1,11 @@
 package rpggods.tameable;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.fml.network.PacketDistributor;
 import rpggods.RPGGods;
@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ITameable extends INBTSerializable<CompoundNBT> {
+public interface ITameable extends INBTSerializable<CompoundTag> {
 
     public static final ResourceLocation REGISTRY_NAME = new ResourceLocation(RPGGods.MODID, "tameable");
 
@@ -42,7 +42,7 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
         }
     }
 
-    default boolean setTamedBy(PlayerEntity player) {
+    default boolean setTamedBy(Player player) {
         if(!getOwnerId().isPresent()) {
             this.setTamed(true);
             this.setOwnerId(player.getUUID());
@@ -51,7 +51,7 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
         return false;
     }
 
-    default Optional<LivingEntity> getOwner(World world) {
+    default Optional<LivingEntity> getOwner(Level world) {
         Optional<UUID> uuid = this.getOwnerId();
         return uuid.isPresent() ? Optional.ofNullable(world.getPlayerByUUID(uuid.get())) : Optional.empty();
     }
@@ -61,8 +61,8 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    default CompoundNBT serializeNBT() {
-        final CompoundNBT nbt = new CompoundNBT();
+    default CompoundTag serializeNBT() {
+        final CompoundTag nbt = new CompoundTag();
         if(getOwnerId().isPresent()) {
             nbt.putUUID(OWNER, getOwnerId().get());
         }
@@ -71,7 +71,7 @@ public interface ITameable extends INBTSerializable<CompoundNBT> {
     }
 
     @Override
-    default void deserializeNBT(final CompoundNBT nbt) {
+    default void deserializeNBT(final CompoundTag nbt) {
         UUID uuid = null;
         if (nbt.hasUUID(OWNER)) {
             uuid = nbt.getUUID(OWNER);

@@ -1,8 +1,8 @@
 package rpggods.altar;
 
-import net.minecraft.util.IStringSerializable;
+import net.minecraft.util.StringRepresentable;
 
-public enum ModelPart implements IStringSerializable {
+public enum ModelPart implements StringRepresentable {
   HEAD("head"), 
   BODY("body"), 
   LEFT_ARM("left_arm"), 

@@ -2,7 +2,7 @@ package rpggods.deity;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 

@@ -1,21 +1,23 @@
 package rpggods.item;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.inventory.container.SimpleNamedContainerProvider;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.UseAction;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkHooks;
 import rpggods.RPGGods;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.gui.FavorContainer;
+
+import net.minecraft.world.item.Item.Properties;
 
 public class ScrollItem extends Item {
 
@@ -24,20 +26,20 @@ public class ScrollItem extends Item {
     }
 
     @Override
-    public ActionResult<ItemStack> use(World level, PlayerEntity player, Hand hand) {
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         // prevent use when there are no registered deities
         if(RPGGods.DEITY_HELPER.isEmpty()) {
-            return ActionResult.pass(player.getItemInHand(hand));
+            return InteractionResultHolder.pass(player.getItemInHand(hand));
         }
         // begin using item (to enable texture change) and open GUI
         player.startUsingItem(hand);
-        if(player instanceof ServerPlayerEntity) {
+        if(player instanceof ServerPlayer) {
             LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
             if(favor.isPresent()) {
                 IFavor ifavor = favor.orElse(null);
                 // prevent use when favor is disabled
                 if(!ifavor.isEnabled()) {
-                    return ActionResult.pass(player.getItemInHand(hand));
+                    return InteractionResultHolder.pass(player.getItemInHand(hand));
                 }
                 // prevent use when there are no unlocked deities
                 boolean unlocked = false;
@@ -48,13 +50,13 @@ public class ScrollItem extends Item {
                     }
                 }
                 if(!unlocked) {
-                    return ActionResult.pass(player.getItemInHand(hand));
+                    return InteractionResultHolder.pass(player.getItemInHand(hand));
                 }
                 // open Favor GUI
-                NetworkHooks.openGui((ServerPlayerEntity)player,
-                        new SimpleNamedContainerProvider((id, inventory, p) ->
+                NetworkHooks.openGui((ServerPlayer)player,
+                        new SimpleMenuProvider((id, inventory, p) ->
                                 new FavorContainer(id, inventory, ifavor, null),
-                                StringTextComponent.EMPTY),
+                                TextComponent.EMPTY),
                         buf -> {
                             buf.writeNbt(ifavor.serializeNBT());
                             buf.writeBoolean(false);
@@ -62,12 +64,12 @@ public class ScrollItem extends Item {
                 );
             }
         }
-        return ActionResult.success(player.getItemInHand(hand));
+        return InteractionResultHolder.success(player.getItemInHand(hand));
     }
 
     @Override
-    public UseAction getUseAnimation(ItemStack item) {
-        return UseAction.BLOCK;
+    public UseAnim getUseAnimation(ItemStack item) {
+        return UseAnim.BLOCK;
     }
 
     public int getUseDuration(ItemStack item) {

@@ -1,11 +1,11 @@
 package rpggods.client.screen;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.button.Button;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.StringTextComponent;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.network.chat.TextComponent;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -37,7 +37,7 @@ public class ScrollButton<T extends Screen> extends Button {
                         final int width, final int height, final int uX, final int vY,
                         final ResourceLocation textureIn, final boolean isVertical, final Predicate<T> isEnabled,
                         final Consumer<ScrollButton<T>> onScrollEnd) {
-        super(x, y, width, height, StringTextComponent.EMPTY, b -> {
+        super(x, y, width, height, TextComponent.EMPTY, b -> {
         });
         screen = gui;
         u = uX;
@@ -58,13 +58,13 @@ public class ScrollButton<T extends Screen> extends Button {
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+    public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         if (this.visible) {
             screen.getMinecraft().getTextureManager().bind(texture);
             final boolean isEnabled = enabled.test(screen);
             final float scroll = isEnabled ? scrollAmount : 0.0F;
             final int vOffset = isEnabled ? 0 : vHeight;
-            final int offset = MathHelper.clamp((int) (scroll * this.height - this.vHeight / 2), 1, this.height - vHeight - 1);
+            final int offset = Mth.clamp((int) (scroll * this.height - this.vHeight / 2), 1, this.height - vHeight - 1);
             final int dx = vertical ? 1 : offset;
             final int dy = vertical ? offset : 1;
             this.blit(matrixStack, this.x + dx, this.y + dy, u, v + vOffset, uWidth, vHeight);
@@ -97,7 +97,7 @@ public class ScrollButton<T extends Screen> extends Button {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (enabled.test(screen)) {
-            scrollAmount = MathHelper.clamp((float) (scrollAmount - delta), 0.0F, 1.0F);
+            scrollAmount = Mth.clamp((float) (scrollAmount - delta), 0.0F, 1.0F);
             scrollEndHandler.accept(this);
             return true;
         }
@@ -106,9 +106,9 @@ public class ScrollButton<T extends Screen> extends Button {
 
     private void updateScrollAmount(final double mouseX, final double mouseY) {
         if(vertical) {
-            scrollAmount = MathHelper.clamp((float) (mouseY - this.y) / (float) this.height, 0.0F, 1.0F);
+            scrollAmount = Mth.clamp((float) (mouseY - this.y) / (float) this.height, 0.0F, 1.0F);
         } else {
-            scrollAmount = MathHelper.clamp((float) (mouseX - this.x) / (float) this.width, 0.0F, 1.0F);
+            scrollAmount = Mth.clamp((float) (mouseX - this.x) / (float) this.width, 0.0F, 1.0F);
         }
     }
 

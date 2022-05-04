@@ -1,10 +1,10 @@
 package rpggods.network;
 
 import com.mojang.serialization.DataResult;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
@@ -38,9 +38,9 @@ public class SSacrificePacket {
      * @param buf the PacketBuffer
      * @return a new instance of a SSacrificePacket based on the PacketBuffer
      */
-    public static SSacrificePacket fromBytes(final PacketBuffer buf) {
+    public static SSacrificePacket fromBytes(final FriendlyByteBuf buf) {
         final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundNBT sNBT = buf.readNbt();
+        final CompoundTag sNBT = buf.readNbt();
         final Optional<Sacrifice> sEffect = RPGGods.SACRIFICE.readObject(sNBT)
                 .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Sacrifice from NBT for packet\n" + error));
         return new SSacrificePacket(sName, sEffect.orElse(Sacrifice.EMPTY));
@@ -52,11 +52,11 @@ public class SSacrificePacket {
      * @param msg the SSacrificePacket
      * @param buf the PacketBuffer
      */
-    public static void toBytes(final SSacrificePacket msg, final PacketBuffer buf) {
-        DataResult<INBT> nbtResult = RPGGods.SACRIFICE.writeObject(msg.sacrifice);
-        INBT tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Sacrifice to NBT for packet\n" + error)).get();
+    public static void toBytes(final SSacrificePacket msg, final FriendlyByteBuf buf) {
+        DataResult<Tag> nbtResult = RPGGods.SACRIFICE.writeObject(msg.sacrifice);
+        Tag tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Sacrifice to NBT for packet\n" + error)).get();
         buf.writeResourceLocation(msg.sacrificeId);
-        buf.writeNbt((CompoundNBT) tag);
+        buf.writeNbt((CompoundTag) tag);
     }
 
     /**

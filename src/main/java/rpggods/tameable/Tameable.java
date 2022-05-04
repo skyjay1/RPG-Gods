@@ -1,8 +1,8 @@
 package rpggods.tameable;
 
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
-import net.minecraft.util.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.core.Direction;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
@@ -53,21 +53,21 @@ public class Tameable implements ITameable {
     public static class Storage implements Capability.IStorage<ITameable> {
 
         @Override
-        public INBT writeNBT(Capability<ITameable> capability, ITameable instance, Direction side) {
+        public Tag writeNBT(Capability<ITameable> capability, ITameable instance, Direction side) {
             return instance.serializeNBT();
         }
 
         @Override
-        public void readNBT(Capability<ITameable> capability, ITameable instance, Direction side, INBT nbt) {
-            if (nbt instanceof CompoundNBT) {
-                instance.deserializeNBT((CompoundNBT) nbt);
+        public void readNBT(Capability<ITameable> capability, ITameable instance, Direction side, Tag nbt) {
+            if (nbt instanceof CompoundTag) {
+                instance.deserializeNBT((CompoundTag) nbt);
             } else {
                 RPGGods.LOGGER.error("Failed to read Tameable capability from NBT of type " + (nbt != null ? nbt.getType().getName() : "null"));
             }
         }
     }
 
-    public static class Provider implements ICapabilitySerializable<CompoundNBT> {
+    public static class Provider implements ICapabilitySerializable<CompoundTag> {
         public ITameable instance = RPGGods.TAMEABLE.getDefaultInstance();
 
         @Override
@@ -76,12 +76,12 @@ public class Tameable implements ITameable {
         }
 
         @Override
-        public CompoundNBT serializeNBT() {
-            return (CompoundNBT) RPGGods.TAMEABLE.getStorage().writeNBT(RPGGods.TAMEABLE, this.instance, null);
+        public CompoundTag serializeNBT() {
+            return (CompoundTag) RPGGods.TAMEABLE.getStorage().writeNBT(RPGGods.TAMEABLE, this.instance, null);
         }
 
         @Override
-        public void deserializeNBT(CompoundNBT nbt) {
+        public void deserializeNBT(CompoundTag nbt) {
             RPGGods.TAMEABLE.getStorage().readNBT(RPGGods.TAMEABLE, this.instance, null, nbt);
         }
     }
