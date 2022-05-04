@@ -2,7 +2,7 @@ package rpggods.altar;
 
 import net.minecraft.util.StringRepresentable;
 
-public enum ModelPart implements StringRepresentable {
+public enum HumanoidPart implements StringRepresentable {
   HEAD("head"), 
   BODY("body"), 
   LEFT_ARM("left_arm"), 
@@ -12,7 +12,7 @@ public enum ModelPart implements StringRepresentable {
   OFFSET("offset");
   
   private String name;
-  private ModelPart(final String n) {
+  private HumanoidPart(final String n) {
     this.name = n;
   }
   

@@ -5,7 +5,6 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -23,7 +22,6 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.common.util.Constants;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
@@ -31,8 +29,6 @@ import rpggods.entity.AltarEntity;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Random;
-
-import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 
 public class GlowBlock extends Block implements SimpleWaterloggedBlock {
 
@@ -68,9 +64,9 @@ public class GlowBlock extends Block implements SimpleWaterloggedBlock {
     public void onPlace(final BlockState state, final Level worldIn, final BlockPos pos, final BlockState oldState, final boolean isMoving) {
         state.setValue(WATERLOGGED, oldState.getFluidState().is(FluidTags.WATER));
         // schedule next tick
-        worldIn.getBlockTicks().scheduleTick(pos, this, 4);
+        worldIn.scheduleTick(pos, this, 4);
         if (state.getValue(BlockStateProperties.WATERLOGGED)) {
-            worldIn.getLiquidTicks().scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(worldIn));
+            worldIn.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(worldIn));
         }
     }
 
@@ -78,9 +74,9 @@ public class GlowBlock extends Block implements SimpleWaterloggedBlock {
     public void tick(final BlockState state, final ServerLevel worldIn, final BlockPos pos, final Random rand) {
         super.tick(state, worldIn, pos, rand);
         // schedule next tick
-        worldIn.getBlockTicks().scheduleTick(pos, this, 4);
+        worldIn.scheduleTick(pos, this, 4);
         if (state.getValue(BlockStateProperties.WATERLOGGED)) {
-            worldIn.getLiquidTicks().scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(worldIn));
+            worldIn.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(worldIn));
         }
         // check for altar entity
         AABB aabb = new AABB(pos);
@@ -96,13 +92,13 @@ public class GlowBlock extends Block implements SimpleWaterloggedBlock {
         }
         // remove this block if no altar found with valid light level
         if(!hasAltar) {
-            removeGlowBlock(worldIn, state, pos, Constants.BlockFlags.DEFAULT);
+            removeGlowBlock(worldIn, state, pos, UPDATE_ALL);
         }
     }
 
     @Override
-    public boolean isAir(BlockState state, BlockGetter world, BlockPos pos) {
-        return true;
+    protected boolean isAir(BlockState state) {
+        return !state.getValue(WATERLOGGED);
     }
 
     @Override
@@ -144,10 +140,5 @@ public class GlowBlock extends Block implements SimpleWaterloggedBlock {
     @Override
     public RenderShape getRenderShape(final BlockState state) {
         return RenderShape.INVISIBLE;
-    }
-
-    @Override
-    public void fallOn(final Level worldIn, final BlockPos pos, final Entity entityIn, final float fallDistance) {
-        // do nothing
     }
 }

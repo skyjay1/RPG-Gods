@@ -11,8 +11,8 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.common.util.LogicalSidedProvider;
 import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.fml.LogicalSidedProvider;
 import rpggods.RPGGods;
 
 import javax.annotation.Nullable;
@@ -105,7 +105,7 @@ public class GenericJsonReloadListener<T> extends SimpleJsonResourceReloadListen
         RPGGods.LOGGER.debug("Found " + OBJECTS.size() + " entries");
         boolean isServer = true;
         try {
-            LogicalSidedProvider.INSTANCE.get(LogicalSide.SERVER);
+            LogicalSidedProvider.WORKQUEUE.get(LogicalSide.SERVER);
         } catch (Exception e) {
             isServer = false;
         }

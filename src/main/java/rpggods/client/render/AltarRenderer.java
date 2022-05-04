@@ -10,7 +10,6 @@ import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
@@ -34,9 +33,8 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.altar.AltarPose;
-import rpggods.altar.ModelPart;
+import rpggods.altar.HumanoidPart;
 import rpggods.client.screen.AltarScreen;
-import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import java.util.HashMap;
@@ -97,7 +95,7 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
         RenderType rendertype = this.getRenderType(entityIn, flag, flag1, flag2);
 
         // rotate around body and translate according to pose offsets
-        getModel().translateRotateAroundBody(pose.get(ModelPart.OFFSET), pose.get(ModelPart.BODY), matrixStackIn, partialTicks);
+        getModel().translateRotateAroundBody(pose.get(HumanoidPart.OFFSET), pose.get(HumanoidPart.BODY), matrixStackIn, partialTicks);
         // translate and rotate so the model is not upside-down
         matrixStackIn.translate(0.0F, 2.0F + baseHeight, 0.0F);
         matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(180.0F));

@@ -3,11 +3,11 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.material.Material;
-import net.minecraft.world.entity.AgableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.entity.EntityType;
@@ -25,7 +25,6 @@ import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.particles.ParticleOptions;
@@ -33,8 +32,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.potion.PotionUtils;
-import net.minecraft.potion.Potions;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.util.StringRepresentable;
@@ -69,7 +66,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.function.Supplier;
 
-public class PerkAction {
+public final class PerkAction {
 
     public static final PerkAction EMPTY = new PerkAction(PerkAction.Type.FAVOR, Optional.empty(),
             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -116,8 +113,8 @@ public class PerkAction {
 
     /**
      * Runs a single Perk without any of the preliminary checks or cooldown.
-     * If you want these, call {@link FavorEventHandler#runPerk(Perk, PlayerEntity, IFavor)} or
-     * {@link FavorEventHandler#runPerk(Perk, PlayerEntity, IFavor, Optional, Optional, Optional)} instead.
+     * If you want these, call {@link FavorEventHandler#runPerk(Perk, Player, IFavor)} or
+     * {@link FavorEventHandler#runPerk(Perk, Player, IFavor, Optional, Optional, Optional)} instead.
      * @param deity the Deity that is associated with the perk
      * @param player the player
      * @param favor the player's favor
@@ -202,7 +199,7 @@ public class PerkAction {
                 }
                 return false;
             case OFFSPRING:
-                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof AgableMob
+                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof AgeableMob
                         && object.isPresent() && object.get() instanceof BabyEntitySpawnEvent) {
                     int childCount = Math.round(getMultiplier().get());
                     if(childCount < 1) {
@@ -214,9 +211,9 @@ public class PerkAction {
                         }
                     } else if(childCount > 1) {
                         // number of babies is more than one, so spawn additional mobs
-                        AgableMob parent = (AgableMob) entity.get();
+                        AgeableMob parent = (AgeableMob) entity.get();
                         for(int i = 1; i < childCount; i++) {
-                            AgableMob bonusChild = (AgableMob) parent.getType().create(parent.level);
+                            AgeableMob bonusChild = (AgeableMob) parent.getType().create(parent.level);
                             if(bonusChild != null) {
                                 bonusChild.copyPosition(parent);
                                 bonusChild.setBaby(true);
@@ -329,7 +326,7 @@ public class PerkAction {
             if(!nbt.contains("ShowParticles")) {
                 nbt.putBoolean("ShowParticles", false);
             }
-            MobEffect potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")));
+            MobEffect potion = ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(nbt.getString("Potion")));
             if(potion != null) {
                 nbt.putByte("Id", (byte) MobEffect.getId(potion));
                 return Optional.of(MobEffectInstance.load(nbt));
@@ -380,7 +377,7 @@ public class PerkAction {
                         return Optional.of(entity);
                     }
                 }
-                entity.remove();
+                entity.discard();
             }
         }
         return Optional.empty();

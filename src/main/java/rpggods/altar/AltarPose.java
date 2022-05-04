@@ -5,7 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import com.mojang.math.Vector3f;
 import net.minecraftforge.common.util.INBTSerializable;
-import rpggods.deity.Altar;
 
 import java.util.EnumMap;
 import java.util.Map.Entry;
@@ -15,60 +14,60 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
   public static final AltarPose EMPTY = new AltarPose();
 
   public static final AltarPose WALKING = new AltarPose()
-          .set(ModelPart.HEAD, 5, 0, 0)
-          .set(ModelPart.LEFT_ARM, 30, 0, -2.5F)
-          .set(ModelPart.RIGHT_ARM, -30, 0, 2.5F)
-          .set(ModelPart.LEFT_LEG, -20, 0, -2)
-          .set(ModelPart.RIGHT_LEG, 20, 0, 2);
+          .set(HumanoidPart.HEAD, 5, 0, 0)
+          .set(HumanoidPart.LEFT_ARM, 30, 0, -2.5F)
+          .set(HumanoidPart.RIGHT_ARM, -30, 0, 2.5F)
+          .set(HumanoidPart.LEFT_LEG, -20, 0, -2)
+          .set(HumanoidPart.RIGHT_LEG, 20, 0, 2);
 
   public static final AltarPose STANDING_HOLDING = new AltarPose()
-          .set(ModelPart.HEAD, 5, 0, 0)
-          .set(ModelPart.LEFT_ARM, 0, 0, -2.5F)
-          .set(ModelPart.RIGHT_ARM, -30, 0, 2.5F)
-          .set(ModelPart.LEFT_LEG, 0, 0, -2)
-          .set(ModelPart.RIGHT_LEG, 0, 0, 2);
+          .set(HumanoidPart.HEAD, 5, 0, 0)
+          .set(HumanoidPart.LEFT_ARM, 0, 0, -2.5F)
+          .set(HumanoidPart.RIGHT_ARM, -30, 0, 2.5F)
+          .set(HumanoidPart.LEFT_LEG, 0, 0, -2)
+          .set(HumanoidPart.RIGHT_LEG, 0, 0, 2);
 
   public static final AltarPose STANDING_HOLDING_DRAMATIC = new AltarPose()
-          .set(ModelPart.HEAD, -5, 0, 0)
-          .set(ModelPart.LEFT_ARM, 0, 0, -2.5F)
-          .set(ModelPart.RIGHT_ARM, -90, 0, 2.5F)
-          .set(ModelPart.LEFT_LEG, 0, 0, -2)
-          .set(ModelPart.RIGHT_LEG, 0, 0, 2);
+          .set(HumanoidPart.HEAD, -5, 0, 0)
+          .set(HumanoidPart.LEFT_ARM, 0, 0, -2.5F)
+          .set(HumanoidPart.RIGHT_ARM, -90, 0, 2.5F)
+          .set(HumanoidPart.LEFT_LEG, 0, 0, -2)
+          .set(HumanoidPart.RIGHT_LEG, 0, 0, 2);
 
   public static final AltarPose STANDING_RAISED = new AltarPose()
-          .set(ModelPart.HEAD, -20, 0, 0)
-          .set(ModelPart.LEFT_ARM, 0, -90F, -130F)
-          .set(ModelPart.RIGHT_ARM, 0, 90F, 130F)
-          .set(ModelPart.LEFT_LEG, 0, 0, -2)
-          .set(ModelPart.RIGHT_LEG, 0, 0, 2);
+          .set(HumanoidPart.HEAD, -20, 0, 0)
+          .set(HumanoidPart.LEFT_ARM, 0, -90F, -130F)
+          .set(HumanoidPart.RIGHT_ARM, 0, 90F, 130F)
+          .set(HumanoidPart.LEFT_LEG, 0, 0, -2)
+          .set(HumanoidPart.RIGHT_LEG, 0, 0, 2);
 
   public static final AltarPose WEEPING = new AltarPose()
-          .set(ModelPart.HEAD, 12, 0, 0)
-          .set(ModelPart.LEFT_ARM, -125F, 0, -45F)
-          .set(ModelPart.RIGHT_ARM, -125F, 0, 45F)
-          .set(ModelPart.LEFT_LEG, 4, 0, -2)
-          .set(ModelPart.RIGHT_LEG, -4, 0, 2);
+          .set(HumanoidPart.HEAD, 12, 0, 0)
+          .set(HumanoidPart.LEFT_ARM, -125F, 0, -45F)
+          .set(HumanoidPart.RIGHT_ARM, -125F, 0, 45F)
+          .set(HumanoidPart.LEFT_LEG, 4, 0, -2)
+          .set(HumanoidPart.RIGHT_LEG, -4, 0, 2);
 
   public static final AltarPose DAB = new AltarPose()
-          .set(ModelPart.HEAD, 38, 0, 0)
-          .set(ModelPart.LEFT_ARM, -100F, 45F, 0)
-          .set(ModelPart.RIGHT_ARM, -108F, 64F, 0)
-          .set(ModelPart.LEFT_LEG, 0, 0, -4)
-          .set(ModelPart.RIGHT_LEG, 0, 0, 4);
+          .set(HumanoidPart.HEAD, 38, 0, 0)
+          .set(HumanoidPart.LEFT_ARM, -100F, 45F, 0)
+          .set(HumanoidPart.RIGHT_ARM, -108F, 64F, 0)
+          .set(HumanoidPart.LEFT_LEG, 0, 0, -4)
+          .set(HumanoidPart.RIGHT_LEG, 0, 0, 4);
 
 
   public static final Codec<AltarPose> CODEC = CompoundTag.CODEC.xmap(AltarPose::new, AltarPose::serializeNBT);
 
-  private final EnumMap<ModelPart, Vector3f> angles = new EnumMap<>(ModelPart.class);
+  private final EnumMap<HumanoidPart, Vector3f> angles = new EnumMap<>(HumanoidPart.class);
   
   public AltarPose() {
-    angles.put(ModelPart.HEAD, new Vector3f(0, 0, 0));
-    angles.put(ModelPart.BODY, new Vector3f(0, 0, 0));
-    angles.put(ModelPart.LEFT_ARM, new Vector3f(0, 0, 0));
-    angles.put(ModelPart.RIGHT_ARM, new Vector3f(0, 0, 0));
-    angles.put(ModelPart.LEFT_LEG, new Vector3f(0, 0, 0));
-    angles.put(ModelPart.RIGHT_LEG, new Vector3f(0, 0, 0));
-    angles.put(ModelPart.OFFSET, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.HEAD, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.BODY, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.LEFT_ARM, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.RIGHT_ARM, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.LEFT_LEG, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.RIGHT_LEG, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.OFFSET, new Vector3f(0, 0, 0));
   }
   
   public AltarPose(final CompoundTag tag) {
@@ -83,7 +82,7 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
    * @param z the z rotation in degrees
    * @return the AltarPose for chaining instances
    **/
-  public AltarPose set(final ModelPart p, final float x, final float y, final float z) {
+  public AltarPose set(final HumanoidPart p, final float x, final float y, final float z) {
     return setRadians(p, (float)Math.toRadians(x), (float)Math.toRadians(y), (float)Math.toRadians(z));
   }
   
@@ -95,7 +94,7 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
    * @param z the z rotation in radians
    * @return the AltarPose for chaining instances
    **/
-  public AltarPose setRadians(final ModelPart p, final float x, final float y, final float z) {
+  public AltarPose setRadians(final HumanoidPart p, final float x, final float y, final float z) {
     angles.put(p, new Vector3f(x, y, z));
     return this;
   }
@@ -104,14 +103,14 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
    * @param p the model part
    * @return a vector of 3 floats representing x, y, and z angles in radians
    **/
-  public Vector3f get(final ModelPart p) {
+  public Vector3f get(final HumanoidPart p) {
     return angles.get(p);
   }
   
   @Override
   public CompoundTag serializeNBT() {
     CompoundTag tag = new CompoundTag();
-    for(final Entry<ModelPart, Vector3f> e : angles.entrySet()) {
+    for(final Entry<HumanoidPart, Vector3f> e : angles.entrySet()) {
       final CompoundTag eTag = new CompoundTag();
       eTag.put("x", FloatTag.valueOf(e.getValue().x()));
       eTag.put("y", FloatTag.valueOf(e.getValue().y()));
@@ -124,7 +123,7 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
   @Override
   public void deserializeNBT(CompoundTag nbt) {
     String key;
-    for (final ModelPart m : ModelPart.values()) {
+    for (final HumanoidPart m : HumanoidPart.values()) {
       final CompoundTag eTag = nbt.getCompound(m.getSerializedName());
       float x = 0.0F;
       float y = 0.0F;
@@ -141,7 +140,7 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
   @Override
   public String toString() {
     final StringBuilder builder = new StringBuilder("AltarPose{\n");
-    for(final Entry<ModelPart, Vector3f> entry : angles.entrySet()) {
+    for(final Entry<HumanoidPart, Vector3f> entry : angles.entrySet()) {
       builder.append("  ");
       builder.append(entry.getKey().getSerializedName());
       builder.append(" : ");

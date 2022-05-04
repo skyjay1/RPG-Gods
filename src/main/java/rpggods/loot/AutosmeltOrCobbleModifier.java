@@ -3,6 +3,7 @@ package rpggods.loot;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -40,13 +41,14 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
 
     private final Block stone;
     private final ResourceLocation oresTag;
-    private final Tag<Block> ores;
+    private final TagKey<Block> ores;
 
     protected AutosmeltOrCobbleModifier(final LootItemCondition[] conditionsIn, final Block stoneIn, final ResourceLocation oresTagIn) {
         super(conditionsIn);
         stone = stoneIn;
         oresTag = oresTagIn;
-        ores = BlockTags.createOptional(oresTagIn);
+        // TODO make sure this works
+        ores = BlockTags.create(oresTagIn);
     }
 
     @Override

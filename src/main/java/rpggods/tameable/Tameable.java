@@ -49,7 +49,7 @@ public class Tameable implements ITameable {
     public void setOwnerId(@Nullable UUID ownerId) {
         this.owner = Optional.ofNullable(ownerId);
     }
-
+/*
     public static class Storage implements Capability.IStorage<ITameable> {
 
         @Override
@@ -65,7 +65,7 @@ public class Tameable implements ITameable {
                 RPGGods.LOGGER.error("Failed to read Tameable capability from NBT of type " + (nbt != null ? nbt.getType().getName() : "null"));
             }
         }
-    }
+    }*/
 
     public static class Provider implements ICapabilitySerializable<CompoundTag> {
         public ITameable instance = RPGGods.TAMEABLE.getDefaultInstance();

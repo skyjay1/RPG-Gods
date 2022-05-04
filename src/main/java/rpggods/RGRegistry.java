@@ -17,7 +17,10 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.extensions.IForgeContainerType;
+import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
@@ -36,11 +39,21 @@ import rpggods.loot.AutosmeltOrCobbleModifier;
 import rpggods.loot.CropMultiplierModifier;
 import rpggods.recipe.ShapedAltarRecipe;
 import rpggods.recipe.ShapelessAltarRecipe;
+import rpggods.tameable.ITameable;
 
 import java.util.Collections;
 import java.util.List;
 
 public final class RGRegistry {
+
+    public static final class CapabilityReg {
+
+        @SubscribeEvent
+        public static void registerCapabilities(final RegisterCapabilitiesEvent event) {
+            event.register(IFavor.class);
+            event.register(ITameable.class);
+        }
+    }
 
     public static final class EntityReg {
 
@@ -130,14 +143,14 @@ public final class RGRegistry {
         public static void registerContainers(final RegistryEvent.Register<MenuType<?>> event) {
             RPGGods.LOGGER.debug("registerContainers");
             // Altar screen requires UUID of altar entity
-            MenuType<AltarContainer> altarContainer = IForgeContainerType.create((windowId, inv, data) -> {
+            MenuType<AltarContainer> altarContainer = IForgeMenuType.create((windowId, inv, data) -> {
                 final int entityId = data.readInt();
                 Entity entity = inv.player.level.getEntity(entityId);
                 AltarEntity altarEntity = (AltarEntity) entity;
                 return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity);
             });
             // Favor screen requires Favor as a Compound Tag and Deity ID as a ResourceLocation
-            MenuType<FavorContainer> favorContainer = IForgeContainerType.create((windowId, inv, data) -> {
+            MenuType<FavorContainer> favorContainer = IForgeMenuType.create((windowId, inv, data) -> {
                 final IFavor favor = RPGGods.FAVOR.getDefaultInstance();
                 RPGGods.FAVOR.readNBT(favor, null, data.readNbt());
                 boolean hasDeity = data.readBoolean();
@@ -166,15 +179,24 @@ public final class RGRegistry {
 
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
-            registerEntityRenderers();
             event.enqueueWork(() -> registerContainerRenders());
             event.enqueueWork(() -> registerModelProperties());
         }
 
-        private static void registerEntityRenderers() {
+        @SubscribeEvent
+        private static void registerEntityLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
             RPGGods.LOGGER.debug("registerEntityRenderers");
-            RenderingRegistry.registerEntityRenderingHandler(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
+            // TODO
+            //RenderingRegistry.registerEntityRenderingHandler(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
         }
+
+        @SubscribeEvent
+        private static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+            RPGGods.LOGGER.debug("registerEntityRenderers");
+            // TODO
+            //RenderingRegistry.registerEntityRenderingHandler(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
+        }
+
 
         private static void registerContainerRenders() {
             RPGGods.LOGGER.debug("registerContainerRenders");
@@ -188,10 +210,10 @@ public final class RGRegistry {
             RPGGods.LOGGER.debug("registerModelProperties");
             // Scroll properites
             ItemProperties.register(ItemReg.SCROLL, new ResourceLocation("open"),
-                    (item, world, entity) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
+                    (item, world, entity, i) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
             // Altar properties
 
-            ItemProperties.register(ItemReg.ALTAR, new ResourceLocation("index"), (item, world, entity) -> {
+            ItemProperties.register(ItemReg.ALTAR, new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
                 if(altars.isEmpty()) {
                     altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());

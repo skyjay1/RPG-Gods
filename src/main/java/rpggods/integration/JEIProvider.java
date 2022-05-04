@@ -2,16 +2,15 @@ package rpggods.integration;
 
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
-import mezz.jei.api.constants.VanillaRecipeCategoryUid;
 import mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter;
+import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IAdvancedRegistration;
-import mezz.jei.api.registration.IModIngredientRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.registration.IVanillaCategoryExtensionRegistration;
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.Recipe;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.item.AltarItem;
@@ -43,10 +42,12 @@ public class JEIProvider implements IModPlugin {
 
     @Override
     public void registerRecipes(final IRecipeRegistration registry) {
-        final List<IRecipe<?>> list = Minecraft.getInstance().level.getRecipeManager().getRecipes().stream()
+        final List<Recipe<?>> list = Minecraft.getInstance().level.getRecipeManager().getRecipes().stream()
                 .filter(r -> r.getResultItem().getItem() instanceof AltarItem)
                 .collect(Collectors.toList());
-        registry.addRecipes(list, VanillaRecipeCategoryUid.CRAFTING);
+        // RecipeType<T> recipeType, List<T> recipes
+        // TODO
+        //registry.addRecipes(RecipeTypes.CRAFTING, list);
     }
 
     @Override

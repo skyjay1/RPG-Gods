@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Registry;
+import net.minecraft.world.level.block.state.BlockState;
 import rpggods.deity.Offering;
 
 public class AltarItems {
@@ -24,7 +25,7 @@ public class AltarItems {
             ITEM_OR_STACK_CODEC.optionalFieldOf("feet", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.FEET)),
             ITEM_OR_STACK_CODEC.optionalFieldOf("mainhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.MAINHAND)),
             ITEM_OR_STACK_CODEC.optionalFieldOf("offhand", ItemStack.EMPTY).forGetter(o -> o.getItemStackFromSlot(EquipmentSlot.OFFHAND)),
-            Registry.BLOCK.optionalFieldOf("block", Blocks.AIR).forGetter(AltarItems::getBlock),
+            Registry.BLOCK.byNameCodec().optionalFieldOf("block",Blocks.AIR).forGetter(AltarItems::getBlock),
             Codec.BOOL.optionalFieldOf("armor_locked", false).forGetter(AltarItems::isArmorLocked),
             Codec.BOOL.optionalFieldOf("hands_locked", false).forGetter(AltarItems::isHandsLocked),
             Codec.BOOL.optionalFieldOf("block_locked", false).forGetter(AltarItems::isBlockLocked)

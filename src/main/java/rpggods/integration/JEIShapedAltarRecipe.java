@@ -7,6 +7,7 @@ import mezz.jei.api.ingredients.IIngredients;
 import mezz.jei.plugins.vanilla.crafting.CraftingCategoryExtension;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.Ingredient;
+import net.minecraft.world.item.ItemStack;
 import rpggods.item.AltarItem;
 import rpggods.recipe.ShapedAltarRecipe;
 

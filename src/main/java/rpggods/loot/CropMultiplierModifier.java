@@ -3,6 +3,7 @@ package rpggods.loot;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.Entity;
@@ -32,12 +33,13 @@ import java.util.List;
 public class CropMultiplierModifier extends LootModifier {
 
     private final ResourceLocation cropsTag;
-    private final Tag<Block> crops;
+    private final TagKey<Block> crops;
 
     protected CropMultiplierModifier(final LootItemCondition[] conditionsIn, final ResourceLocation cropsTagIn) {
         super(conditionsIn);
         cropsTag = cropsTagIn;
-        crops = BlockTags.bind(cropsTagIn.toString());
+        // TODO make sure this works
+        crops = BlockTags.create(cropsTagIn);
     }
 
     @Override

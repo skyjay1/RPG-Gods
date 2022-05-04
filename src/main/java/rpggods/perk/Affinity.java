@@ -6,14 +6,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 
 import java.util.Optional;
 
-public class Affinity {
+public final class Affinity {
 
     public static final Affinity EMPTY = new Affinity(Affinity.Type.PASSIVE, new ResourceLocation("null"));
 

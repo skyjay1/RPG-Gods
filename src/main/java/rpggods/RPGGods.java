@@ -6,18 +6,18 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.common.capabilities.CapabilityToken;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkRegistry;
-import net.minecraftforge.fml.network.PacketDistributor;
-import net.minecraftforge.fml.network.simple.SimpleChannel;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import rpggods.deity.Altar;
@@ -57,11 +57,9 @@ public class RPGGods {
     public static RGConfig CONFIG = new RGConfig(CONFIG_BUILDER);
     private static final ForgeConfigSpec CONFIG_SPEC = CONFIG_BUILDER.build();
 
-    @CapabilityInject(IFavor.class)
-    public static final Capability<IFavor> FAVOR = null;
+    public static Capability<IFavor> FAVOR = CapabilityManager.get(new CapabilityToken<>(){});
 
-    @CapabilityInject(ITameable.class)
-    public static final Capability<ITameable> TAMEABLE = null;
+    public static Capability<ITameable> TAMEABLE = CapabilityManager.get(new CapabilityToken<>(){});
 
     private static final String PROTOCOL_VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, "channel"),
@@ -113,6 +111,7 @@ public class RPGGods {
     public RPGGods() {
         LOGGER.debug("registerListeners");
         // Mod event bus listeners
+        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.CapabilityReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.BlockReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ItemReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.EntityReg.class);
@@ -151,16 +150,14 @@ public class RPGGods {
     }
 
     public static void setup(final FMLCommonSetupEvent event) {
-        // register capability
-        CapabilityManager.INSTANCE.register(IFavor.class, new Favor.Storage(), Favor::new);
-        CapabilityManager.INSTANCE.register(ITameable.class, new Tameable.Storage(), Tameable::new);
+
     }
 
-    public static void loadConfig(final ModConfig.Loading event) {
+    public static void loadConfig(final ModConfigEvent.Loading event) {
         CONFIG.bake();
     }
 
-    public static void reloadConfig(final ModConfig.Reloading event) {
+    public static void reloadConfig(final ModConfigEvent.Reloading event) {
         CONFIG.bake();
     }
 }

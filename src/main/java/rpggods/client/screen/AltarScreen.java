@@ -24,15 +24,13 @@ import net.minecraft.network.chat.TranslatableComponent;
 import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
-import rpggods.altar.ModelPart;
+import rpggods.altar.HumanoidPart;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 import rpggods.gui.AltarContainer;
 import rpggods.network.CUpdateAltarPacket;
 
 import java.util.Optional;
-
-import net.minecraft.client.gui.components.Button.OnPress;
 
 public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
 
@@ -95,12 +93,12 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
     protected AngleSlider sliderAngleX;
     protected AngleSlider sliderAngleY;
     protected AngleSlider sliderAngleZ;
-    private final PartButton[] partButtons = new PartButton[ModelPart.values().length];
+    private final PartButton[] partButtons = new PartButton[HumanoidPart.values().length];
     private IconButton genderButton;
     private IconButton slimButton;
     private IconButton presetButton;
     private IconButton resetButton;
-    private ModelPart selectedPart = ModelPart.BODY;
+    private HumanoidPart selectedPart = HumanoidPart.BODY;
 
     private EditBox nameField;
 
@@ -127,24 +125,23 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
     }
 
     @Override
-    public void init(Minecraft minecraft, int width, int height) {
-        super.init(minecraft, width, height);
+    public void init() {
         // add tab buttons
-        tabButtons[0] = addButton(new AltarScreen.TabButton(this, 0, new TranslatableComponent("gui.altar.pose"),
+        tabButtons[0] = addWidget(new AltarScreen.TabButton(this, 0, new TranslatableComponent("gui.altar.pose"),
                 leftPos + (0 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.ARMOR_STAND)));
-        tabButtons[1] = addButton(new AltarScreen.TabButton(this, 1, new TranslatableComponent("gui.altar.items"),
+        tabButtons[1] = addWidget(new AltarScreen.TabButton(this, 1, new TranslatableComponent("gui.altar.items"),
                 leftPos + (1 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.IRON_SWORD)));
         // add part buttons
-        for (int i = 0, l = ModelPart.values().length; i < l; i++) {
-            final ModelPart p = ModelPart.values()[i];
+        for (int i = 0, l = HumanoidPart.values().length; i < l; i++) {
+            final HumanoidPart p = HumanoidPart.values()[i];
             final Component title = new TranslatableComponent("gui.altar." + p.getSerializedName());
-            partButtons[i] = this.addButton(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (PART_HEIGHT * i), title, button -> {
+            partButtons[i] = this.addWidget(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (PART_HEIGHT * i), title, button -> {
                 this.selectedPart = p;
                 AltarScreen.this.updateSliders();
             }) {
                 @Override
                 protected boolean isSelected() {
-                    return this.isHovered() || (p == AltarScreen.this.selectedPart);
+                    return this.isFocused() || (p == AltarScreen.this.selectedPart);
                 }
             });
         }
@@ -152,18 +149,18 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         final Component titlePreset = new TranslatableComponent("gui.altar.preset");
         final AltarPose[] presets = new AltarPose[] { AltarPose.STANDING_HOLDING, AltarPose.STANDING_RAISED,
                 AltarPose.STANDING_HOLDING_DRAMATIC, AltarPose.WALKING, AltarPose.WEEPING, AltarPose.DAB };
-        presetButton = this.addButton(new IconButton(this, this.leftPos + PRESET_X, this.topPos + PRESET_Y, 16, 202, titlePreset, button -> {
+        presetButton = this.addWidget(new IconButton(this, this.leftPos + PRESET_X, this.topPos + PRESET_Y, 16, 202, titlePreset, button -> {
             this.pose = presets[(int)Math.floor(Math.random() * presets.length)];
         }));
         // add reset button
         final Component titleReset = new TranslatableComponent("controls.reset");
-        resetButton = this.addButton(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
+        resetButton = this.addWidget(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
             AltarScreen.this.pose.set(AltarScreen.this.selectedPart, 0, 0, 0);
             AltarScreen.this.updateSliders();
         }));
         // add gender button
         final Component titleGender = new TranslatableComponent("gui.altar.gender");
-        genderButton = this.addButton(new IconButton(this, this.leftPos + GENDER_X, this.topPos + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
+        genderButton = this.addWidget(new IconButton(this, this.leftPos + GENDER_X, this.topPos + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
             @Override
             public int getIconX() {
                 return super.getIconX() + (AltarScreen.this.female ? 0 : this.width);
@@ -171,7 +168,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         });
         // add slim button
         final Component titleSlim = new TranslatableComponent("gui.altar.slim");
-        slimButton = this.addButton(new IconButton(this, this.leftPos + SLIM_X, this.topPos + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
+        slimButton = this.addWidget(new IconButton(this, this.leftPos + SLIM_X, this.topPos + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
             @Override
             public int getIconX() {
                 return super.getIconX() + (AltarScreen.this.slim ? 0 : this.width);
@@ -196,9 +193,9 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             @Override
             double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).z()); }
         });
-        this.addButton(sliderAngleX);
-        this.addButton(sliderAngleY);
-        this.addButton(sliderAngleZ);
+        this.addWidget(sliderAngleX);
+        this.addWidget(sliderAngleY);
+        this.addWidget(sliderAngleZ);
         // items tab
         this.minecraft.keyboardHandler.setSendRepeatsToGui(true);
         int i = (this.width - this.imageWidth) / 2;
@@ -212,7 +209,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.nameField.setMaxLength(35);
         this.nameField.setResponder(s -> name = (s != null && s.length() > 0) ? Optional.of(s) : Optional.empty());
         this.nameField.setEditable(!getMenu().getEntity().isNameLocked());
-        this.children.add(this.nameField);
+        this.addWidget(this.nameField);
         // update
         this.updateSliders();
         this.updateTab(0);
@@ -241,7 +238,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             }
         }
         // draw preview pane
-        this.minecraft.getTextureManager().bind(SCREEN_WIDGETS);
+        this.minecraft.getTextureManager().bindForSetup(SCREEN_WIDGETS);
         this.blit(matrixStack, this.leftPos + PREVIEW_X, this.topPos + PREVIEW_Y, 168, 130, PREVIEW_WIDTH, PREVIEW_HEIGHT);
     }
 
@@ -253,17 +250,17 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         // draw text box
         this.nameField.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw hovering text LAST
-        for (final AbstractWidget b : this.buttons) {
-            if (b.visible && b.isHovered()) {
+        // TODO
+        /*for (final AbstractWidget b : this.buttons) {
+            if (b.visible && b.isFocused()) {
                 b.renderToolTip(matrixStack, mouseX, mouseY);
             }
-        }
+        }*/
         this.renderTooltip(matrixStack, mouseX, mouseY);
     }
 
     @Override
-    public void tick() {
-        super.tick();
+    public void containerTick() {
         this.nameField.tick();
     }
 

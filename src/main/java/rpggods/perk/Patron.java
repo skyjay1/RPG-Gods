@@ -5,7 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 import java.util.Optional;
 
-public class Patron {
+public final class Patron {
 
     public static final Patron EMPTY = new Patron(Optional.empty(), 0, 0, 0);
 

@@ -34,7 +34,7 @@ import rpggods.favor.IFavor;
 
 import java.util.Optional;
 
-public class PerkCondition {
+public final class PerkCondition {
 
     public static final Codec<PerkCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkCondition.Type.CODEC.fieldOf("type").forGetter(PerkCondition::getType),
@@ -114,7 +114,7 @@ public class PerkCondition {
         if(type == PerkCondition.Type.STRUCTURE && id.isPresent()) {
             StructureFeature<?> structure = ForgeRegistries.STRUCTURE_FEATURES.getValue(id.get());
             if(structure != null) {
-                return world.structureFeatureManager().getStructureAt(pos, true, structure).isValid();
+                return world.structureFeatureManager().getStructureAt(pos, structure).isValid();
             }
         }
         return false;
@@ -242,7 +242,7 @@ public class PerkCondition {
                 }
                 return new TextComponent(d);
             case EFFECT_START:
-                MobEffect effect = ForgeRegistries.POTIONS.getValue(rl);
+                MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(rl);
                 if(effect != null) {
                     return effect.getDisplayName();
                 }

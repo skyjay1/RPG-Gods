@@ -1,23 +1,13 @@
 package rpggods.client.render;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.block.material.Material;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.model.AgeableModel;
-import net.minecraft.client.renderer.entity.model.BipedModel;
-import net.minecraft.client.renderer.entity.model.EntityModel;
-import net.minecraft.client.renderer.entity.model.IHasArm;
-import net.minecraft.client.renderer.entity.model.IHasHead;
-import net.minecraft.client.renderer.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
 import com.mojang.math.Vector3f;
 import rpggods.altar.AltarPose;
-import rpggods.altar.ModelPart;
+import rpggods.altar.HumanoidPart;
 import rpggods.entity.AltarEntity;
 
 import java.util.Collection;
@@ -40,7 +30,7 @@ public class AltarModel extends AltarArmorModel {
     protected ModelPart rightLegwear;
     protected ModelPart bodyWear;
 
-    private static final EnumMap<ModelPart, Collection<ModelPart>> ROTATION_MAP = new EnumMap<>(ModelPart.class);
+    private static final EnumMap<HumanoidPart, Collection<ModelPart>> ROTATION_MAP = new EnumMap<>(HumanoidPart.class);
 
     public AltarModel() {
         this(0.0F, 0.0F);
@@ -118,12 +108,12 @@ public class AltarModel extends AltarArmorModel {
         this.bodyWear.addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
         this.bodyWear.setPos(0.0F, 0.0F + yOffsetIn, 0.0F);
 
-        ROTATION_MAP.put(ModelPart.HEAD, ImmutableList.of(this.head, this.headwear));
-        ROTATION_MAP.put(ModelPart.BODY, ImmutableList.of(this.body, this.bodyChest, this.bodyWear));
-        ROTATION_MAP.put(ModelPart.LEFT_ARM, ImmutableList.of(this.leftArm, this.leftArmSlim, this.leftArmwear, this.leftArmwearSlim));
-        ROTATION_MAP.put(ModelPart.RIGHT_ARM, ImmutableList.of(this.rightArm, this.rightArmSlim, this.rightArmwear, this.rightArmwearSlim));
-        ROTATION_MAP.put(ModelPart.LEFT_LEG, ImmutableList.of(this.leftLeg, this.leftLegwear));
-        ROTATION_MAP.put(ModelPart.RIGHT_LEG, ImmutableList.of(this.rightLeg, this.rightLegwear));
+        ROTATION_MAP.put(HumanoidPart.HEAD, ImmutableList.of(this.head, this.headwear));
+        ROTATION_MAP.put(HumanoidPart.BODY, ImmutableList.of(this.body, this.bodyChest, this.bodyWear));
+        ROTATION_MAP.put(HumanoidPart.LEFT_ARM, ImmutableList.of(this.leftArm, this.leftArmSlim, this.leftArmwear, this.leftArmwearSlim));
+        ROTATION_MAP.put(HumanoidPart.RIGHT_ARM, ImmutableList.of(this.rightArm, this.rightArmSlim, this.rightArmwear, this.rightArmwearSlim));
+        ROTATION_MAP.put(HumanoidPart.LEFT_LEG, ImmutableList.of(this.leftLeg, this.leftLegwear));
+        ROTATION_MAP.put(HumanoidPart.RIGHT_LEG, ImmutableList.of(this.rightLeg, this.rightLegwear));
     }
 
     protected Iterable<ModelPart> getParts() {
@@ -141,7 +131,7 @@ public class AltarModel extends AltarArmorModel {
     @Override
     public void setupAnim(AltarEntity entityIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         final AltarPose pose = entityIn.getAltarPose();
-        for(final Map.Entry<ModelPart, Collection<ModelPart>> e : ROTATION_MAP.entrySet()) {
+        for(final Map.Entry<HumanoidPart, Collection<ModelPart>> e : ROTATION_MAP.entrySet()) {
             // set the rotations for each part in the list
             final Vector3f rotations = pose.get(e.getKey());
             for(final ModelPart m : e.getValue()) {

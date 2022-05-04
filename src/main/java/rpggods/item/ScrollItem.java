@@ -11,13 +11,11 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.network.NetworkHooks;
+import net.minecraftforge.network.NetworkHooks;
 import rpggods.RPGGods;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.gui.FavorContainer;
-
-import net.minecraft.world.item.Item.Properties;
 
 public class ScrollItem extends Item {
 

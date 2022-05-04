@@ -13,7 +13,7 @@ import rpggods.favor.IFavor;
 import java.util.List;
 import java.util.function.Function;
 
-public class Perk {
+public final class Perk {
 
     public static final Perk EMPTY = new Perk(PerkIcon.EMPTY, Lists.newArrayList(),
             FavorRange.EMPTY, Lists.newArrayList(), 0.0F, "null", 1000L);

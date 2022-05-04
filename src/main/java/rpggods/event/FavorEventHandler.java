@@ -343,7 +343,7 @@ public class FavorEventHandler {
      * @param player the player to affect
      * @param favor the player's favor
      * @return True if the perk was run and cooldown was added.
-     * @see #runPerk(Perk, PlayerEntity, IFavor, Optional, Optional, Optional)
+     * @see #runPerk(Perk, Player, IFavor, Optional, Optional, Optional)
      */
     public static boolean runPerk(final Perk perk, final Player player, final IFavor favor) {
         return runPerk(perk, player, favor, Optional.empty(), Optional.empty(), Optional.empty());
