@@ -43,7 +43,7 @@ public class Deity {
         return id;
     }
 
-    /** The ItemStack icon of the deity in the favor GUI **/
+    /** @return The ItemStack icon of the deity in the favor GUI **/
     public ItemStack getIcon() {
         return icon;
     }
@@ -58,7 +58,7 @@ public class Deity {
         return minLevel;
     }
 
-    /** The maximum favor level for this deity **/
+    /** @return The maximum favor level for this deity **/
     public int getMaxLevel() {
         return maxLevel;
     }

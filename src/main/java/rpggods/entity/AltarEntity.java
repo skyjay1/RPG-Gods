@@ -5,7 +5,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntitySize;
 import net.minecraft.entity.EntityType;
@@ -31,6 +33,7 @@ import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.BlockParticleData;
 import net.minecraft.particles.ParticleTypes;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.tileentity.SkullTileEntity;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
@@ -45,6 +48,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.network.NetworkHooks;
 import net.minecraftforge.fml.network.PacketDistributor;
@@ -53,6 +57,7 @@ import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
+import rpggods.block.GlowBlock;
 import rpggods.deity.Altar;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorEventHandler;
@@ -61,11 +66,9 @@ import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
 import rpggods.network.SUpdateAltarPacket;
-import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Optional;
 
 public class AltarEntity extends LivingEntity implements IInventoryChangedListener {
@@ -83,7 +86,6 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     private static final String KEY_FLAGS = "Flags";
     private static final String KEY_LOCKED = "Locked";
     private static final String KEY_POSE = "Pose";
-
 
     public static final int INV_SIZE = 7;
     private Inventory inventory;
@@ -132,7 +134,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         super.onSyncedDataUpdated(key);
         if (key.equals(DEITY)) {
             String sDeityId = getEntityData().get(DEITY);
-            if (sDeityId != null && !sDeityId.isEmpty() && sDeityId.contains(":")) {
+            if (!sDeityId.isEmpty() && sDeityId.contains(":")) {
                 this.setDeity(Optional.ofNullable(ResourceLocation.tryParse(sDeityId)));
             } else {
                 this.setDeity(Optional.empty());
@@ -215,6 +217,11 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
     }
 
     @Override
+    public boolean isPushedByFluid() {
+        return false;
+    }
+
+    @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!this.level.isClientSide && !this.removed) {
             if (DamageSource.OUT_OF_WORLD.equals(source)) {
@@ -278,19 +285,46 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
 
     @Override
     public void tick() {
-        if (firstTick) {
-            if (level.isClientSide) {
+        // client-side tick logic
+        if (firstTick && level.isClientSide) {
                 // update game profile
                 setCustomName(getCustomName());
-            }
         }
+        // parent tick
         super.tick();
-        if(!level.isClientSide && getDeity().isPresent()) {
-            // check if there are any perk conditions for "ritual"
-            DeityHelper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityHelper::new);
-            if(!helper.perkByConditionMap.getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of()).isEmpty()) {
-                // onPerformRitual
-                FavorEventHandler.performRitual(this, getDeity().get());
+        // server-side tick logic
+        if(!level.isClientSide) {
+            // check if altar has a deity
+            if(getDeity().isPresent()) {
+                // check if there are any perk conditions for "ritual"
+                DeityHelper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityHelper::new);
+                if(!helper.perkByConditionMap.getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of()).isEmpty()) {
+                    // onPerformRitual
+                    FavorEventHandler.performRitual(this, getDeity().get());
+                }
+            }
+            // attempt to place light block
+            if(tickCount % 4 == 1) {
+                Altar altar = RPGGods.ALTAR.get(getAltar()).orElse(Altar.EMPTY);
+                int lightLevel = altar.getLightLevel();
+                // check light level
+                if(lightLevel > 0) {
+                    BlockPos posIn = getOnPos().above();
+                    BlockState blockIn = level.getBlockState(posIn);
+                    // check if current block can be replaced
+                    if((blockIn.getMaterial() == Material.AIR || blockIn.getMaterial().isLiquid())
+                            && !RGRegistry.BlockReg.LIGHT.is(blockIn.getBlock())) {
+                        // determine waterlog value
+                        boolean waterlogged = blockIn.getFluidState().isSource() && blockIn.getFluidState().is(FluidTags.WATER);
+                        // create light block
+                        BlockState lightBlock = RGRegistry.BlockReg.LIGHT
+                                .defaultBlockState()
+                                .setValue(GlowBlock.LIGHT_LEVEL, lightLevel)
+                                .setValue(GlowBlock.WATERLOGGED, waterlogged);
+                        // place light block
+                        level.setBlock(posIn, lightBlock, Constants.BlockFlags.DEFAULT);
+                    }
+                }
             }
         }
     }
@@ -563,7 +597,8 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
         ResourceLocation material = Altar.MATERIAL; // TODO
-        return new Altar(enabled, name, isFemale(), isSlim(), items,
+        int lightLevel = 0; // TODO
+        return new Altar(enabled, name, isFemale(), isSlim(), lightLevel, items,
                 material, getAltarPose(), isAltarPoseLocked());
     }
 

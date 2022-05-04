@@ -54,10 +54,10 @@ public class FavorCommand {
                                                         .then(Commands.literal("decay")
                                                                 .executes(command -> setDecay(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), IntegerArgumentType.getInteger(command, "amount"))))))
                                                 .then(Commands.literal("patron")
-                                                        .executes(command -> setPatron(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"))))
+                                                        .executes(command -> setPatron(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"))))
                                                 .then(Commands.literal("unlocked")
                                                         .then(Commands.argument("flag", BoolArgumentType.bool())
-                                                                .executes(command -> setUnlocked(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"), BoolArgumentType.getBool(command, "flag"))))))
+                                                                .executes(command -> setUnlocked(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"), BoolArgumentType.getBool(command, "flag"))))))
                                         .then(Commands.literal("enabled")
                                                 .then(Commands.argument("flag", BoolArgumentType.bool())
                                                         .executes(command -> setEnabled(command.getSource(), EntityArgument.getPlayers(command, "targets"), BoolArgumentType.getBool(command, "flag")))))))
@@ -80,27 +80,27 @@ public class FavorCommand {
                                         .then(Commands.literal("patron")
                                                 .executes(command -> queryPatron(command.getSource(), EntityArgument.getPlayer(command, "target"))))))
                         .then(Commands.literal("cap")
-                                .then(Commands.argument("target", EntityArgument.players())
+                                .then(Commands.argument("targets", EntityArgument.players())
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
                                                 .then(Commands.argument("min", IntegerArgumentType.integer())
                                                         .then(Commands.argument("max", IntegerArgumentType.integer())
-                                                                .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"),
+                                                                .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"),
                                                                         IntegerArgumentType.getInteger(command, "min"), IntegerArgumentType.getInteger(command, "max"), Type.LEVELS))
                                                                 .then(Commands.literal("points")
-                                                                        .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"),
+                                                                        .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"),
                                                                                 IntegerArgumentType.getInteger(command, "min"), IntegerArgumentType.getInteger(command, "max"), Type.POINTS)))
                                                                 .then(Commands.literal("levels")
-                                                                        .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"),
+                                                                        .executes(command -> setCap(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"),
                                                                                 IntegerArgumentType.getInteger(command, "min"), IntegerArgumentType.getInteger(command, "max"), Type.LEVELS))))))))
                         .then(Commands.literal("reset")
-                                .then(Commands.argument("target", EntityArgument.players())
-                                        .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "target")))
+                                .then(Commands.argument("targets", EntityArgument.players())
+                                        .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "targets")))
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
-                                                .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "target"), ResourceLocationArgument.getId(command, "deity"))))
+                                                .executes(command -> resetFavor(command.getSource(), EntityArgument.getPlayers(command, "targets"), ResourceLocationArgument.getId(command, "deity"))))
                                         .then(Commands.literal("patron")
-                                                .executes(command -> resetPatron(command.getSource(), EntityArgument.getPlayers(command, "target"))))
+                                                .executes(command -> resetPatron(command.getSource(), EntityArgument.getPlayers(command, "targets"))))
                                         .then(Commands.literal("cooldown")
-                                                .executes(command -> resetCooldown(command.getSource(), EntityArgument.getPlayers(command, "target")))))));
+                                                .executes(command -> resetCooldown(command.getSource(), EntityArgument.getPlayers(command, "targets")))))));
 
         commandSource.register(Commands.literal("favor")
                 .requires(p -> p.hasPermission(2))

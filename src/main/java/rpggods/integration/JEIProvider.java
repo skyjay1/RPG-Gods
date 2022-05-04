@@ -4,6 +4,8 @@ import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.VanillaRecipeCategoryUid;
 import mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter;
+import mezz.jei.api.registration.IAdvancedRegistration;
+import mezz.jei.api.registration.IModIngredientRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.registration.IVanillaCategoryExtensionRegistration;
@@ -52,4 +54,10 @@ public class JEIProvider implements IModPlugin {
         registry.getCraftingCategory().addCategoryExtension(ShapedAltarRecipe.class, JEIShapedAltarRecipe.Wrapper::new);
         registry.getCraftingCategory().addCategoryExtension(ShapelessAltarRecipe.class, JEIShapelessAltarRecipe.Wrapper::new);
     }
+
+    @Override
+    public void registerAdvanced(IAdvancedRegistration registration) {
+
+    }
+
 }

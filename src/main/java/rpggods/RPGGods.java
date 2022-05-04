@@ -113,6 +113,7 @@ public class RPGGods {
     public RPGGods() {
         LOGGER.debug("registerListeners");
         // Mod event bus listeners
+        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.BlockReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ItemReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.EntityReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.AttributesReg.class);

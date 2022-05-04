@@ -7,12 +7,12 @@ issueTrackerURL="https://github.com/skyjay1/RPG-Gods/issues"
 
 [[mods]]
     modId="rpggods"
-    version="16.5.2"
+    version="16.5.3"
     displayName="RPG Gods"
     credits=""
     authors="skyjay1"
     description='''Gods and goddesses galore'''
-[[dependencies.greekfantasy]]
+[[dependencies.rpggods]]
     modId="forge"
     mandatory=true
     versionRange="[36.2,)"

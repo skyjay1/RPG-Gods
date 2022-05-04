@@ -12,7 +12,7 @@ public class Altar {
 
     public static final ResourceLocation MATERIAL = new ResourceLocation("stone");
 
-    public static final Altar EMPTY = new Altar(true, Optional.empty(), false, false,
+    public static final Altar EMPTY = new Altar(true, Optional.empty(), false, false, 0,
             AltarItems.EMPTY, MATERIAL, AltarPose.EMPTY, false);
 
     public static final Codec<Altar> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -20,6 +20,7 @@ public class Altar {
             Codec.STRING.optionalFieldOf("name").forGetter(Altar::getName),
             Codec.BOOL.optionalFieldOf("female", false).forGetter(Altar::isFemale),
             Codec.BOOL.optionalFieldOf("slim", false).forGetter(Altar::isSlim),
+            Codec.INT.optionalFieldOf("light", 0).forGetter(Altar::getLightLevel),
             AltarItems.CODEC.optionalFieldOf("items", AltarItems.EMPTY).forGetter(Altar::getItems),
             ResourceLocation.CODEC.optionalFieldOf("material", MATERIAL).forGetter(Altar::getMaterial),
             AltarPose.CODEC.optionalFieldOf("pose", AltarPose.WALKING).forGetter(Altar::getPose),
@@ -30,6 +31,7 @@ public class Altar {
     private final Optional<String> name;
     private final boolean female;
     private final boolean slim;
+    private final int lightLevel;
     private final AltarItems items;
     private final ResourceLocation material;
     private final AltarPose pose;
@@ -38,12 +40,13 @@ public class Altar {
     private final Optional<ResourceLocation> deity;
 
     public Altar(boolean enabled, Optional<String> name, boolean female, boolean slim,
-                 AltarItems items, ResourceLocation material,
+                 int lightLevel, AltarItems items, ResourceLocation material,
                  AltarPose pose, boolean poseLocked) {
         this.enabled = enabled;
         this.name = name;
         this.female = female;
         this.slim = slim;
+        this.lightLevel = lightLevel;
         this.items = items;
         this.material = material;
         this.pose = pose;
@@ -72,6 +75,10 @@ public class Altar {
 
     public boolean isSlim() {
         return slim;
+    }
+
+    public int getLightLevel() {
+        return lightLevel;
     }
 
     public AltarItems getItems() {

@@ -723,11 +723,11 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         int minY = 0;
         int maxY = 0;
         for(List<Perk> l : perkMap.getOrDefault(deity, ImmutableMap.of()).values()) {
-            if(l.size() > maxY) {
-                maxY = l.size();
+            if(l.size() > minY) {
+                minY = l.size();
             }
         }
-        maxY = Math.max(0, maxY - 4) * (PERK_HEIGHT + PERK_SPACE_Y);
+        minY = -Math.max(0, minY - 4) * (PERK_HEIGHT + PERK_SPACE_Y);
         // update move amounts so they are clamped at bounds
         if(dx + moveX > maxX) moveX = maxX - this.dx;
         if(dx + moveX < minX) moveX = this.dx - minX;

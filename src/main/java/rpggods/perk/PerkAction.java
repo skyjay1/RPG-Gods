@@ -3,25 +3,70 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.IGrowable;
+import net.minecraft.block.material.Material;
+import net.minecraft.entity.AgeableEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.item.ExperienceOrbEntity;
+import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.merchant.IMerchant;
+import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
+import net.minecraft.entity.monster.DrownedEntity;
+import net.minecraft.entity.monster.GuardianEntity;
+import net.minecraft.entity.passive.WaterMobEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.AbstractArrowEntity;
+import net.minecraft.entity.projectile.ArrowEntity;
+import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.item.MerchantOffer;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.particles.IParticleData;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.pathfinding.SwimmerPathNavigator;
+import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.PotionUtils;
 import net.minecraft.potion.Potions;
+import net.minecraft.state.IntegerProperty;
+import net.minecraft.state.properties.BlockStateProperties;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.IFormattableTextComponent;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.IServerWorld;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.deity.DeityHelper;
+import rpggods.event.FavorChangedEvent;
 import rpggods.event.FavorEventHandler;
+import rpggods.favor.FavorLevel;
+import rpggods.favor.IFavor;
+import rpggods.tameable.ITameable;
 
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.Supplier;
 
 public class PerkAction {
@@ -67,6 +112,332 @@ public class PerkAction {
         this.affinity = affinity;
         this.patron = patron;
         this.hidden = hidden;
+    }
+
+    /**
+     * Runs a single Perk without any of the preliminary checks or cooldown.
+     * If you want these, call {@link FavorEventHandler#runPerk(Perk, PlayerEntity, IFavor)} or
+     * {@link FavorEventHandler#runPerk(Perk, PlayerEntity, IFavor, Optional, Optional, Optional)} instead.
+     * @param deity the Deity that is associated with the perk
+     * @param player the player
+     * @param favor the player's favor
+     * @param entity an entity to use when running the perk, if any
+     * @param data a ResourceLocation ID to use when running the perk, if any
+     * @param object the Event to reference when running the perk, if any
+     * @return True if the action ran successfully
+     */
+    public boolean run(final ResourceLocation deity, final PlayerEntity player, final IFavor favor,
+                                        final Optional<Entity> entity, final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
+        switch (this.getType()) {
+            case FUNCTION: return getId().isPresent() && FavorEventHandler.runFunction(player.level, player, getId().get());
+            case POTION:
+                if(getTag().isPresent()) {
+                    Optional<EffectInstance> effect = readEffectInstance(getTag().get());
+                    if(effect.isPresent()) {
+                        return player.addEffect(effect.get());
+                    }
+                }
+                return false;
+            case SUMMON:
+                float distance = getMultiplier().orElse(9F);
+                return getTag().isPresent() && summonEntityNearPlayer(player.level, player, getTag(), distance).isPresent();
+            case ITEM: if(getItem().isPresent()) {
+                ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), getItem().get().copy());
+                itemEntity.setNoPickUpDelay();
+                return player.level.addFreshEntity(itemEntity);
+            }
+                return false;
+            case FAVOR: return getFavor().isPresent() && getId().isPresent()
+                    && favor.getFavor(getId().get()).addFavor(player, getId().get(), getFavor().get(), FavorChangedEvent.Source.PERK)
+                    != favor.getFavor(getId().get()).getFavor();
+            case AFFINITY:
+                if(getAffinity().isPresent() && entity.isPresent() && data.isPresent() && getAffinity().get().getType() == Affinity.Type.TAME) {
+                    LazyOptional<ITameable> tameable = entity.get().getCapability(RPGGods.TAMEABLE);
+                    if(tameable.isPresent()) {
+                        if(tameable.orElse(null).setTamedBy(player)) {
+                            // set custom name
+                            if(!entity.get().hasCustomName()) {
+                                entity.get().setCustomName(entity.get().getDisplayName());
+                            }
+                            // send particle packet
+                            if(entity.get().level instanceof ServerWorld) {
+                                Vector3d pos = entity.get().getEyePosition(1.0F);
+                                ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.HEART, pos.x, pos.y, pos.z, 10, 0.5D, 0.5D, 0.5D, 0);
+                            }
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            case ARROW_DAMAGE:
+                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof ArrowEntity) {
+                    ArrowEntity arrow = (ArrowEntity) entity.get();
+                    arrow.setBaseDamage(arrow.getBaseDamage() * getMultiplier().get());
+                    return true;
+                }
+                return false;
+            case ARROW_EFFECT:
+                if(entity.isPresent() && getTag().isPresent() && entity.get() instanceof ArrowEntity) {
+                    ArrowEntity arrow = (ArrowEntity) entity.get();
+                    readEffectInstance(getTag().get()).ifPresent(e -> arrow.addEffect(e));
+                    return true;
+                }
+                return false;
+            case ARROW_COUNT:
+                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof AbstractArrowEntity) {
+                    AbstractArrowEntity arrow = (AbstractArrowEntity) entity.get();
+                    int arrowCount = Math.round(getMultiplier().get());
+                    double motionScale = 0.8;
+                    for(int i = 0; i < arrowCount; i++) {
+                        AbstractArrowEntity arrow2 = (AbstractArrowEntity) arrow.getType().create(arrow.level);
+                        arrow2.copyPosition(arrow);
+                        arrow2.setDeltaMovement(arrow.getDeltaMovement().multiply(
+                                (Math.random() * 2.0D - 1.0D) * motionScale,
+                                (Math.random() * 2.0D - 1.0D) * motionScale,
+                                (Math.random() * 2.0D - 1.0D) * motionScale));
+                        arrow2.pickup = AbstractArrowEntity.PickupStatus.CREATIVE_ONLY;
+                        arrow.level.addFreshEntity(arrow2);
+                    }
+                    return true;
+                }
+                return false;
+            case OFFSPRING:
+                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof AgeableEntity
+                        && object.isPresent() && object.get() instanceof BabyEntitySpawnEvent) {
+                    int childCount = Math.round(getMultiplier().get());
+                    if(childCount < 1) {
+                        // number of babies is zero, so cancel the event
+                        object.get().setCanceled(true);
+                        if(entity.get().level instanceof ServerWorld) {
+                            Vector3d pos = entity.get().getEyePosition(1.0F);
+                            ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 6, 0.5D, 0.5D, 0.5D, 0);
+                        }
+                    } else if(childCount > 1) {
+                        // number of babies is more than one, so spawn additional mobs
+                        AgeableEntity parent = (AgeableEntity) entity.get();
+                        for(int i = 1; i < childCount; i++) {
+                            AgeableEntity bonusChild = (AgeableEntity) parent.getType().create(parent.level);
+                            if(bonusChild != null) {
+                                bonusChild.copyPosition(parent);
+                                bonusChild.setBaby(true);
+                                parent.level.addFreshEntity(bonusChild);
+                                if(parent.level instanceof ServerWorld) {
+                                    Vector3d pos = bonusChild.getEyePosition(1.0F);
+                                    ((ServerWorld)parent.level).sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            case CROP_GROWTH:
+                if(getMultiplier().isPresent()) {
+                    return growCropsNearPlayer(player, favor, Math.round(getMultiplier().get()));
+                }
+                return false;
+            case CROP_HARVEST:
+                // This is handled using loot table modifiers
+                return getMultiplier().isPresent();
+            case DAMAGE:
+                if(getMultiplier().isPresent() && object.isPresent() && object.get() instanceof LivingHurtEvent) {
+                    LivingHurtEvent event = (LivingHurtEvent) object.get();
+                    float amount = event.getAmount();
+                    event.setAmount(amount * (getMultiplier().get()));
+                }
+                return false;
+            case DURABILITY:
+                if(getMultiplier().isPresent() && getString().isPresent()) {
+                    EquipmentSlotType slot = EquipmentSlotType.byName(getString().get());
+                    ItemStack item = player.getItemBySlot(slot);
+                    // add or remove durability
+                    if(!item.isEmpty() && item.isDamageableItem()) {
+                        float multiplier = Math.max(-1.0F, Math.min(1.0F, getMultiplier().get()));
+                        int durability = Math.round(multiplier * item.getMaxDamage());
+                        item.setDamageValue(item.getDamageValue() + durability);
+                        return true;
+                    }
+                }
+                return false;
+            case AUTOSMELT:
+            case UNSMELT:
+                // These are handled using loot table modifiers
+                return true;
+            case SPECIAL_PRICE:
+                if(getMultiplier().isPresent() && entity.isPresent() && entity.get() instanceof IMerchant) {
+                    final int diff = Math.round(getMultiplier().get());
+                    final IMerchant merchant = (IMerchant) entity.get();
+                    // cancel event if the diff is ridiculously high
+                    if(diff >= 100 && object.isPresent()) {
+                        object.get().setCanceled(true);
+                        // cause villager to shake head and play unhappy sound
+                        if(entity.get() instanceof AbstractVillagerEntity) {
+                            ((AbstractVillagerEntity)entity.get()).setUnhappyCounter(40);
+                            entity.get().playSound(SoundEvents.VILLAGER_NO, 0.5F, 1.0F);
+                        }
+                        // spawn angry particles
+                        if(entity.get().level instanceof ServerWorld) {
+                            Vector3d pos = entity.get().getEyePosition(1.0F);
+                            ((ServerWorld)entity.get().level).sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.x, pos.y, pos.z, 4, 0.5D, 0.5D, 0.5D, 0);
+                        }
+                        return true;
+                    }
+                    // add or reduce special price for all offers
+                    final boolean add = diff > 0;
+                    int special;
+                    for(MerchantOffer offer : merchant.getOffers()) {
+                        special = offer.getSpecialPriceDiff();
+                        if((add && special < diff) || (!add && special > diff)) {
+                            offer.setSpecialPriceDiff(diff);
+                        }
+                    }
+                    return !merchant.getOffers().isEmpty();
+                }
+                return false;
+            case PATRON:
+                if(getPatron().isPresent()) {
+                    return favor.setPatron(player, getPatron().get());
+                }
+                return false;
+            case UNLOCK:
+                if(getId().isPresent()) {
+                    FavorLevel level = favor.getFavor(getId().get());
+                    if(!level.isEnabled()) {
+                        favor.getFavor(getId().get()).setEnabled(true);
+                        // send player feedback
+                        ITextComponent message = getDisplayDescription();
+                        player.displayClientMessage(message.copy().withStyle(TextFormatting.BOLD, TextFormatting.LIGHT_PURPLE), true);
+                        // play sound
+                        player.level.playSound(player, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                        return false; // hacky solution to prevent feedback, since we don't need cooldown anyway
+                    }}
+                return false;
+            case XP:
+                if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof ExperienceOrbEntity) {
+                    ((ExperienceOrbEntity)entity.get()).value *= getMultiplier().get();
+                    return true;
+                }
+                return false;
+        }
+        return false;
+    }
+
+    public static Optional<EffectInstance> readEffectInstance(final CompoundNBT tag) {
+        if(tag.contains("Potion", 8)) {
+            final CompoundNBT nbt = tag.copy();
+            // "show particles" will default to false if not specified
+            if(!nbt.contains("ShowParticles")) {
+                nbt.putBoolean("ShowParticles", false);
+            }
+            Effect potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(nbt.getString("Potion")));
+            if(potion != null) {
+                nbt.putByte("Id", (byte) Effect.getId(potion));
+                return Optional.of(EffectInstance.load(nbt));
+            }
+        }
+        return Optional.empty();
+    }
+
+
+
+    /**
+     * Attempts to summon an entity near the player
+     * @param worldIn the world
+     * @param playerIn the player
+     * @param entityTag the CompoundNBT of the entity
+     * @param distance the maximum distance from the player to summon. Using 0 will skip the usual canSpawn checks.
+     * @return the entity if it was summoned, or an empty optional
+     **/
+    public static Optional<Entity> summonEntityNearPlayer(final World worldIn, final PlayerEntity playerIn,
+                                                          final Optional<CompoundNBT> entityTag, final float distance) {
+        if(entityTag.isPresent() && worldIn instanceof IServerWorld) {
+            final Optional<EntityType<?>> entityType = EntityType.by(entityTag.get());
+            if(entityType.isPresent()) {
+                Entity entity = entityType.get().create(worldIn);
+                final boolean waterMob = entity instanceof WaterMobEntity || entity instanceof DrownedEntity || entity instanceof GuardianEntity
+                        || (entity instanceof MobEntity && ((MobEntity)entity).getNavigation() instanceof SwimmerPathNavigator);
+                // find a place to spawn the entity
+                Random rand = playerIn.getRandom();
+                BlockPos spawnPos;
+                for(int range = 1 + Math.round(distance), attempts = Math.min(32, range * 3); attempts > 0; attempts--) {
+                    if(range > 1) {
+                        spawnPos = playerIn.blockPosition().offset(rand.nextInt(range) - rand.nextInt(range), rand.nextInt(2) - rand.nextInt(2), rand.nextInt(range) - rand.nextInt(range));
+                    } else {
+                        spawnPos = playerIn.blockPosition().above();
+                    }
+                    // check if this is a valid position
+                    boolean canSpawnHere = (range == 1)
+                            || EntitySpawnPlacementRegistry.checkSpawnRules(entityType.get(), (IServerWorld)worldIn, SpawnReason.SPAWN_EGG, spawnPos, rand)
+                            || (waterMob && worldIn.getBlockState(spawnPos).is(Blocks.WATER))
+                            || (!waterMob && worldIn.getBlockState(spawnPos.below()).canOcclude()
+                            && worldIn.getBlockState(spawnPos).getMaterial() == Material.AIR
+                            && worldIn.getBlockState(spawnPos.above()).getMaterial() == Material.AIR);
+                    if(canSpawnHere) {
+                        // spawn the entity at this position and finish
+                        entity.load(entityTag.get());
+                        entity.setPos(spawnPos.getX() + 0.5D, spawnPos.getY() + 0.01D, spawnPos.getZ() + 0.5D);
+                        worldIn.addFreshEntity(entity);
+                        return Optional.of(entity);
+                    }
+                }
+                entity.remove();
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Checks random blocks in a radius until either a growable crop has been found
+     * and changed, or no crops were found in a limited number of attempts.
+     * @param player the player
+     * @param favor the player's favor
+     * @param amount the amount of growth to add (can be negative to remove growth)
+     * @return whether a crop was found and its age was changed
+     **/
+    public static boolean growCropsNearPlayer(final PlayerEntity player, final IFavor favor, final int amount) {
+        if(amount == 0) {
+            return false;
+        }
+        final IntegerProperty[] AGES = new IntegerProperty[] {
+                BlockStateProperties.AGE_1, BlockStateProperties.AGE_15, BlockStateProperties.AGE_2,
+                BlockStateProperties.AGE_3, BlockStateProperties.AGE_5, BlockStateProperties.AGE_7
+        };
+        final Random rand = player.level.getRandom();
+        final int maxAttempts = 10;
+        final int variationY = 1;
+        final int radius = 5;
+        int attempts = 0;
+        // if there are effects that should change growth states, find a crop to affect
+        while (attempts++ <= maxAttempts) {
+            // get random block in radius
+            final int x1 = rand.nextInt(radius * 2) - radius;
+            final int y1 = rand.nextInt(variationY * 2) - variationY;
+            final int z1 = rand.nextInt(radius * 2) - radius;
+            final BlockPos blockpos = player.blockPosition().offset(x1, y1, z1);
+            final BlockState state = player.level.getBlockState(blockpos);
+            // if the block can be grown, grow it and return
+            if (state.getBlock() instanceof IGrowable) {
+                // determine which age property applies to this state
+                for(final IntegerProperty AGE : AGES) {
+                    if(state.hasProperty(AGE)) {
+                        // attempt to update the age (add or subtract)
+                        int oldAge = state.getValue(AGE);
+                        int newAge = Math.max(0, oldAge + amount);
+                        if(AGE.getPossibleValues().contains(newAge)) {
+                            // update the block age
+                            player.level.setBlock(blockpos, state.setValue(AGE, newAge), 2);
+                            // spawn particles
+                            if(player.level instanceof ServerWorld) {
+                                IParticleData particle = (amount > 0) ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+                                ((ServerWorld)player.level).sendParticles(particle, blockpos.getX() + 0.5D, blockpos.getY() + 0.25D, blockpos.getZ() + 0.5D, 10, 0.5D, 0.5D, 0.5D, 0);
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public Type getType() {
@@ -136,7 +507,7 @@ public class PerkAction {
             case ARROW_EFFECT:
                 if(tag.isPresent()) {
                     // format potion ID as effect name (with amplifier)
-                    Optional<EffectInstance> effect = FavorEventHandler.readEffectInstance(tag.get());
+                    Optional<EffectInstance> effect = readEffectInstance(tag.get());
                     if(effect.isPresent()) {
                         String potencyKey = "potion.potency." + effect.get().getAmplifier();
                         return new TranslationTextComponent(effect.get().getDescriptionId())

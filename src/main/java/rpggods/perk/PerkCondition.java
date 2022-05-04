@@ -5,9 +5,15 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.potion.Effect;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ITag;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
@@ -21,7 +27,10 @@ import net.minecraft.world.gen.feature.structure.Structure;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.registries.ForgeRegistries;
+import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.event.FavorEventHandler;
+import rpggods.favor.IFavor;
 
 import java.util.Optional;
 
@@ -29,16 +38,20 @@ public class PerkCondition {
 
     public static final Codec<PerkCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkCondition.Type.CODEC.fieldOf("type").forGetter(PerkCondition::getType),
-            Codec.STRING.optionalFieldOf("data").forGetter(PerkCondition::getData)
+            Codec.STRING.optionalFieldOf("data").forGetter(PerkCondition::getData),
+            CompoundNBT.CODEC.optionalFieldOf("tag").forGetter(PerkCondition::getTag)
     ).apply(instance, PerkCondition::new));
 
     private final PerkCondition.Type type;
     private final Optional<String> data;
+    private final Optional<CompoundNBT> tag;
     private final Optional<ResourceLocation> id;
 
-    public PerkCondition(PerkCondition.Type type, Optional<String> data) {
+    public PerkCondition(PerkCondition.Type type, Optional<String> data, Optional<CompoundNBT> tag) {
         this.type = type;
         this.data = data;
+        this.tag = tag;
+        // parse ResourceLocation ID from data string
         if(data.isPresent() && data.get().contains(":")) {
             id = Optional.ofNullable(ResourceLocation.tryParse(getData().get()));
         } else {
@@ -58,6 +71,16 @@ public class PerkCondition {
         return id;
     }
 
+    public Optional<CompoundNBT> getTag() {
+        return tag;
+    }
+
+    /**
+     * Checks if the player is in a specific biome
+     * @param world the world
+     * @param pos the player position
+     * @return True if this condition has a biome and the position is in that biome
+     */
     public boolean isInBiome(final World world, final BlockPos pos) {
         // if biome data is present for this condition, make sure the biome matches
         if(type == PerkCondition.Type.BIOME && data.isPresent()) {
@@ -81,6 +104,12 @@ public class PerkCondition {
         return true;
     }
 
+    /**
+     * Checks if the player is in a specific structure, according to the Chunk data
+     * @param world the world
+     * @param pos the player location
+     * @return True if this condition has a structure and the position is inside the structure
+     */
     public boolean isInStructure(final ServerWorld world, final BlockPos pos) {
         if(type == PerkCondition.Type.STRUCTURE && id.isPresent()) {
             Structure<?> structure = ForgeRegistries.STRUCTURE_FEATURES.getValue(id.get());
@@ -89,10 +118,6 @@ public class PerkCondition {
             }
         }
         return false;
-    }
-
-    public static DataResult<PerkCondition> fromType(PerkCondition.Type type) {
-        return DataResult.success(new PerkCondition(type, Optional.empty()));
     }
 
     @Override
@@ -104,6 +129,92 @@ public class PerkCondition {
         return this.getType().getDisplayName(dataToDisplay(getData().orElse("")));
     }
 
+    /**
+     * Determines if the given perk condition is true.
+     * @param deity the deity for which the perk is running
+     * @param player the player
+     * @param favor the player's favor
+     * @param data a ResourceLocation associated with the perk calling this condition, if any
+     * @param entityTag an Entity CompoundNBT associated with the perk calling this condition, if any
+     * @return True if the PerkCondition passed
+     */
+    public boolean match(final ResourceLocation deity, final PlayerEntity player, final IFavor favor, 
+                         final Optional<ResourceLocation> data, final Optional<CompoundNBT> entityTag) {
+        boolean idMatch;
+        boolean tagMatch;
+        switch (this.getType()) {
+            case PATRON: return favor.getPatron().isPresent() && deity.equals(favor.getPatron().get());
+            case BIOME: return isInBiome(player.level, player.blockPosition());
+            case DAY: return player.level.isDay();
+            case NIGHT: return player.level.isNight();
+            case RANDOM_TICK: return true;
+            case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < FavorEventHandler.COMBAT_TIMER;
+            case PLAYER_CROUCHING: return player.isCrouching();
+            case UNLOCKED: return getId().isPresent() && favor.getFavor(getId().get()).isEnabled();
+            case MAINHAND_ITEM:
+                // match item registry name
+                ItemStack heldItem = player.getMainHandItem();
+                idMatch = getId().isPresent() && getId().get().equals(heldItem.getItem().getRegistryName());
+                // match item tag
+                if(getData().isPresent() && getData().get().startsWith("#")) {
+                    // match item tag
+                    ResourceLocation tagId = ResourceLocation.tryParse(getData().get().substring(1));
+                    ITag<Item> tag = ItemTags.getAllTags().getTagOrEmpty(tagId);
+                    idMatch = tag.contains(heldItem.getItem());
+                }
+                // match nbt tag
+                tagMatch = !tag.isPresent();
+                if(tag.isPresent()) {
+                    tagMatch = NBTUtil.compareNbt(tag.get(), heldItem.getTag(), true);
+                    RPGGods.LOGGER.debug("item nbt tag match: " + tagMatch);
+                }
+                return idMatch && tagMatch;
+            case PLAYER_INTERACT_BLOCK:
+                if(data.isPresent()) {
+                    // locate block from registry
+                    Block block = ForgeRegistries.BLOCKS.getValue(data.get());
+                    if(null == block) {
+                        return false;
+                    }
+                    // match block registry name
+                    idMatch = getId().isPresent() && getId().get().equals(data.get());
+                    // match block tag
+                    if(getData().isPresent() && getData().get().startsWith("#")) {
+                        // match block tag
+                        ResourceLocation tagId = ResourceLocation.tryParse(getData().get().substring(1));
+                        ITag<Block> tag = BlockTags.getAllTags().getTagOrEmpty(tagId);
+                        idMatch = tag.contains(block);
+                    }
+                    return idMatch;
+                }
+                return false;
+            case PLAYER_RIDE_ENTITY:
+                return player.isPassenger() && player.getVehicle() != null && getId().isPresent()
+                        && getId().get().equals(player.getVehicle().getType().getRegistryName())
+                        && (!tag.isPresent() || NBTUtil.compareNbt(tag.get(), entityTag.get(), true));
+            case DIMENSION: return getId().isPresent() && getId().get().equals(player.level.dimension().location());
+            case STRUCTURE: return player.level instanceof ServerWorld && isInStructure((ServerWorld) player.level, player.blockPosition());
+            // match data to perk condition data
+            case RITUAL:
+            case EFFECT_START:
+                return getId().isPresent() && data.isPresent() && getId().get().equals(data.get());
+            // match data and NBT tag
+            case ENTITY_HURT_PLAYER:
+            case ENTITY_KILLED_PLAYER:
+            case PLAYER_HURT_ENTITY:
+            case PLAYER_KILLED_ENTITY:
+            case PLAYER_INTERACT_ENTITY:
+                idMatch = getId().isPresent() && data.isPresent() && getId().get().equals(data.get());
+                tagMatch = !tag.isPresent();
+                if(tag.isPresent()) {
+                    tagMatch = entityTag.isPresent() && NBTUtil.compareNbt(tag.get(), entityTag.get(), true);
+                    RPGGods.LOGGER.debug("entity nbt tag match: " + tagMatch);
+                }
+                return idMatch && tagMatch;
+        }
+        return false;
+    }
+
     private ITextComponent dataToDisplay(final String d) {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
@@ -112,7 +223,9 @@ public class PerkCondition {
             case MAINHAND_ITEM: case RITUAL:
                 Item item = ForgeRegistries.ITEMS.getValue(rl);
                 if(item != null) {
-                    return new ItemStack(item).getDisplayName();
+                    ItemStack itemStack = new ItemStack(item);
+                    tag.ifPresent(nbt -> itemStack.setTag(nbt));
+                    return itemStack.getDisplayName();
                 }
                 return new StringTextComponent(d);
             case BIOME:

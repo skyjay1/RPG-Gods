@@ -1,11 +1,15 @@
 package rpggods;
 
 import com.google.common.collect.Lists;
+import net.minecraft.block.AbstractBlock;
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
 import net.minecraft.client.gui.ScreenManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
 import net.minecraft.inventory.container.ContainerType;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemModelsProperties;
@@ -21,6 +25,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.registries.ObjectHolder;
+import rpggods.block.GlowBlock;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
@@ -62,6 +67,20 @@ public final class RGRegistry {
     }
 
     @ObjectHolder(RPGGods.MODID)
+    public static final class BlockReg {
+        @ObjectHolder("light")
+        public static final Block LIGHT = null;
+
+        @SubscribeEvent
+        public static void registerBlocks(final RegistryEvent.Register<Block> event) {
+            RPGGods.LOGGER.debug("registerBlocks");
+            event.getRegistry().register(new GlowBlock(AbstractBlock.Properties.of(Material.AIR)
+                    .strength(-1F).noCollission().randomTicks().lightLevel(b -> b.getValue(GlowBlock.LIGHT_LEVEL)))
+                    .setRegistryName(RPGGods.MODID, "light"));
+        }
+    }
+
+    @ObjectHolder(RPGGods.MODID)
     public static final class ItemReg {
 
         @ObjectHolder("altar")
@@ -77,6 +96,8 @@ public final class RGRegistry {
                     .setRegistryName(RPGGods.MODID, "altar"));
             event.getRegistry().register(new ScrollItem(new Item.Properties().tab(ItemGroup.TAB_MISC))
                     .setRegistryName(RPGGods.MODID, "scroll"));
+            event.getRegistry().register(new BlockItem(BlockReg.LIGHT, new Item.Properties())
+                    .setRegistryName(RPGGods.MODID, "light"));
         }
     }
 
