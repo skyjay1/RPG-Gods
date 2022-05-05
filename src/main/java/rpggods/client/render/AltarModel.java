@@ -23,19 +23,16 @@ import java.util.Map;
 
 public class AltarModel extends AltarArmorModel {
 
-    // parent
-    protected ModelPart leftSleeve;
-    protected ModelPart rightSleeve;
-    protected ModelPart leftPants;
-    protected ModelPart rightPants;
-    protected ModelPart jacket;
-
-    // custom
     protected ModelPart bodyChest;
     protected ModelPart rightArmSlim;
     protected ModelPart leftArmSlim;
     protected ModelPart leftSleeveSlim;
     protected ModelPart rightSleeveSlim;
+    protected ModelPart leftSleeve;
+    protected ModelPart rightSleeve;
+    protected ModelPart leftPants;
+    protected ModelPart rightPants;
+    protected ModelPart jacket;
 
     private static final EnumMap<HumanoidPart, Collection<ModelPart>> ROTATION_MAP = new EnumMap<>(HumanoidPart.class);
 
@@ -65,11 +62,12 @@ public class AltarModel extends AltarArmorModel {
         CubeDeformation cubeDeformation = CubeDeformation.NONE;
         MeshDefinition meshdefinition = HumanoidModel.createMesh(cubeDeformation, 0.0F);
         PartDefinition partdefinition = meshdefinition.getRoot();
-        // replace parent definitions
         partdefinition.addOrReplaceChild("left_arm", CubeListBuilder.create().texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation), PartPose.offset(5.0F, 2.0F, 0.0F));
         partdefinition.addOrReplaceChild("left_sleeve", CubeListBuilder.create().texOffs(48, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(5.0F, 2.0F, 0.0F));
         partdefinition.addOrReplaceChild("right_sleeve", CubeListBuilder.create().texOffs(40, 32).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(-5.0F, 2.0F, 0.0F));
-        // add custom models
+        partdefinition.addOrReplaceChild("left_pants", CubeListBuilder.create().texOffs(0, 48).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(1.9F, 12.0F, 0.0F));
+        partdefinition.addOrReplaceChild("right_pants", CubeListBuilder.create().texOffs(0, 32).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(-1.9F, 12.0F, 0.0F));
+        partdefinition.addOrReplaceChild("jacket", CubeListBuilder.create().texOffs(16, 32).addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.ZERO);
         partdefinition.addOrReplaceChild("left_arm_slim", CubeListBuilder.create().texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation), PartPose.offset(5.0F, 2.5F, 0.0F));
         partdefinition.addOrReplaceChild("right_arm_slim", CubeListBuilder.create().texOffs(40, 16).addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation), PartPose.offset(-5.0F, 2.5F, 0.0F));
         partdefinition.addOrReplaceChild("left_sleeve_slim", CubeListBuilder.create().texOffs(48, 48).addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(5.0F, 2.5F, 0.0F));

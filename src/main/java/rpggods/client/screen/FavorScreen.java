@@ -261,6 +261,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
     @Override
     public void init() {
+        super.init();
         this.inventoryLabelY = this.height;
         this.openTimestamp = inventory.player.level.getGameTime();
         // clear button lists and maps
@@ -270,21 +271,21 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         int startX = (this.imageWidth - (TAB_WIDTH * TAB_COUNT)) / 2;
         int startY;
         for(int i = 0; i < tabCount; i++) {
-            tabButtons[i] = this.addWidget(new TabButton(this, i, new TranslatableComponent(Altar.createTranslationKey(deityList.get(i))),
+            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, new TranslatableComponent(Altar.createTranslationKey(deityList.get(i))),
                     leftPos + startX + (i * TAB_WIDTH), topPos - TAB_HEIGHT + 13));
         }
         // add tab buttons
-        leftButton = this.addWidget(new TabArrowButton(this, leftPos + startX - (ARROW_WIDTH + 4), topPos - TAB_HEIGHT + 20, true));
-        rightButton = this.addWidget(new TabArrowButton(this, leftPos + startX + TAB_WIDTH * TAB_COUNT + 4, topPos - TAB_HEIGHT + 20, false));
+        leftButton = this.addRenderableWidget(new TabArrowButton(this, leftPos + startX - (ARROW_WIDTH + 4), topPos - TAB_HEIGHT + 20, true));
+        rightButton = this.addRenderableWidget(new TabArrowButton(this, leftPos + startX + TAB_WIDTH * TAB_COUNT + 4, topPos - TAB_HEIGHT + 20, false));
         // add pages
         startX = (this.imageWidth - (PAGE_WIDTH * PAGE_COUNT)) / 2;
         for(int i = 0; i < PAGE_COUNT; i++) {
             FavorScreen.Page p = FavorScreen.Page.values()[i];
-            pageButtons[i] = this.addWidget(new PageButton(this, leftPos + startX + (i * PAGE_WIDTH), topPos + SCREEN_HEIGHT - 7,
+            pageButtons[i] = this.addRenderableWidget(new PageButton(this, leftPos + startX + (i * PAGE_WIDTH), topPos + SCREEN_HEIGHT - 7,
                     125 + 18 * i, 130, new TranslatableComponent(p.getTitle()), new TranslatableComponent(p.getTitle() + ".tooltip"), p));
         }
         // add scroll bar
-        scrollButton = this.addWidget(new ScrollButton<>(this, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, SCROLL_WIDTH, SCROLL_HEIGHT,
+        scrollButton = this.addRenderableWidget(new ScrollButton<>(this, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, SCROLL_WIDTH, SCROLL_HEIGHT,
                 0, 165, SCREEN_WIDGETS, true, gui -> gui.scrollEnabled, b -> updateScroll(b.getScrollAmount())));
         // re-usable text components
         Component text;
@@ -292,22 +293,22 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         // add offering UI elements
         text = new TranslatableComponent("gui.favor.offerings").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
         tooltip = new TranslatableComponent("gui.favor.offerings.tooltip");
-        offeringTitle = this.addWidget(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 16, OFFERING_WIDTH * 2, 12, text, tooltip));
+        offeringTitle = this.addRenderableWidget(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 16, OFFERING_WIDTH * 2, 12, text, tooltip));
         text = new TranslatableComponent("gui.favor.trades").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
         tooltip = new TranslatableComponent("gui.favor.trades.tooltip");
-        tradeTitle = this.addWidget(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 16, TRADE_WIDTH, 12, text, tooltip));
+        tradeTitle = this.addRenderableWidget(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 16, TRADE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < OFFERING_COUNT; i++) {
-            offeringButtons[i] = this.addWidget(new OfferingButton(this, i, this.leftPos + OFFERING_X + OFFERING_WIDTH * (i % 2), this.topPos + OFFERING_Y + OFFERING_HEIGHT * (i / 2)));
+            offeringButtons[i] = this.addRenderableWidget(new OfferingButton(this, i, this.leftPos + OFFERING_X + OFFERING_WIDTH * (i % 2), this.topPos + OFFERING_Y + OFFERING_HEIGHT * (i / 2)));
         }
         for(int i = 0; i < TRADE_COUNT; i++) {
-            tradeButtons[i] = this.addWidget(new TradeButton(this, i, this.leftPos + TRADE_X, this.topPos + TRADE_Y + i * OFFERING_HEIGHT));
+            tradeButtons[i] = this.addRenderableWidget(new TradeButton(this, i, this.leftPos + TRADE_X, this.topPos + TRADE_Y + i * OFFERING_HEIGHT));
         }
         // add sacrifice UI elements
         text = new TranslatableComponent("gui.favor.sacrifices").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
         tooltip = new TranslatableComponent("gui.favor.sacrifices.tooltip");
-        sacrificeTitle = this.addWidget(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 16, SACRIFICE_WIDTH, 12, text, tooltip));
+        sacrificeTitle = this.addRenderableWidget(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 16, SACRIFICE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < SACRIFICE_COUNT; i++) {
-            sacrificeButtons[i] = this.addWidget(new SacrificeButton(this, i, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y + i * SACRIFICE_HEIGHT));
+            sacrificeButtons[i] = this.addRenderableWidget(new SacrificeButton(this, i, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y + i * SACRIFICE_HEIGHT));
         }
         // add perk UI elements
         for(Map.Entry<ResourceLocation, Map<Integer, List<Perk>>> entry : perkMap.entrySet()) {
@@ -321,7 +322,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 int perkCount = 0;
                 // add each perk to the list using perkCount to determine y-position
                 for(Perk p : perksAtLevel.getValue()) {
-                    perkButtonList.add(this.addWidget(new PerkButton(this, p,
+                    perkButtonList.add(this.addRenderableWidget(new PerkButton(this, p,
                             startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X),
                             startY + PERK_SPACE_Y + perkCount * (PERK_HEIGHT + PERK_SPACE_Y))));
                     perkCount++;
@@ -329,7 +330,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 // add level number button
                 text = new TextComponent(perksAtLevel.getKey().toString()).withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
                 if(!perkLevelButtonMap.containsKey(perksAtLevel.getKey())) {
-                    perkLevelButtonMap.put(perksAtLevel.getKey(), this.addWidget(
+                    perkLevelButtonMap.put(perksAtLevel.getKey(), this.addRenderableWidget(
                             new TextButton(this, startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X) + 4, startY - 12,
                                     PERK_WIDTH, PERK_HEIGHT, text)));
                 }

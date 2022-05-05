@@ -224,7 +224,7 @@ public final class RGRegistry {
             // Altar properties
             ItemProperties.register(ItemReg.ALTAR, new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
-                if(altars.isEmpty()) {
+                if(altars.isEmpty() || entity.tickCount % 100 == 0) {
                     altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());
                     Collections.sort(altars, ResourceLocation::compareNamespaced);
                 }

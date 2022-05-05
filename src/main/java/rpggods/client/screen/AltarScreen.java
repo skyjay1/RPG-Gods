@@ -1,7 +1,6 @@
 package rpggods.client.screen;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
@@ -83,11 +82,9 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
     private final AltarScreen.TabButton[] tabButtons = new AltarScreen.TabButton[TAB_COUNT];
     private int tabIndex;
 
-    private boolean enabled;
     private Optional<String> name;
     private boolean female;
     private boolean slim;
-    private AltarItems items;
     private AltarPose pose;
     private boolean poseLocked;
 
@@ -110,7 +107,6 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.inventoryLabelX = this.leftPos + AltarContainer.PLAYER_INV_X;
         this.inventoryLabelY = this.topPos + AltarContainer.PLAYER_INV_Y - 10;
         Altar altar = screenContainer.getAltar();
-        enabled = altar.isEnabled();
         if(altar.getDeity().isPresent()) {
             name = Optional.empty();
         } else if(screenContainer.getEntity().hasCustomName()) {
@@ -120,23 +116,23 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         }
         female = altar.isFemale();
         slim = altar.isSlim();
-        items = altar.getItems();
         pose = altar.getPose();
         poseLocked = altar.isPoseLocked();
     }
 
     @Override
     public void init() {
+        super.init();
         // add tab buttons
-        tabButtons[0] = addWidget(new AltarScreen.TabButton(this, 0, new TranslatableComponent("gui.altar.pose"),
+        tabButtons[0] = addRenderableWidget(new AltarScreen.TabButton(this, 0, new TranslatableComponent("gui.altar.pose"),
                 leftPos + (0 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.ARMOR_STAND)));
-        tabButtons[1] = addWidget(new AltarScreen.TabButton(this, 1, new TranslatableComponent("gui.altar.items"),
+        tabButtons[1] = addRenderableWidget(new AltarScreen.TabButton(this, 1, new TranslatableComponent("gui.altar.items"),
                 leftPos + (1 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.IRON_SWORD)));
         // add part buttons
         for (int i = 0, l = HumanoidPart.values().length; i < l; i++) {
             final HumanoidPart p = HumanoidPart.values()[i];
             final Component title = new TranslatableComponent("gui.altar." + p.getSerializedName());
-            partButtons[i] = this.addWidget(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (PART_HEIGHT * i), title, button -> {
+            partButtons[i] = this.addRenderableWidget(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (PART_HEIGHT * i), title, button -> {
                 this.selectedPart = p;
                 AltarScreen.this.updateSliders();
             }) {
@@ -150,18 +146,18 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         final Component titlePreset = new TranslatableComponent("gui.altar.preset");
         final AltarPose[] presets = new AltarPose[] { AltarPose.STANDING_HOLDING, AltarPose.STANDING_RAISED,
                 AltarPose.STANDING_HOLDING_DRAMATIC, AltarPose.WALKING, AltarPose.WEEPING, AltarPose.DAB };
-        presetButton = this.addWidget(new IconButton(this, this.leftPos + PRESET_X, this.topPos + PRESET_Y, 16, 202, titlePreset, button -> {
+        presetButton = this.addRenderableWidget(new IconButton(this, this.leftPos + PRESET_X, this.topPos + PRESET_Y, 16, 202, titlePreset, button -> {
             this.pose = presets[(int)Math.floor(Math.random() * presets.length)];
         }));
         // add reset button
         final Component titleReset = new TranslatableComponent("controls.reset");
-        resetButton = this.addWidget(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
+        resetButton = this.addRenderableWidget(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
             AltarScreen.this.pose.set(AltarScreen.this.selectedPart, 0, 0, 0);
             AltarScreen.this.updateSliders();
         }));
         // add gender button
         final Component titleGender = new TranslatableComponent("gui.altar.gender");
-        genderButton = this.addWidget(new IconButton(this, this.leftPos + GENDER_X, this.topPos + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
+        genderButton = this.addRenderableWidget(new IconButton(this, this.leftPos + GENDER_X, this.topPos + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
             @Override
             public int getIconX() {
                 return super.getIconX() + (AltarScreen.this.female ? 0 : this.width);
@@ -169,7 +165,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         });
         // add slim button
         final Component titleSlim = new TranslatableComponent("gui.altar.slim");
-        slimButton = this.addWidget(new IconButton(this, this.leftPos + SLIM_X, this.topPos + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
+        slimButton = this.addRenderableWidget(new IconButton(this, this.leftPos + SLIM_X, this.topPos + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
             @Override
             public int getIconX() {
                 return super.getIconX() + (AltarScreen.this.slim ? 0 : this.width);
@@ -194,9 +190,9 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             @Override
             double getAngleValue() { return Math.toDegrees(AltarScreen.this.pose.get(AltarScreen.this.selectedPart).z()); }
         });
-        this.addWidget(sliderAngleX);
-        this.addWidget(sliderAngleY);
-        this.addWidget(sliderAngleZ);
+        this.addRenderableWidget(sliderAngleX);
+        this.addRenderableWidget(sliderAngleY);
+        this.addRenderableWidget(sliderAngleZ);
         // items tab
         this.minecraft.keyboardHandler.setSendRepeatsToGui(true);
         int i = (this.width - this.imageWidth) / 2;
@@ -210,7 +206,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.nameField.setMaxLength(35);
         this.nameField.setResponder(s -> name = (s != null && s.length() > 0) ? Optional.of(s) : Optional.empty());
         this.nameField.setEditable(!getMenu().getEntity().isNameLocked());
-        this.addWidget(this.nameField);
+        this.addRenderableWidget(this.nameField);
         // update
         this.updateSliders();
         this.updateTab(0);
