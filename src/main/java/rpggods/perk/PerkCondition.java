@@ -3,6 +3,8 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
@@ -84,18 +86,19 @@ public final class PerkCondition {
     public boolean isInBiome(final Level world, final BlockPos pos) {
         // if biome data is present for this condition, make sure the biome matches
         if(type == PerkCondition.Type.BIOME && data.isPresent()) {
-            final Optional<ResourceKey<Biome>> biome = world.getBiomeName(pos);
-            if(data.get().contains(":")) {
+            final Holder<Biome> biome = world.getBiome(pos);
+            if(id.isPresent()) {
                 // interpret as a ResourceLocation
                 // if the biome name does not match, the condition is false
-                if(biome.isPresent() && !biome.get().getRegistryName().toString().equals(data.get())) {
+                if(!biome.is(id.get())) {
                     return false;
                 }
             } else {
                 // interpret as a BiomeDictionary.TYPE
                 final BiomeDictionary.Type type = BiomeDictionary.Type.getType(data.get());
+                final Optional<ResourceKey<Biome>> resourceKey = biome.unwrapKey();
                 // if the biome does not match the given type, the condition is false
-                if(biome.isPresent() && !BiomeDictionary.hasType(biome.get(), type)) {
+                if(resourceKey.isPresent() && !BiomeDictionary.hasType(resourceKey.get(), type)) {
                     return false;
                 }
             }
@@ -114,7 +117,9 @@ public final class PerkCondition {
         if(type == PerkCondition.Type.STRUCTURE && id.isPresent()) {
             StructureFeature<?> structure = ForgeRegistries.STRUCTURE_FEATURES.getValue(id.get());
             if(structure != null) {
-                return world.structureFeatureManager().getStructureAt(pos, structure).isValid();
+                // TODO isInStructure broken
+                return false;
+                //return world.structureFeatureManager().getStructureAt(pos, structure).isValid();
             }
         }
         return false;
@@ -159,14 +164,13 @@ public final class PerkCondition {
                 if(getData().isPresent() && getData().get().startsWith("#")) {
                     // match item tag
                     ResourceLocation tagId = ResourceLocation.tryParse(getData().get().substring(1));
-                    Tag<Item> tag = ItemTags.getAllTags().getTagOrEmpty(tagId);
-                    idMatch = tag.contains(heldItem.getItem());
+                    TagKey<Item> tagKey = ItemTags.create(tagId);
+                    idMatch = heldItem.is(tagKey);
                 }
                 // match nbt tag
                 tagMatch = !tag.isPresent();
                 if(tag.isPresent()) {
                     tagMatch = NbtUtils.compareNbt(tag.get(), heldItem.getTag(), true);
-                    RPGGods.LOGGER.debug("item nbt tag match: " + tagMatch);
                 }
                 return idMatch && tagMatch;
             case PLAYER_INTERACT_BLOCK:
@@ -182,8 +186,8 @@ public final class PerkCondition {
                     if(getData().isPresent() && getData().get().startsWith("#")) {
                         // match block tag
                         ResourceLocation tagId = ResourceLocation.tryParse(getData().get().substring(1));
-                        Tag<Block> tag = BlockTags.getAllTags().getTagOrEmpty(tagId);
-                        idMatch = tag.contains(block);
+                        TagKey<Block> tagKey = BlockTags.create(tagId);
+                        idMatch = block.defaultBlockState().is(tagKey);
                     }
                     return idMatch;
                 }
@@ -208,7 +212,6 @@ public final class PerkCondition {
                 tagMatch = !tag.isPresent();
                 if(tag.isPresent()) {
                     tagMatch = entityTag.isPresent() && NbtUtils.compareNbt(tag.get(), entityTag.get(), true);
-                    RPGGods.LOGGER.debug("entity nbt tag match: " + tagMatch);
                 }
                 return idMatch && tagMatch;
         }

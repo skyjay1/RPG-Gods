@@ -1,6 +1,7 @@
 package rpggods;
 
 import com.google.common.collect.Lists;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Material;
@@ -19,17 +20,17 @@ import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
-import net.minecraftforge.common.extensions.IForgeContainerType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.registries.ObjectHolder;
 import rpggods.block.GlowBlock;
 import rpggods.entity.AltarEntity;
+import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
@@ -151,8 +152,14 @@ public final class RGRegistry {
             });
             // Favor screen requires Favor as a Compound Tag and Deity ID as a ResourceLocation
             MenuType<FavorContainer> favorContainer = IForgeMenuType.create((windowId, inv, data) -> {
-                final IFavor favor = RPGGods.FAVOR.getDefaultInstance();
-                RPGGods.FAVOR.readNBT(favor, null, data.readNbt());
+                CompoundTag nbt = data.readNbt();
+                // load favor capability
+                LazyOptional<IFavor> ifavor = inv.player.getCapability(RPGGods.FAVOR);
+                IFavor favor = ifavor.orElse(Favor.EMPTY);
+                if(favor != Favor.EMPTY && nbt != null) {
+                    favor.deserializeNBT(nbt);
+                }
+                // load deity
                 boolean hasDeity = data.readBoolean();
                 ResourceLocation deityId = null;
                 if(hasDeity) {
@@ -184,19 +191,22 @@ public final class RGRegistry {
         }
 
         @SubscribeEvent
-        private static void registerEntityLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        public static void registerEntityLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
             RPGGods.LOGGER.debug("registerEntityRenderers");
-            // TODO
-            //RenderingRegistry.registerEntityRenderingHandler(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
+            // create cube deformations
+            net.minecraft.client.model.geom.builders.CubeDeformation inner = new net.minecraft.client.model.geom.builders.CubeDeformation(0.25F);
+            net.minecraft.client.model.geom.builders.CubeDeformation outer = new net.minecraft.client.model.geom.builders.CubeDeformation(0.5F);
+            // register layer definitions
+            event.registerLayerDefinition(rpggods.client.render.AltarRenderer.ALTAR_MODEL_RESOURCE, () -> rpggods.client.render.AltarModel.createBodyLayer());
+            event.registerLayerDefinition(rpggods.client.render.AltarRenderer.ALTAR_INNER_ARMOR_RESOURCE, () -> rpggods.client.render.AltarArmorModel.createBodyLayer(inner));
+            event.registerLayerDefinition(rpggods.client.render.AltarRenderer.ALTAR_OUTER_ARMOR_RESOURCE, () -> rpggods.client.render.AltarArmorModel.createBodyLayer(outer));
         }
 
         @SubscribeEvent
-        private static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
             RPGGods.LOGGER.debug("registerEntityRenderers");
-            // TODO
-            //RenderingRegistry.registerEntityRenderingHandler(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
+            event.registerEntityRenderer(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
         }
-
 
         private static void registerContainerRenders() {
             RPGGods.LOGGER.debug("registerContainerRenders");
@@ -212,7 +222,6 @@ public final class RGRegistry {
             ItemProperties.register(ItemReg.SCROLL, new ResourceLocation("open"),
                     (item, world, entity, i) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
             // Altar properties
-
             ItemProperties.register(ItemReg.ALTAR, new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
                 if(altars.isEmpty()) {
@@ -222,9 +231,9 @@ public final class RGRegistry {
                 ResourceLocation deity = ResourceLocation.tryParse(item.getOrCreateTag().getString(AltarItem.KEY_ALTAR));
                 int index = 0;
                 int size = altars.size();
-                for(int i = 0; i < size; i++) {
-                    if(altars.get(i).equals(deity)) {
-                        index = i;
+                for(int j = 0; j < size; j++) {
+                    if(altars.get(j).equals(deity)) {
+                        index = j;
                         break;
                     }
                 }

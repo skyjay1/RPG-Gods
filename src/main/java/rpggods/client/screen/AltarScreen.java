@@ -3,15 +3,16 @@ package rpggods.client.screen;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.block.BlockState;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.MultiBufferSource;
 import com.mojang.blaze3d.platform.Lighting;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -140,8 +141,8 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
                 AltarScreen.this.updateSliders();
             }) {
                 @Override
-                protected boolean isSelected() {
-                    return this.isFocused() || (p == AltarScreen.this.selectedPart);
+                public boolean isFocused() {
+                    return super.isFocused() || (p == AltarScreen.this.selectedPart);
                 }
             });
         }
@@ -219,9 +220,8 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
     protected void renderBg(PoseStack matrixStack, float partialTicks, int mouseX, int mouseY) {
         this.renderBackground(matrixStack);
         Lighting.setupForFlatItems();
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
         // draw background
-        this.minecraft.getTextureManager().bind(SCREEN_TEXTURE);
+        RenderSystem.setShaderTexture(0, SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos, this.topPos, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         // draw item slots
         if(this.tabIndex == 1) {
@@ -238,7 +238,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             }
         }
         // draw preview pane
-        this.minecraft.getTextureManager().bindForSetup(SCREEN_WIDGETS);
+        RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
         this.blit(matrixStack, this.leftPos + PREVIEW_X, this.topPos + PREVIEW_Y, 168, 130, PREVIEW_WIDTH, PREVIEW_HEIGHT);
     }
 
@@ -338,35 +338,32 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         updateAltarEntity(menu.getEntity());
 
         // Render the Entity with given scale
-        RenderSystem.pushMatrix();
-        RenderSystem.enableRescaleNormal();
-        RenderSystem.enableAlphaTest();
-        RenderSystem.defaultAlphaFunc();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.translatef(posX + margin, posY + margin, 100.0F + 10.0F);
-        RenderSystem.translatef(0.0F, PREVIEW_HEIGHT - margin * 1.75F, 0.0F);
-        // apply negative body rotation to ensure entity faces camera
-        final float entityYRot = 360.0F - getMenu().getEntity().yBodyRot;
-        RenderSystem.rotatef(entityYRot, 0.0F, -1.0F, 0.0F);
-        RenderSystem.scalef(1.0F, -1.0F, 1.0F);
-        RenderSystem.scalef(scale, scale, scale);
-        RenderSystem.rotatef(rotX * 15.0F, 0.0F, 1.0F, 0.0F);
-        RenderSystem.rotatef(rotY * 15.0F, 1.0F, 0.0F, 0.0F);
-
-        Lighting.setupForFlatItems();
-
-        MultiBufferSource.BufferSource bufferType = minecraft.renderBuffers().bufferSource();
-        Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(menu.getEntity())
-                        .render(menu.getEntity(), 0F, partialTicks, matrixStackIn, bufferType, 15728880);
-        bufferType.endBatch();
-
-        RenderSystem.enableDepthTest();
+        PoseStack posestack = RenderSystem.getModelViewStack();
+        posestack.pushPose();
+        posestack.translate((double)posX, (double)posY, 1050.0D);
+        posestack.scale(1.0F, 1.0F, -1.0F);
+        RenderSystem.applyModelViewMatrix();
+        PoseStack posestack1 = new PoseStack();
+        posestack1.translate(0.0D, 0.0D, 1000.0D);
+        posestack1.scale(scale, scale, scale);
+        Quaternion quaternion = Vector3f.ZP.rotationDegrees(rotX * 15.0F); // was 180.0F
+        Quaternion quaternion1 = Vector3f.XP.rotationDegrees(rotY * 15.0F);
+        quaternion.mul(quaternion1);
+        posestack1.mulPose(quaternion);
+        Lighting.setupForEntityInInventory();
+        EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        quaternion1.conj();
+        entityrenderdispatcher.overrideCameraOrientation(quaternion1);
+        entityrenderdispatcher.setRenderShadow(false);
+        MultiBufferSource.BufferSource multibuffersource$buffersource = Minecraft.getInstance().renderBuffers().bufferSource();
+        RenderSystem.runAsFancy(() -> {
+            entityrenderdispatcher.render(menu.getEntity(), 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, posestack1, multibuffersource$buffersource, 15728880);
+        });
+        multibuffersource$buffersource.endBatch();
+        entityrenderdispatcher.setRenderShadow(true);
+        posestack.popPose();
+        RenderSystem.applyModelViewMatrix();
         Lighting.setupFor3DItems();
-        RenderSystem.disableAlphaTest();
-        RenderSystem.disableRescaleNormal();
-        RenderSystem.popMatrix();
     }
 
     /**
@@ -407,8 +404,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
                 final int xOffset = (index % TAB_COUNT) * TAB_WIDTH;
                 final int yOffset = isSelected() ? this.height : 2;
                 // draw button background
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y - selected, xOffset, yOffset - selected, this.width, this.height - selected);
                 // draw item
                 AltarScreen.this.itemRenderer.renderGuiItem(item, this.x + (this.width - 16) / 2, this.y + (this.height - 16) / 2);
@@ -430,18 +426,13 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         @Override
         public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible) {
-                final boolean selected = isSelected();
+                final boolean selected = isFocused();
                 final int xOffset = 25;
                 final int yOffset = 130 + (selected ? this.height : 0);
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, xOffset, yOffset, this.width, this.height);
                 drawCenteredString(matrixStack, AltarScreen.this.font, this.getMessage(), this.x + this.width / 2, this.y + (this.height - 8) / 2, getFGColor() | Mth.ceil(this.alpha * 255.0F) << 24);
             }
-        }
-
-        protected boolean isSelected() {
-            return this.isHovered();
         }
     }
 
@@ -462,13 +453,12 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible) {
                 int xOffset = 97;
-                int yOffset = 130 + (this.isHovered() ? this.height : 0);
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+                int yOffset = 130 + (this.isFocused() ? this.height : 0);
                 // draw button background
-                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, xOffset, yOffset, this.width, this.height);
                 // draw button icon
-                AltarScreen.this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
+                RenderSystem.setShaderTexture(0, SCREEN_TEXTURE);
                 this.blit(matrixStack, this.x, this.y, getIconX(), getIconY(), this.width, this.height);
             }
         }

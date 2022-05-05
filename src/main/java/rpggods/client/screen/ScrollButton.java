@@ -1,5 +1,6 @@
 package rpggods.client.screen;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
@@ -60,7 +61,7 @@ public class ScrollButton<T extends Screen> extends Button {
     @Override
     public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         if (this.visible) {
-            screen.getMinecraft().getTextureManager().bind(texture);
+            RenderSystem.setShaderTexture(0, texture);
             final boolean isEnabled = enabled.test(screen);
             final float scroll = isEnabled ? scrollAmount : 0.0F;
             final int vOffset = isEnabled ? 0 : vHeight;

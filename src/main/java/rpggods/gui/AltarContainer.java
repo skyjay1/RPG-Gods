@@ -52,22 +52,20 @@ public class AltarContainer extends AbstractContainerMenu {
         // add container inventory
         altarSlots = new ArrayList<>(ALTAR_INV_SIZE);
         int index = 0;
-        if(altarInv != null) {
-            boolean handsLocked = entity.isHandsLocked();
-            boolean armorLocked = entity.isArmorLocked();
-            boolean blockLocked = entity.isBlockLocked();
-            // mainhand slot
-            altarSlots.add(this.addSlot(new AltarSlot(altarInv, index++, ARMOR_X + 18 + 2, ARMOR_Y, handsLocked)));
-            // armor slots
-            altarSlots.add(this.addSlot(new EquipmentSlot(altarInv, index++, ARMOR_X, ARMOR_Y + 3 * 18, armorLocked, EquipmentSlot.FEET)));
-            altarSlots.add(this.addSlot(new EquipmentSlot(altarInv, index++, ARMOR_X, ARMOR_Y + 2 * 18, armorLocked, EquipmentSlot.LEGS)));
-            altarSlots.add(this.addSlot(new EquipmentSlot(altarInv, index++, ARMOR_X, ARMOR_Y + 1 * 18, armorLocked, EquipmentSlot.CHEST)));
-            altarSlots.add(this.addSlot(new EquipmentSlot(altarInv, index++, ARMOR_X, ARMOR_Y + 0 * 18, armorLocked, EquipmentSlot.HEAD)));
-            // offhand slot
-            altarSlots.add(this.addSlot(new EquipmentSlot(altarInv, index++, ARMOR_X + 18 + 2, ARMOR_Y + 18, handsLocked, EquipmentSlot.OFFHAND)));
-            // block slot
-            altarSlots.add(this.addSlot(new AltarSlot(altarInv, index++, ARMOR_X + 18 + 2, ARMOR_Y + 18 * 3, blockLocked)));
-        }
+        boolean handsLocked = entity.isHandsLocked();
+        boolean armorLocked = entity.isArmorLocked();
+        boolean blockLocked = entity.isBlockLocked();
+        // mainhand slot
+        altarSlots.add(this.addSlot(new AltarSlot(altarInv, index++, ARMOR_X + 18 + 2, ARMOR_Y, handsLocked)));
+        // armor slots
+        altarSlots.add(this.addSlot(new EquipmentOnlySlot(altarInv, index++, ARMOR_X, ARMOR_Y + 3 * 18, armorLocked, EquipmentSlot.FEET)));
+        altarSlots.add(this.addSlot(new EquipmentOnlySlot(altarInv, index++, ARMOR_X, ARMOR_Y + 2 * 18, armorLocked, EquipmentSlot.LEGS)));
+        altarSlots.add(this.addSlot(new EquipmentOnlySlot(altarInv, index++, ARMOR_X, ARMOR_Y + 1 * 18, armorLocked, EquipmentSlot.CHEST)));
+        altarSlots.add(this.addSlot(new EquipmentOnlySlot(altarInv, index++, ARMOR_X, ARMOR_Y + 0 * 18, armorLocked, EquipmentSlot.HEAD)));
+        // offhand slot
+        altarSlots.add(this.addSlot(new EquipmentOnlySlot(altarInv, index++, ARMOR_X + 18 + 2, ARMOR_Y + 18, handsLocked, EquipmentSlot.OFFHAND)));
+        // block slot
+        altarSlots.add(this.addSlot(new AltarSlot(altarInv, index++, ARMOR_X + 18 + 2, ARMOR_Y + 18 * 3, blockLocked)));
         // add player inventory
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 9; ++j) {
@@ -174,7 +172,7 @@ public class AltarContainer extends AbstractContainerMenu {
         }
     }
 
-    public static class EquipmentSlot extends AltarSlot {
+    public static class EquipmentOnlySlot extends AltarSlot {
 
         private static final ResourceLocation[] ARMOR_SLOT_TEXTURES = new ResourceLocation[]{
                 InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS, InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS,
@@ -184,7 +182,7 @@ public class AltarContainer extends AbstractContainerMenu {
 
         private EquipmentSlot type;
 
-        public EquipmentSlot(Container inventoryIn, int index, int xPosition, int yPosition, final boolean locked, EquipmentSlot slotType) {
+        public EquipmentOnlySlot(Container inventoryIn, int index, int xPosition, int yPosition, final boolean locked, EquipmentSlot slotType) {
             super(inventoryIn, index, xPosition, yPosition, locked);
             this.type = slotType;
         }

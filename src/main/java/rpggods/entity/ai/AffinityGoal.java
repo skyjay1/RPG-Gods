@@ -21,18 +21,17 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Tuple;
 import net.minecraft.core.BlockPos;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.network.PacketDistributor;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
+import rpggods.favor.Favor;
 import rpggods.favor.FavorRange;
 import rpggods.favor.IFavor;
-import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.tameable.ITameable;
+import rpggods.tameable.Tameable;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -41,14 +40,12 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import net.minecraft.world.entity.ai.goal.Goal.Flag;
-
 public class AffinityGoal {
 
     private static boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
         if (!(target instanceof Creeper) && !(target instanceof Ghast)) {
             if (target instanceof Mob) {
-                ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(RPGGods.TAMEABLE.getDefaultInstance());
+                ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
                 return !t.isTamed() || !t.getOwnerId().isPresent() || !t.getOwnerId().get().equals(owner.getUUID());
             } else if (target instanceof Player && owner instanceof Player && !((Player)owner).canHarmPlayer((Player)target)) {
                 return false;
@@ -196,7 +193,7 @@ public class AffinityGoal {
                 if(e instanceof Player && e != creature.getLastHurtByMob() && !isOwnerOrTeam(creature, e)) {
                     List<ResourceLocation> perks = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.FLEE, ImmutableList.of());
                     if(perks.size() > 0) {
-                        IFavor favor = e.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance());
+                        IFavor favor = e.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
                         if(favor.isEnabled()) {
                             Perk p;
                             for(ResourceLocation r : perks) {
@@ -246,8 +243,8 @@ public class AffinityGoal {
 
         @Override
         public boolean canUse() {
-            ITameable t = entity.getCapability(RPGGods.TAMEABLE).orElse(RPGGods.TAMEABLE.getDefaultInstance());
-            return t.isTamed() && t.isSitting() && entity.hurtTime > 0;
+            ITameable t = entity.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
+            return t != Tameable.EMPTY && t.isTamed() && t.isSitting() && entity.hurtTime > 0;
         }
 
         @Override
@@ -281,7 +278,7 @@ public class AffinityGoal {
 
         @Override
         public boolean canUse() {
-            ITameable tameable = entity.getCapability(RPGGods.TAMEABLE).orElse(RPGGods.TAMEABLE.getDefaultInstance());
+            ITameable tameable = entity.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
             Optional<LivingEntity> owner = tameable.getOwner(entity.level);
             if (!owner.isPresent()) {
                 return false;
@@ -361,8 +358,7 @@ public class AffinityGoal {
             if (!isTeleportFriendlyBlock(new BlockPos(x, y, z))) {
                 return false;
             }
-            this.entity.moveTo(x + 0.5D, y, z + 0.5D, this.entity.yRot,
-                    this.entity.xRot);
+            this.entity.moveTo(x + 0.5D, y, z + 0.5D, this.entity.getYRot(), this.entity.getXRot());
             this.navigator.stop();
             return true;
         }
@@ -407,9 +403,9 @@ public class AffinityGoal {
          * method as well.
          */
         public boolean canUse() {
-            ITameable tameable = mob.getCapability(RPGGods.TAMEABLE).orElse(RPGGods.TAMEABLE.getDefaultInstance());
+            ITameable tameable = mob.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
             Optional<LivingEntity> owner = tameable.getOwner(mob.level);
-            if (!owner.isPresent() || !tameable.isTamed() || tameable.isSitting()) {
+            if (tameable == Tameable.EMPTY || !owner.isPresent() || !tameable.isTamed() || tameable.isSitting()) {
                 return false;
             }
             this.owner = owner.get();
@@ -447,9 +443,9 @@ public class AffinityGoal {
          * method as well.
          */
         public boolean canUse() {
-            ITameable tameable = mob.getCapability(RPGGods.TAMEABLE).orElse(RPGGods.TAMEABLE.getDefaultInstance());
+            ITameable tameable = mob.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
             Optional<LivingEntity> owner = tameable.getOwner(mob.level);
-            if (!owner.isPresent() || !tameable.isTamed() || tameable.isSitting()) {
+            if (tameable == Tameable.EMPTY || !owner.isPresent() || !tameable.isTamed() || tameable.isSitting()) {
                 return false;
             }
             this.owner = owner.get();

@@ -4,27 +4,21 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.entity.model.ArmorStandArmorModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.phys.Vec3;
 import com.mojang.math.Vector3f;
 import net.minecraftforge.client.event.RenderLivingEvent;
@@ -45,14 +39,20 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
     protected static final ResourceLocation STEVE_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/steve.png");
     protected static final ResourceLocation ALEX_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/altar/alex.png");
 
+    public static final ModelLayerLocation ALTAR_MODEL_RESOURCE = new ModelLayerLocation(new ResourceLocation(RPGGods.MODID, "altar"), "altar");
+    public static final ModelLayerLocation ALTAR_INNER_ARMOR_RESOURCE = new ModelLayerLocation(new ResourceLocation(RPGGods.MODID, "altar"), "inner_armor");
+    public static final ModelLayerLocation ALTAR_OUTER_ARMOR_RESOURCE = new ModelLayerLocation(new ResourceLocation(RPGGods.MODID, "altar"), "outer_armor");
+
     private final Map<ResourceLocation, ResourceLocation> DEITY_TEXTURES = new HashMap<>();
 
-    public AltarRenderer(final EntityRenderDispatcher renderManagerIn) {
-        super(renderManagerIn, new AltarModel(0.0F, 0.0F), 0.5F);
-        this.addLayer(new HumanoidArmorLayer(this, new AltarArmorModel(0.5F), new AltarArmorModel(1.0F)));
+    public AltarRenderer(final EntityRendererProvider.Context context) {
+        super(context, new AltarModel(context.bakeLayer(ALTAR_MODEL_RESOURCE)), 0.5F);
+        this.addLayer(new HumanoidArmorLayer(this,
+                new AltarArmorModel(context.bakeLayer(ALTAR_INNER_ARMOR_RESOURCE)),
+                new AltarArmorModel(context.bakeLayer(ALTAR_OUTER_ARMOR_RESOURCE))));
         this.addLayer(new ItemInHandLayer<>(this));
-        this.addLayer(new ElytraLayer<>(this));
-        this.addLayer(new CustomHeadLayer<>(this));
+        this.addLayer(new ElytraLayer<>(this, context.getModelSet()));
+        this.addLayer(new CustomHeadLayer<>(this, context.getModelSet()));
     }
 
     @Override
@@ -60,7 +60,7 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
                        MultiBufferSource bufferIn, int packedLightIn) {
         // intentional omission of super call
         // pre-render event
-        if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
+        if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre<>(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
             return;
         }
         matrixStackIn.pushPose();
@@ -76,7 +76,7 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
                 baseHeight = 0.0F;
                 matrixStackIn.pushPose();
                 matrixStackIn.translate(-0.5D, 0.0D, -0.5D);
-                Minecraft.getInstance().getBlockRenderer().renderBlock(block.defaultBlockState(),
+                Minecraft.getInstance().getBlockRenderer().renderSingleBlock(block.defaultBlockState(),
                         matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY, EmptyModelData.INSTANCE);
                 matrixStackIn.popPose();
             }
@@ -121,7 +121,7 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
         }
 
         // post-render event
-        MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Post(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn));
+        MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Post<>(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn));
     }
 
     @Override

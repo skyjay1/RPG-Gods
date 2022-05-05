@@ -7,6 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 
 import java.util.Optional;
@@ -17,7 +18,7 @@ public class FavorContainer extends AbstractContainerMenu {
     private Optional<ResourceLocation> deity;
 
     public FavorContainer(int id, final Inventory inventory) {
-        this(id, inventory, RPGGods.FAVOR.getDefaultInstance(), null);
+        this(id, inventory, Favor.EMPTY, null);
     }
 
     public FavorContainer(final int id, final Inventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {

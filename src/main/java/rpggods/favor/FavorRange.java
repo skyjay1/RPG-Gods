@@ -56,7 +56,7 @@ public class FavorRange {
      */
     public boolean isInRange(final Player player) {
         if (!player.level.isClientSide && player.isEffectiveAi() && player.getCapability(RPGGods.FAVOR).isPresent() && this != FavorRange.EMPTY) {
-            return isInRange(player.getCapability(RPGGods.FAVOR).orElse(RPGGods.FAVOR.getDefaultInstance()));
+            return isInRange(player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY));
         }
         return false;
     }

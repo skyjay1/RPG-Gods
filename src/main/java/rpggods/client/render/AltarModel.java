@@ -3,9 +3,16 @@ package rpggods.client.render;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.world.entity.HumanoidArm;
 import com.mojang.math.Vector3f;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.world.entity.HumanoidArm;
 import rpggods.altar.AltarPose;
 import rpggods.altar.HumanoidPart;
 import rpggods.entity.AltarEntity;
@@ -16,116 +23,72 @@ import java.util.Map;
 
 public class AltarModel extends AltarArmorModel {
 
+    // parent
+    protected ModelPart leftSleeve;
+    protected ModelPart rightSleeve;
+    protected ModelPart leftPants;
+    protected ModelPart rightPants;
+    protected ModelPart jacket;
+
+    // custom
     protected ModelPart bodyChest;
     protected ModelPart rightArmSlim;
     protected ModelPart leftArmSlim;
-
-    // layers
-    protected ModelPart headwear;
-    protected ModelPart leftArmwear;
-    protected ModelPart rightArmwear;
-    protected ModelPart leftArmwearSlim;
-    protected ModelPart rightArmwearSlim;
-    protected ModelPart leftLegwear;
-    protected ModelPart rightLegwear;
-    protected ModelPart bodyWear;
+    protected ModelPart leftSleeveSlim;
+    protected ModelPart rightSleeveSlim;
 
     private static final EnumMap<HumanoidPart, Collection<ModelPart>> ROTATION_MAP = new EnumMap<>(HumanoidPart.class);
 
-    public AltarModel() {
-        this(0.0F, 0.0F);
+    public AltarModel(final ModelPart root) {
+        super(root);
+        this.young = false;
+        this.bodyChest = root.getChild("chest");
+        this.leftArmSlim = root.getChild("left_arm_slim");
+        this.rightArmSlim = root.getChild("right_arm_slim");
+        this.leftSleeve = root.getChild("left_sleeve");
+        this.rightSleeve = root.getChild("right_sleeve");
+        this.leftSleeveSlim = root.getChild("left_sleeve_slim");
+        this.rightSleeveSlim = root.getChild("right_sleeve_slim");
+        this.leftPants = root.getChild("left_pants");
+        this.rightPants = root.getChild("right_pants");
+        this.jacket = root.getChild("jacket");
+
+        ROTATION_MAP.put(HumanoidPart.HEAD, ImmutableList.of(this.head, this.hat));
+        ROTATION_MAP.put(HumanoidPart.BODY, ImmutableList.of(this.body, this.bodyChest, this.jacket));
+        ROTATION_MAP.put(HumanoidPart.LEFT_ARM, ImmutableList.of(this.leftArm, this.leftArmSlim, this.leftSleeve, this.leftSleeveSlim));
+        ROTATION_MAP.put(HumanoidPart.RIGHT_ARM, ImmutableList.of(this.rightArm, this.rightArmSlim, this.rightSleeve, this.rightSleeveSlim));
+        ROTATION_MAP.put(HumanoidPart.LEFT_LEG, ImmutableList.of(this.leftLeg, this.leftPants));
+        ROTATION_MAP.put(HumanoidPart.RIGHT_LEG, ImmutableList.of(this.rightLeg, this.rightPants));
     }
 
-    public AltarModel(final float modelSizeIn, final float yOffsetIn) {
-        super(modelSizeIn, 64, 64);
-        this.texWidth = 64;
-        this.texHeight = 64;
-        this.young = false;
-        // head
-        this.head = new ModelPart(this, 0, 0);
-        this.head.addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, modelSizeIn);
-        this.head.setPos(0.0F, 0.0F + yOffsetIn, 0.0F);
-        // body
-        this.body = new ModelPart(this, 16, 16);
-        this.body.addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, modelSizeIn);
-        this.body.setPos(0.0F, 0.0F + yOffsetIn, 0.0F);
-        this.bodyChest = new ModelPart(this);
-        this.bodyChest.setPos(0.0F, 1.0F, -2.0F);
-        this.bodyChest.xRot = -0.2182F;
-        this.bodyChest.texOffs(19, 20).addBox(-4.01F, 0.0F, 0.0F, 8.0F, 4.0F, 1.0F, modelSizeIn);
-        // full-size arms
-        this.leftArm = new ModelPart(this, 32, 48);
-        this.leftArm.addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn);
-        this.leftArm.setPos(5.0F, 2.0F + yOffsetIn, 0.0F);
-        this.leftArm.mirror = true;
-        this.rightArm = new ModelPart(this, 40, 16);
-        this.rightArm.addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn);
-        this.rightArm.setPos(-5.0F, 2.0F + yOffsetIn, 0.0F);
-        // slim arms
-        this.leftArmSlim = new ModelPart(this, 32, 48);
-        this.leftArmSlim.addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, modelSizeIn);
-        this.leftArmSlim.setPos(5.0F, 2.5F + yOffsetIn, 0.0F);
-        this.leftArmSlim.mirror = true;
-        this.rightArmSlim = new ModelPart(this, 40, 16);
-        this.rightArmSlim.addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, modelSizeIn);
-        this.rightArmSlim.setPos(-5.0F, 2.5F + yOffsetIn, 0.0F);
-        // legs
-        this.rightLeg = new ModelPart(this, 16, 48);
-        this.rightLeg.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn);
-        this.rightLeg.setPos(-2.0F, 12.0F + yOffsetIn, 0.0F);
-        this.leftLeg = new ModelPart(this, 0, 16);
-        //this.leftLeg.mirror = true;
-        this.leftLeg.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn);
-        this.leftLeg.setPos(2.0F, 12.0F + yOffsetIn, 0.0F);
-        // layers
-        // head
-        this.headwear = new ModelPart(this, 32, 0);
-        this.headwear.addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, modelSizeIn + 0.5F);
-        this.headwear.setPos(0.0F, 0.0F + yOffsetIn, 0.0F);
-        // arms
-        this.leftArmwear = new ModelPart(this, 48, 48);
-        this.leftArmwear.addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.leftArmwear.setPos(5.0F, 2.0F + yOffsetIn, 0.0F);
-        this.rightArmwear = new ModelPart(this, 40, 32);
-        this.rightArmwear.addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.rightArmwear.setPos(-5.0F, 2.0F + yOffsetIn, 0.0F); // 10.0F
-        // slim arms
-        this.leftArmwearSlim = new ModelPart(this, 48, 48);
-        this.leftArmwearSlim.addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.leftArmwearSlim.setPos(5.0F, 2.5F + yOffsetIn, 0.0F);
-        this.rightArmwearSlim = new ModelPart(this, 40, 32);
-        this.rightArmwearSlim.addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.rightArmwearSlim.setPos(-5.0F, 2.5F + yOffsetIn, 0.0F); // 10.0F
-        // legs
-        this.leftLegwear = new ModelPart(this, 0, 48);
-        this.leftLegwear.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.leftLegwear.setPos(1.9F, 12.0F + yOffsetIn, 0.0F);
-        this.rightLegwear = new ModelPart(this, 0, 32);
-        this.rightLegwear.addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.rightLegwear.setPos(-1.9F, 12.0F + yOffsetIn, 0.0F);
-        // body
-        this.bodyWear = new ModelPart(this, 16, 32);
-        this.bodyWear.addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, modelSizeIn + 0.25F);
-        this.bodyWear.setPos(0.0F, 0.0F + yOffsetIn, 0.0F);
+    public static LayerDefinition createBodyLayer() {
+        CubeDeformation cubeDeformation = CubeDeformation.NONE;
+        MeshDefinition meshdefinition = HumanoidModel.createMesh(cubeDeformation, 0.0F);
+        PartDefinition partdefinition = meshdefinition.getRoot();
+        // replace parent definitions
+        partdefinition.addOrReplaceChild("left_arm", CubeListBuilder.create().texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation), PartPose.offset(5.0F, 2.0F, 0.0F));
+        partdefinition.addOrReplaceChild("left_sleeve", CubeListBuilder.create().texOffs(48, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(5.0F, 2.0F, 0.0F));
+        partdefinition.addOrReplaceChild("right_sleeve", CubeListBuilder.create().texOffs(40, 32).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(-5.0F, 2.0F, 0.0F));
+        // add custom models
+        partdefinition.addOrReplaceChild("left_arm_slim", CubeListBuilder.create().texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation), PartPose.offset(5.0F, 2.5F, 0.0F));
+        partdefinition.addOrReplaceChild("right_arm_slim", CubeListBuilder.create().texOffs(40, 16).addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation), PartPose.offset(-5.0F, 2.5F, 0.0F));
+        partdefinition.addOrReplaceChild("left_sleeve_slim", CubeListBuilder.create().texOffs(48, 48).addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(5.0F, 2.5F, 0.0F));
+        partdefinition.addOrReplaceChild("right_sleeve_slim", CubeListBuilder.create().texOffs(40, 32).addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, cubeDeformation.extend(0.25F)), PartPose.offset(-5.0F, 2.5F, 0.0F));
+        partdefinition.addOrReplaceChild("chest", CubeListBuilder.create().texOffs(19, 20).addBox(-4.01F, 0.0F, 0.0F, 8.0F, 4.0F, 1.0F, cubeDeformation), PartPose.offsetAndRotation(0.0F, 1.0F, -2.0F, -0.2182F, 0.0F, 0.0F));
 
-        ROTATION_MAP.put(HumanoidPart.HEAD, ImmutableList.of(this.head, this.headwear));
-        ROTATION_MAP.put(HumanoidPart.BODY, ImmutableList.of(this.body, this.bodyChest, this.bodyWear));
-        ROTATION_MAP.put(HumanoidPart.LEFT_ARM, ImmutableList.of(this.leftArm, this.leftArmSlim, this.leftArmwear, this.leftArmwearSlim));
-        ROTATION_MAP.put(HumanoidPart.RIGHT_ARM, ImmutableList.of(this.rightArm, this.rightArmSlim, this.rightArmwear, this.rightArmwearSlim));
-        ROTATION_MAP.put(HumanoidPart.LEFT_LEG, ImmutableList.of(this.leftLeg, this.leftLegwear));
-        ROTATION_MAP.put(HumanoidPart.RIGHT_LEG, ImmutableList.of(this.rightLeg, this.rightLegwear));
+        return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
     protected Iterable<ModelPart> getParts() {
-        return ImmutableList.of(this.head, this.body, this.bodyChest, this.headwear, this.bodyWear, this.leftLeg, this.rightLeg, this.leftLegwear, this.rightLegwear);
+        return ImmutableList.of(this.head, this.body, this.bodyChest, this.hat, this.jacket, this.leftLeg, this.rightLeg, this.leftPants, this.rightPants);
     }
 
     protected Iterable<ModelPart> getSlimArms() {
-        return ImmutableList.of(this.leftArmSlim, this.rightArmSlim, this.leftArmwearSlim, this.rightArmwearSlim);
+        return ImmutableList.of(this.leftArmSlim, this.rightArmSlim, this.leftSleeveSlim, this.rightSleeveSlim);
     }
 
     protected Iterable<ModelPart> getArms() {
-        return ImmutableList.of(this.leftArm, this.rightArm, this.leftArmwear, this.rightArmwear);
+        return ImmutableList.of(this.leftArm, this.rightArm, this.leftSleeve, this.rightSleeve);
     }
 
     @Override
@@ -144,9 +107,9 @@ public class AltarModel extends AltarArmorModel {
         this.body.xRot = 0.0F;
         this.body.yRot = 0.0F;
         this.body.zRot = 0.0F;
-        this.bodyWear.xRot = 0.0F;
-        this.bodyWear.yRot = 0.0F;
-        this.bodyWear.zRot = 0.0F;
+        this.jacket.xRot = 0.0F;
+        this.jacket.yRot = 0.0F;
+        this.jacket.zRot = 0.0F;
         this.bodyChest.xRot = -0.2182F;
         this.bodyChest.yRot = 0.0F;
         this.bodyChest.zRot = 0.0F;

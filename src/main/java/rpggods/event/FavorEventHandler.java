@@ -1,66 +1,39 @@
 package rpggods.event;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import net.minecraft.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.IGrowable;
-import net.minecraft.block.material.Material;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.CommandFunction;
-import net.minecraft.entity.AgeableEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.entity.SpawnReason;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.LightningBolt;
-import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.trading.Merchant;
-import net.minecraft.entity.merchant.villager.AbstractVillagerEntity;
-import net.minecraft.entity.monster.DrownedEntity;
-import net.minecraft.entity.monster.GuardianEntity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.entity.passive.WaterMobEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.projectile.SpectralArrow;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.item.MerchantOffer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.pathfinding.SwimmerPathNavigator;
-import net.minecraft.potion.Effect;
-import net.minecraft.potion.EffectInstance;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.state.IntegerProperty;
-import net.minecraft.state.properties.BlockStateProperties;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ITag;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.concurrent.TickDelayedTask;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -68,7 +41,6 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.world.IServerWorld;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.util.LazyOptional;
@@ -83,27 +55,24 @@ import net.minecraftforge.event.entity.living.PotionEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
-import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.entity.ai.AffinityGoal;
-import rpggods.favor.FavorLevel;
+import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.network.SUpdateSittingPacket;
-import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
 import rpggods.deity.Cooldown;
+import rpggods.tameable.Tameable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -111,7 +80,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -198,9 +166,9 @@ public class FavorEventHandler {
      */
     public static boolean onSacrifice(final Player player, final IFavor favor, final LivingEntity entity) {
         boolean success = false;
-        if(favor.isEnabled()) {
+        ResourceLocation entityId = entity.getType().getRegistryName();
+        if(favor.isEnabled() && entityId != null) {
             // find and process all matching sacrifices
-            ResourceLocation entityId = entity.getType().getRegistryName();
             ResourceLocation deityId;
             Sacrifice sacrifice;
             Cooldown cooldown;
@@ -434,6 +402,9 @@ public class FavorEventHandler {
         }
         // detect ritual perks for this deity
         ResourceLocation itemId = item.getItem().getItem().getRegistryName();
+        if(null == itemId) {
+            return false;
+        }
         DeityHelper deity = RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new);
         List<ResourceLocation> perkIds = deity.perkByConditionMap
                 .getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of());
@@ -446,7 +417,7 @@ public class FavorEventHandler {
         boolean success = false;
         LazyOptional<IFavor> ifavor = player.getCapability(RPGGods.FAVOR);
         if(ifavor.isPresent()) {
-            IFavor favor = ifavor.orElse(null);
+            IFavor favor = ifavor.orElse(Favor.EMPTY);
             // attempt to run the perks
             if(favor.isEnabled()) {
                 for(Perk perk : perks) {
@@ -496,7 +467,7 @@ public class FavorEventHandler {
                     if (source instanceof LivingEntity && !player.isSpectator() && !player.isCreative()) {
                         player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                             triggerCondition(PerkCondition.Type.ENTITY_KILLED_PLAYER, player, f, Optional.of(source),
-                                    Optional.of(source.getType().getRegistryName()), Optional.empty());
+                                    Optional.ofNullable(source.getType().getRegistryName()), Optional.empty());
                         });
                     }
                 } else if (event.getSource().getEntity() instanceof Player) {
@@ -504,7 +475,7 @@ public class FavorEventHandler {
                     // onPlayerKillEntity
                     player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.PLAYER_KILLED_ENTITY, player, f, Optional.of(event.getEntityLiving()),
-                                Optional.of(event.getEntityLiving().getType().getRegistryName()), Optional.empty());
+                                Optional.ofNullable(event.getEntityLiving().getType().getRegistryName()), Optional.empty());
                         onSacrifice(player, f, event.getEntityLiving());
                     });
                 }
@@ -531,7 +502,7 @@ public class FavorEventHandler {
                         // onEntityHurtPlayer
                         player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                             triggerCondition(PerkCondition.Type.ENTITY_HURT_PLAYER, player, f, Optional.of(source),
-                                    Optional.of(source.getType().getRegistryName()), Optional.of(event));
+                                    Optional.ofNullable(source.getType().getRegistryName()), Optional.of(event));
                         });
                     }
                 } else if (event.getSource().getDirectEntity() instanceof Player) {
@@ -540,7 +511,7 @@ public class FavorEventHandler {
                     // onPlayerHurtEntity
                     player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.PLAYER_HURT_ENTITY, player, f, Optional.of(target),
-                                Optional.of(target.getType().getRegistryName()), Optional.of(event));
+                                Optional.ofNullable(target.getType().getRegistryName()), Optional.of(event));
                         // onEnterCombat
                         if (player.getCombatTracker().getCombatDuration() < COMBAT_TIMER) {
                             triggerCondition(PerkCondition.Type.ENTER_COMBAT, player, f,
@@ -558,10 +529,10 @@ public class FavorEventHandler {
                 // onPlayerInteractEntity
                 event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
                     final ResourceLocation id = event.getTarget().getType().getRegistryName();
-                    if (triggerCondition(PerkCondition.Type.PLAYER_INTERACT_ENTITY, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.of(id), Optional.empty())) {
+                    if (triggerCondition(PerkCondition.Type.PLAYER_INTERACT_ENTITY, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.ofNullable(id), Optional.empty())) {
                         event.setCancellationResult(InteractionResult.SUCCESS);
                     }
-                    if (event.getTarget() instanceof Merchant && triggerPerks(PerkAction.Type.SPECIAL_PRICE, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.of(id), Optional.of(event))) {
+                    if (event.getTarget() instanceof Merchant && triggerPerks(PerkAction.Type.SPECIAL_PRICE, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.ofNullable(id), Optional.of(event))) {
                         event.setCancellationResult(event.isCanceled() ? InteractionResult.FAIL : InteractionResult.SUCCESS);
                     }
                 });
@@ -658,7 +629,7 @@ public class FavorEventHandler {
                         && !(event.getEntity() instanceof NeutralMob)) {
                     // check for existing attack goal
                     boolean hasAttackGoal = false;
-                    for(Goal g : mob.goalSelector.getRunningGoals().collect(Collectors.toList())) {
+                    for(Goal g : mob.goalSelector.getRunningGoals().toList()) {
                         if(g instanceof MeleeAttackGoal) {
                             hasAttackGoal = true;
                             break;
@@ -686,7 +657,7 @@ public class FavorEventHandler {
                     // onEffectStart
                     player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.EFFECT_START, player, f, Optional.empty(),
-                                Optional.of(event.getPotionEffect().getEffect().getRegistryName()), Optional.empty());
+                                Optional.ofNullable(event.getPotionEffect().getEffect().getRegistryName()), Optional.empty());
                     });
                 }
             }
@@ -757,11 +728,11 @@ public class FavorEventHandler {
         public static void onRenderLiving(final net.minecraftforge.client.event.RenderLivingEvent.Pre<?,?> event) {
             if(event.getEntity().isAlive() && event.getEntity() instanceof Mob && !(event.getEntity() instanceof TamableAnimal)) {
                 LazyOptional<ITameable> tameable = event.getEntity().getCapability(RPGGods.TAMEABLE);
-                if(tameable.isPresent() && tameable.orElse(null).isSitting()) {
+                if(tameable.isPresent() && tameable.orElse(Tameable.EMPTY).isSitting()) {
                     // shift down when sitting
                     ResourceLocation id = event.getEntity().getType().getRegistryName();
                     double dy = RPGGods.CONFIG.isSittingMob(id) ? -0.5D : -0.125D;
-                    event.getMatrixStack().translate(0, dy, 0);
+                    event.getPoseStack().translate(0, dy, 0);
                 }
             }
         }

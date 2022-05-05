@@ -1,11 +1,10 @@
 package rpggods.favor;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.Capability.IStorage;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
@@ -18,6 +17,8 @@ import java.util.Optional;
 
 public class Favor implements IFavor {
 
+    public static final Favor EMPTY = new Favor(false);
+
     protected final Map<ResourceLocation, FavorLevel> favorMap = new HashMap<>();
     protected final Map<String, Long> perkCooldownMap = new HashMap<>();
     protected final Map<ResourceLocation, Cooldown> offeringCooldownMap = new HashMap<>();
@@ -27,6 +28,10 @@ public class Favor implements IFavor {
     private long timestamp = 0L;
 
     public Favor() {
+    }
+
+    private Favor(boolean enabled) {
+        this.enabled = enabled;
     }
 
     @Override
@@ -106,39 +111,31 @@ public class Favor implements IFavor {
         return b.toString();
     }
 
-    public static class Storage implements IStorage<IFavor> {
-
-        @Override
-        public Tag writeNBT(Capability<IFavor> capability, IFavor instance, Direction side) {
-            return instance.serializeNBT();
-        }
-
-        @Override
-        public void readNBT(Capability<IFavor> capability, IFavor instance, Direction side, Tag nbt) {
-            if (nbt instanceof CompoundTag) {
-                instance.deserializeNBT((CompoundTag) nbt);
-            } else {
-                RPGGods.LOGGER.error("Failed to read Favor capability from NBT of type " + (nbt != null ? nbt.getType().getName() : "null"));
-            }
-        }
-    }
-
     public static class Provider implements ICapabilitySerializable<CompoundTag> {
-        public IFavor instance = RPGGods.FAVOR.getDefaultInstance();
+        private final IFavor instance;
+        private final LazyOptional<IFavor> storage;
+
+        public Provider(Player player) {
+            instance = new Favor();
+            storage = LazyOptional.of(() -> instance);
+        }
 
         @Override
         public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
-            return cap == RPGGods.FAVOR ? RPGGods.FAVOR.orEmpty(cap, LazyOptional.of(() -> instance)) : LazyOptional.empty();
+            if(cap == RPGGods.FAVOR) {
+                return storage.cast();
+            }
+            return LazyOptional.empty();
         }
 
         @Override
         public CompoundTag serializeNBT() {
-            return (CompoundTag) RPGGods.FAVOR.getStorage().writeNBT(RPGGods.FAVOR, this.instance, null);
+            return instance.serializeNBT();
         }
 
         @Override
         public void deserializeNBT(CompoundTag nbt) {
-            RPGGods.FAVOR.getStorage().readNBT(RPGGods.FAVOR, this.instance, null, nbt);
+            instance.deserializeNBT(nbt);
         }
     }
 }

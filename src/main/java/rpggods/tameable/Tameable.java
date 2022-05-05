@@ -3,6 +3,8 @@ package rpggods.tameable;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
@@ -14,6 +16,8 @@ import java.util.UUID;
 
 public class Tameable implements ITameable {
 
+    public static final Tameable EMPTY = new Tameable();
+
     private Optional<UUID> owner = Optional.empty();
     private boolean sitting;
     private boolean tamed;
@@ -22,7 +26,7 @@ public class Tameable implements ITameable {
 
     @Override
     public boolean isTamed() {
-        return tamed;
+        return this != EMPTY && tamed;
     }
 
     @Override
@@ -49,40 +53,32 @@ public class Tameable implements ITameable {
     public void setOwnerId(@Nullable UUID ownerId) {
         this.owner = Optional.ofNullable(ownerId);
     }
-/*
-    public static class Storage implements Capability.IStorage<ITameable> {
-
-        @Override
-        public Tag writeNBT(Capability<ITameable> capability, ITameable instance, Direction side) {
-            return instance.serializeNBT();
-        }
-
-        @Override
-        public void readNBT(Capability<ITameable> capability, ITameable instance, Direction side, Tag nbt) {
-            if (nbt instanceof CompoundTag) {
-                instance.deserializeNBT((CompoundTag) nbt);
-            } else {
-                RPGGods.LOGGER.error("Failed to read Tameable capability from NBT of type " + (nbt != null ? nbt.getType().getName() : "null"));
-            }
-        }
-    }*/
 
     public static class Provider implements ICapabilitySerializable<CompoundTag> {
-        public ITameable instance = RPGGods.TAMEABLE.getDefaultInstance();
+        private final ITameable instance;
+        private final LazyOptional<ITameable> storage;
+
+        public Provider(final Entity entity) {
+            instance = new Tameable();
+            storage = LazyOptional.of(() -> instance);
+        }
 
         @Override
         public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
-            return cap == RPGGods.TAMEABLE ? RPGGods.TAMEABLE.orEmpty(cap, LazyOptional.of(() -> instance)) : LazyOptional.empty();
+            if(cap == RPGGods.TAMEABLE) {
+                return storage.cast();
+            }
+            return LazyOptional.empty();
         }
 
         @Override
         public CompoundTag serializeNBT() {
-            return (CompoundTag) RPGGods.TAMEABLE.getStorage().writeNBT(RPGGods.TAMEABLE, this.instance, null);
+            return instance.serializeNBT();
         }
 
         @Override
         public void deserializeNBT(CompoundTag nbt) {
-            RPGGods.TAMEABLE.getStorage().readNBT(RPGGods.TAMEABLE, this.instance, null, nbt);
+            instance.deserializeNBT(nbt);
         }
     }
 }

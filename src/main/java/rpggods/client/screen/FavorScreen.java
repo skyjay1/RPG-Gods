@@ -6,6 +6,8 @@ import com.google.common.collect.Lists;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -13,10 +15,10 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.MultiBufferSource;
 import com.mojang.blaze3d.platform.Lighting;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
@@ -130,6 +132,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Sacrifice>>> sacrificeMap = new HashMap();
     // Key: deity ID; Value: Map of perk level to list of available perks
     private static final Map<ResourceLocation, Map<Integer, List<Perk>>> perkMap = new HashMap();
+    private Inventory inventory;
     private ResourceLocation deity;
     private MutableComponent deityName = (MutableComponent) TextComponent.EMPTY;
     private MutableComponent deityFavor = (MutableComponent) TextComponent.EMPTY;
@@ -175,6 +178,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
     public FavorScreen(FavorContainer screenContainer, Inventory inv, Component titleIn) {
         super(screenContainer, inv, titleIn);
+        this.inventory = inv;
         this.imageWidth = SCREEN_WIDTH;
         this.imageHeight = SCREEN_HEIGHT;
         // add all deities to list
@@ -256,8 +260,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     }
 
     @Override
-    public void init(Minecraft minecraft, int width, int height) {
-        super.init(minecraft, width, height);
+    public void init() {
         this.inventoryLabelY = this.height;
         this.openTimestamp = inventory.player.level.getGameTime();
         // clear button lists and maps
@@ -267,21 +270,21 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         int startX = (this.imageWidth - (TAB_WIDTH * TAB_COUNT)) / 2;
         int startY;
         for(int i = 0; i < tabCount; i++) {
-            tabButtons[i] = this.addButton(new TabButton(this, i, new TranslatableComponent(Altar.createTranslationKey(deityList.get(i))),
+            tabButtons[i] = this.addWidget(new TabButton(this, i, new TranslatableComponent(Altar.createTranslationKey(deityList.get(i))),
                     leftPos + startX + (i * TAB_WIDTH), topPos - TAB_HEIGHT + 13));
         }
         // add tab buttons
-        leftButton = this.addButton(new TabArrowButton(this, leftPos + startX - (ARROW_WIDTH + 4), topPos - TAB_HEIGHT + 20, true));
-        rightButton = this.addButton(new TabArrowButton(this, leftPos + startX + TAB_WIDTH * TAB_COUNT + 4, topPos - TAB_HEIGHT + 20, false));
+        leftButton = this.addWidget(new TabArrowButton(this, leftPos + startX - (ARROW_WIDTH + 4), topPos - TAB_HEIGHT + 20, true));
+        rightButton = this.addWidget(new TabArrowButton(this, leftPos + startX + TAB_WIDTH * TAB_COUNT + 4, topPos - TAB_HEIGHT + 20, false));
         // add pages
         startX = (this.imageWidth - (PAGE_WIDTH * PAGE_COUNT)) / 2;
         for(int i = 0; i < PAGE_COUNT; i++) {
             FavorScreen.Page p = FavorScreen.Page.values()[i];
-            pageButtons[i] = this.addButton(new PageButton(this, leftPos + startX + (i * PAGE_WIDTH), topPos + SCREEN_HEIGHT - 7,
+            pageButtons[i] = this.addWidget(new PageButton(this, leftPos + startX + (i * PAGE_WIDTH), topPos + SCREEN_HEIGHT - 7,
                     125 + 18 * i, 130, new TranslatableComponent(p.getTitle()), new TranslatableComponent(p.getTitle() + ".tooltip"), p));
         }
         // add scroll bar
-        scrollButton = this.addButton(new ScrollButton<>(this, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, SCROLL_WIDTH, SCROLL_HEIGHT,
+        scrollButton = this.addWidget(new ScrollButton<>(this, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, SCROLL_WIDTH, SCROLL_HEIGHT,
                 0, 165, SCREEN_WIDGETS, true, gui -> gui.scrollEnabled, b -> updateScroll(b.getScrollAmount())));
         // re-usable text components
         Component text;
@@ -289,22 +292,22 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         // add offering UI elements
         text = new TranslatableComponent("gui.favor.offerings").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
         tooltip = new TranslatableComponent("gui.favor.offerings.tooltip");
-        offeringTitle = this.addButton(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 16, OFFERING_WIDTH * 2, 12, text, tooltip));
+        offeringTitle = this.addWidget(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 16, OFFERING_WIDTH * 2, 12, text, tooltip));
         text = new TranslatableComponent("gui.favor.trades").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
         tooltip = new TranslatableComponent("gui.favor.trades.tooltip");
-        tradeTitle = this.addButton(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 16, TRADE_WIDTH, 12, text, tooltip));
+        tradeTitle = this.addWidget(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 16, TRADE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < OFFERING_COUNT; i++) {
-            offeringButtons[i] = this.addButton(new OfferingButton(this, i, this.leftPos + OFFERING_X + OFFERING_WIDTH * (i % 2), this.topPos + OFFERING_Y + OFFERING_HEIGHT * (i / 2)));
+            offeringButtons[i] = this.addWidget(new OfferingButton(this, i, this.leftPos + OFFERING_X + OFFERING_WIDTH * (i % 2), this.topPos + OFFERING_Y + OFFERING_HEIGHT * (i / 2)));
         }
         for(int i = 0; i < TRADE_COUNT; i++) {
-            tradeButtons[i] = this.addButton(new TradeButton(this, i, this.leftPos + TRADE_X, this.topPos + TRADE_Y + i * OFFERING_HEIGHT));
+            tradeButtons[i] = this.addWidget(new TradeButton(this, i, this.leftPos + TRADE_X, this.topPos + TRADE_Y + i * OFFERING_HEIGHT));
         }
         // add sacrifice UI elements
         text = new TranslatableComponent("gui.favor.sacrifices").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
         tooltip = new TranslatableComponent("gui.favor.sacrifices.tooltip");
-        sacrificeTitle = this.addButton(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 16, SACRIFICE_WIDTH, 12, text, tooltip));
+        sacrificeTitle = this.addWidget(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 16, SACRIFICE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < SACRIFICE_COUNT; i++) {
-            sacrificeButtons[i] = this.addButton(new SacrificeButton(this, i, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y + i * SACRIFICE_HEIGHT));
+            sacrificeButtons[i] = this.addWidget(new SacrificeButton(this, i, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y + i * SACRIFICE_HEIGHT));
         }
         // add perk UI elements
         for(Map.Entry<ResourceLocation, Map<Integer, List<Perk>>> entry : perkMap.entrySet()) {
@@ -318,7 +321,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 int perkCount = 0;
                 // add each perk to the list using perkCount to determine y-position
                 for(Perk p : perksAtLevel.getValue()) {
-                    perkButtonList.add(this.addButton(new PerkButton(this, p,
+                    perkButtonList.add(this.addWidget(new PerkButton(this, p,
                             startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X),
                             startY + PERK_SPACE_Y + perkCount * (PERK_HEIGHT + PERK_SPACE_Y))));
                     perkCount++;
@@ -326,7 +329,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 // add level number button
                 text = new TextComponent(perksAtLevel.getKey().toString()).withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
                 if(!perkLevelButtonMap.containsKey(perksAtLevel.getKey())) {
-                    perkLevelButtonMap.put(perksAtLevel.getKey(), this.addButton(
+                    perkLevelButtonMap.put(perksAtLevel.getKey(), this.addWidget(
                             new TextButton(this, startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X) + 4, startY - 12,
                                     PERK_WIDTH, PERK_HEIGHT, text)));
                 }
@@ -346,7 +349,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     public void render(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         this.renderBackground(matrixStack);
         // draw background image
-        this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
+        RenderSystem.setShaderTexture(0, SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos, this.topPos, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         // draw name
         this.font.drawShadow(matrixStack, deityName, this.leftPos + NAME_X, this.topPos + NAME_Y, 0xFFFFFF);
@@ -374,21 +377,17 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             renderPerksPage(matrixStack, mouseX, mouseY, partialTicks);
         }
         // draw hovering text LAST
-        for(AbstractWidget b : this.buttons) {
+        // TODO
+        /*for(AbstractWidget b : this.buttons) {
             if(b.visible && b.isHovered()) {
                 b.renderToolTip(matrixStack, mouseX, mouseY);
             }
-        }
+        }*/
     }
 
     @Override
     public boolean isPauseScreen() {
         return true;
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
     }
 
     @Override
@@ -434,7 +433,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         super.removed();
         // clear entity map
         for(AltarEntity entity : entityMap.values()) {
-            entity.remove();
+            entity.discard();
         }
     }
 
@@ -443,7 +442,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         int startX = (this.width - this.font.width(deityTitle)) / 2;
         this.font.draw(matrixStack, deityTitle, startX, this.topPos + TITLE_Y, 0xFFFFFF);
         // draw preview pane
-        this.minecraft.getTextureManager().bind(SCREEN_WIDGETS);
+        RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
         this.blit(matrixStack, this.leftPos + PREVIEW_X, this.topPos + PREVIEW_Y, 202, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
         // prepare to draw favor amounts
         final FavorLevel level = getMenu().getFavor().getFavor(deity);
@@ -479,13 +478,13 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
     private void renderOfferingsPage(PoseStack matrixStack) {
         // draw scroll background
-        this.minecraft.getTextureManager().bind(SCREEN_WIDGETS);
+        RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
         this.blit(matrixStack, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, 188, 0, SCROLL_WIDTH, SCROLL_HEIGHT);
     }
 
     private void renderSacrificesPage(PoseStack matrixStack) {
         // draw scroll background
-        this.minecraft.getTextureManager().bind(SCREEN_WIDGETS);
+        RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
         this.blit(matrixStack, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, 188, 0, SCROLL_WIDTH, SCROLL_HEIGHT);
     }
 
@@ -493,8 +492,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         matrixStack.pushPose();
         matrixStack.translate(0, 0, 250);
         // draw header frame
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
+        RenderSystem.setShaderTexture(0, SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos + 23, this.topPos + 13, 23, 13, 208, 28);
         // draw favor level
         renderFavorLevel(matrixStack, mouseX, mouseY, partialTicks);
@@ -506,13 +504,13 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             b.renderButton(matrixStack, mouseX, mouseY, partialTicks);
         }
         // draw side frames
-        this.getMinecraft().getTextureManager().bind(SCREEN_TEXTURE);
+        RenderSystem.setShaderTexture(0, SCREEN_TEXTURE);
         this.blit(matrixStack, this.leftPos, this.topPos, 0, 0, 24, 170);
         this.blit(matrixStack, this.leftPos + 232, this.topPos, 232, 0, 24, 168);
         // draw perk button tooltip
         matrixStack.translate(0, 0, 50);
         for(PerkButton b : perkButtonMap.computeIfAbsent(deity, key -> ImmutableList.of())) {
-            if(b.visible && b.isHovered()) {
+            if(b.visible && b.isFocused()) {
                 b.renderPerkTooltip(matrixStack, mouseX, mouseY);
             }
         }
@@ -530,14 +528,12 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             matrixStack.scale(scaleX, scaleY, 1);
             matrixStack.translate((this.leftPos + PERK_BOUNDS_X) / scaleX, (this.topPos + PERK_BOUNDS_Y - 14) / scaleY, 0);
             RenderSystem.enableBlend();
-            RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
-            this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+            RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
             // draw stretched texture
             this.blit(matrixStack, 0, 0, 0, 240, 8, 8);
             // draw boundary texture
             matrixStack.scale(1 / scaleX, 1, 1);
             this.blit(matrixStack, Math.round(sizeX), 0, 8, 240, 8, 8);
-            RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
             RenderSystem.disableBlend();
         }
         matrixStack.popPose();
@@ -771,33 +767,33 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         float rotY = (float) Math.atan((double) ((mouseY - this.topPos - PREVIEW_HEIGHT / 2) / 40.0F));
 
         // Render the Entity with given scale
-        RenderSystem.pushMatrix();
-        RenderSystem.enableRescaleNormal();
-        RenderSystem.enableAlphaTest();
-        RenderSystem.defaultAlphaFunc();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.translatef(posX + margin, posY + margin, 100.0F + 10.0F);
-        RenderSystem.translatef(0.0F, PREVIEW_HEIGHT - margin * 1.75F, 0.0F);
-        //RenderSystem.rotatef(this.blockRotation.getOpposite().getHorizontalAngle(), 0.0F, -1.0F, 0.0F);
-        RenderSystem.scalef(1.0F, -1.0F, 1.0F);
-        RenderSystem.scalef(scale, scale, scale);
-        RenderSystem.rotatef(rotX * 15.0F, 0.0F, 1.0F, 0.0F);
-        RenderSystem.rotatef(rotY * 15.0F, 1.0F, 0.0F, 0.0F);
-
-        Lighting.setupForFlatItems();
-
-        MultiBufferSource.BufferSource bufferType = minecraft.renderBuffers().bufferSource();
-        Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity)
-                .render(entity, 0F, partialTicks, matrixStackIn, bufferType, 15728880);
-        bufferType.endBatch();
-
-        RenderSystem.enableDepthTest();
+        // Render the Entity with given scale
+        PoseStack posestack = RenderSystem.getModelViewStack();
+        posestack.pushPose();
+        posestack.translate((double)posX, (double)posY, 1050.0D);
+        posestack.scale(1.0F, 1.0F, -1.0F);
+        RenderSystem.applyModelViewMatrix();
+        PoseStack posestack1 = new PoseStack();
+        posestack1.translate(0.0D, 0.0D, 1000.0D);
+        posestack1.scale(scale, scale, scale);
+        Quaternion quaternion = Vector3f.ZP.rotationDegrees(rotX * 15.0F); // was 180.0F
+        Quaternion quaternion1 = Vector3f.XP.rotationDegrees(rotY * 15.0F);
+        quaternion.mul(quaternion1);
+        posestack1.mulPose(quaternion);
+        Lighting.setupForEntityInInventory();
+        EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        quaternion1.conj();
+        entityrenderdispatcher.overrideCameraOrientation(quaternion1);
+        entityrenderdispatcher.setRenderShadow(false);
+        MultiBufferSource.BufferSource multibuffersource$buffersource = Minecraft.getInstance().renderBuffers().bufferSource();
+        RenderSystem.runAsFancy(() -> {
+            entityrenderdispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, posestack1, multibuffersource$buffersource, 15728880);
+        });
+        multibuffersource$buffersource.endBatch();
+        entityrenderdispatcher.setRenderShadow(true);
+        posestack.popPose();
+        RenderSystem.applyModelViewMatrix();
         Lighting.setupFor3DItems();
-        RenderSystem.disableAlphaTest();
-        RenderSystem.disableRescaleNormal();
-        RenderSystem.popMatrix();
     }
     /**
      * Renders a scroll background for a tooltip with the given position and size
@@ -827,8 +823,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         matrixStack.pushPose();
         matrixStack.translate(startX, startY, 0);
         // prepare to render
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+        RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
         // draw upper left corner
         this.blit(matrixStack, 0, 0, u, v, cWidth, cHeight);
         // draw upper middle
@@ -871,8 +866,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         float scale = (float)width / 18.0F;
         matrixStack.scale(scale, 1, 1);
         matrixStack.translate(x / scale, y, this.itemRenderer.blitOffset + 101);
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+        RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
         this.blit(matrixStack, 0,0, 0, 250, 18, 2);
         matrixStack.popPose();
     }
@@ -903,11 +897,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                     blitY += PERK_HEIGHT;
                 }
                 // draw color
-                RenderSystem.color4f(perk.getIcon().getColorRed(), perk.getIcon().getColorGreen(), perk.getIcon().getColorBlue(), 1.0F);
-                FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderColor(perk.getIcon().getColorRed(), perk.getIcon().getColorGreen(), perk.getIcon().getColorBlue(), 1.0F);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, 0, blitY, PERK_WIDTH, PERK_HEIGHT);
                 // draw bg
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                 this.blit(matrixStack, this.x, this.y, 22, blitY, PERK_WIDTH, PERK_HEIGHT);
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(perk.getIcon().getItem(), this.x + (PERK_WIDTH - 16) / 2, this.y + (PERK_HEIGHT - 16) / 2);
@@ -922,10 +916,10 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                     int vOffset = Math.round((Mth.clamp(1.0F - (float)cooldown / (float)perk.getCooldown(), 0.0F, 1.0F)) * PERK_HEIGHT);
                     // draw cooldown
                     RenderSystem.enableBlend();
-                    RenderSystem.color4f(1.0F, 1.0F, 1.0F, 0.5F);
-                    FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 0.5F);
+                    RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                     this.blit(matrixStack, this.x, this.y + vOffset, 44, blitY + vOffset, PERK_WIDTH, PERK_HEIGHT - vOffset);
-                    RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                     RenderSystem.disableBlend();
                     matrixStack.popPose();
                 }
@@ -1106,8 +1100,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 // draw unlock text
                 FavorScreen.this.font.draw(matrixStack, unlockText, this.x + 18 * 2 + ARROW_WIDTH + 4, this.y + textY, 0xFFFFFF);
                 // draw arrow
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x + 18, this.y + textY, 113, 130, ARROW_WIDTH, ARROW_HEIGHT);
                 // draw strikethrough
                 long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
@@ -1120,7 +1113,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         @Override
         public void updateOffering(final ResourceLocation deity, final int startIndex) {
             final int offeringId = startIndex * 2 + id;
-            final List<ImmutablePair<ResourceLocation, Offering>> offerings = FavorScreen.this.tradeMap.getOrDefault(deity, ImmutableList.of());
+            final List<ImmutablePair<ResourceLocation, Offering>> offerings = FavorScreen.tradeMap.getOrDefault(deity, ImmutableList.of());
             if(offeringId < offerings.size()) {
                 this.visible = true;
                 ImmutablePair<ResourceLocation, Offering> tuple = offerings.get(offeringId);
@@ -1179,7 +1172,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
         public OfferingButton(final FavorScreen gui, final int index, int x, int y,final int width, final int height) {
             super(x, y, width, height, TextComponent.EMPTY, b -> {},
-                    (b, m, bx, by) -> gui.renderWrappedToolTip(m, ((OfferingButton)b).getTooltip(bx, by), bx, by, gui.font));
+                    (b, m, bx, by) -> gui.renderTooltip(m, ((OfferingButton)b).getTooltip(bx, by), Optional.empty(), bx, by, gui.font));
             this.id = index;
             this.favorText = TextComponent.EMPTY;
             this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
@@ -1392,8 +1385,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 final int u = (id % TAB_COUNT) * TAB_WIDTH;
                 final int v = selected ? this.height : dY;
                 // draw button background
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, u, v, this.width, this.height - dY);
                 // draw item
                 FavorScreen.this.itemRenderer.renderGuiItem(item, this.x + (this.width - 16) / 2, this.y + (this.height - 16) / 2);
@@ -1427,10 +1419,9 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if(this.visible) {
                 final int u = left ? ARROW_WIDTH : 0;
-                final int v = 130 + (isHovered() ? this.height : 0);
+                final int v = 130 + (isFocused() ? this.height : 0);
                 // draw button
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, u, v, this.width, this.height);
             }
         }
@@ -1459,8 +1450,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 int dY = selected ? 0 : -4;
                 int uX = (page.ordinal() % PAGE_COUNT) * PAGE_WIDTH;
                 int vY = 64 + (selected ? this.height : 0);
-                RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-                FavorScreen.this.getMinecraft().getTextureManager().bind(SCREEN_WIDGETS);
+                RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 // draw tab
                 this.blit(matrixStack, this.x, this.y - dY, uX, vY, this.width, this.height + dY);
                 // draw icon

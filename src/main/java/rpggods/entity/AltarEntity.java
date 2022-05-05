@@ -48,10 +48,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fml.network.NetworkHooks;
-import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
@@ -61,6 +60,7 @@ import rpggods.block.GlowBlock;
 import rpggods.deity.Altar;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorEventHandler;
+import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.gui.AltarContainer;
 import rpggods.gui.FavorContainer;
@@ -223,14 +223,14 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (!this.level.isClientSide && !this.removed) {
+        if (!this.level.isClientSide && !this.isRemoved()) {
             if (DamageSource.OUT_OF_WORLD.equals(source)) {
-                this.remove();
+                this.kill();
                 return false;
             } else if (!this.isInvulnerableTo(source)) {
                 if (source.isExplosion()) {
                     this.brokenByAnything(source);
-                    this.remove();
+                    this.kill();
                     return false;
                 } else if (DamageSource.IN_FIRE.equals(source)) {
                     if (this.isOnFire()) {
@@ -249,12 +249,12 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     boolean flag2 = "player".equals(source.getMsgId());
                     if (!flag2 && !flag) {
                         return false;
-                    } else if (source.getEntity() instanceof Player && !((Player) source.getEntity()).abilities.mayBuild) {
+                    } else if (source.getEntity() instanceof Player && !((Player) source.getEntity()).getAbilities().mayBuild) {
                         return false;
                     } else if (source.isCreativePlayer()) {
                         this.playBrokenSound();
                         this.showBreakingParticles();
-                        this.remove();
+                        this.kill();
                         return flag1;
                     } else {
                         long i = this.level.getGameTime();
@@ -264,7 +264,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                         } else {
                             this.brokenByPlayer(source);
                             this.showBreakingParticles();
-                            this.remove();
+                            this.kill();
                         }
 
                         return true;
@@ -313,7 +313,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     BlockState blockIn = level.getBlockState(posIn);
                     // check if current block can be replaced
                     if((blockIn.getMaterial() == Material.AIR || blockIn.getMaterial().isLiquid())
-                            && !RGRegistry.BlockReg.LIGHT.is(blockIn.getBlock())) {
+                            && !RGRegistry.BlockReg.LIGHT.defaultBlockState().is(blockIn.getBlock())) {
                         // determine waterlog value
                         boolean waterlogged = blockIn.getFluidState().isSource() && blockIn.getFluidState().is(FluidTags.WATER);
                         // create light block
@@ -322,7 +322,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                                 .setValue(GlowBlock.LIGHT_LEVEL, lightLevel)
                                 .setValue(GlowBlock.WATERLOGGED, waterlogged);
                         // place light block
-                        level.setBlock(posIn, lightBlock, Constants.BlockFlags.DEFAULT);
+                        level.setBlock(posIn, lightBlock, Block.UPDATE_ALL);
                     }
                 }
             }
@@ -340,7 +340,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         f = f - amount;
         if (f <= 0.5F) {
             this.brokenByAnything(source);
-            this.remove();
+            this.kill();
         } else {
             this.setHealth(f);
         }
@@ -398,7 +398,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
                 if (favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
-                    IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
+                    IFavor ifavor = favor.orElse(Favor.EMPTY);
                     boolean enabled = ifavor.getFavor(deity).isEnabled();
                     if(!enabled) {
                         return InteractionResult.PASS;
@@ -640,7 +640,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     private void updatePlayerProfile() {
-        this.playerProfile = SkullBlockEntity.updateGameprofile(this.playerProfile);
+        SkullBlockEntity.updateGameprofile(this.playerProfile, g -> AltarEntity.this.playerProfile = g);
     }
 
     public boolean isArmorLocked() {

@@ -1,21 +1,27 @@
 package rpggods.client.render;
 
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.renderer.model.ModelRenderer;
-import net.minecraft.entity.item.ArmorStandEntity;
+import net.minecraft.client.model.geom.ModelPart;
 import com.mojang.math.Vector3f;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
 import rpggods.altar.AltarPose;
 import rpggods.altar.HumanoidPart;
 import rpggods.entity.AltarEntity;
 
 public class AltarArmorModel extends HumanoidModel<AltarEntity> {
 
-    public AltarArmorModel(float modelSize) {
-        this(modelSize, 64, 32);
+    protected AltarArmorModel(ModelPart root) {
+        super(root);
     }
 
-    protected AltarArmorModel(float modelSize, int textureWidthIn, int textureHeightIn) {
-        super(modelSize, 0.0F, textureWidthIn, textureHeightIn);
+    public static LayerDefinition createBodyLayer(CubeDeformation cubeDeformation) {
+        MeshDefinition meshdefinition = HumanoidModel.createMesh(cubeDeformation, 0.0F);
+        return LayerDefinition.create(meshdefinition, 64, 32);
     }
 
     /**

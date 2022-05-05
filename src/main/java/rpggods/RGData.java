@@ -68,11 +68,11 @@ public final class RGData {
     @SubscribeEvent
     public static void onAttachCapabilities(final AttachCapabilitiesEvent<Entity> event) {
         if(event.getObject() instanceof Player) {
-            event.addCapability(IFavor.REGISTRY_NAME, new Favor.Provider());
+            event.addCapability(IFavor.REGISTRY_NAME, new Favor.Provider((Player)event.getObject()));
         } else if(event.getObject() instanceof Mob
                 && !(event.getObject() instanceof TamableAnimal)
                 && !(event.getObject() instanceof AbstractHorse)) {
-            event.addCapability(ITameable.REGISTRY_NAME, new Tameable.Provider());
+            event.addCapability(ITameable.REGISTRY_NAME, new Tameable.Provider(event.getObject()));
         }
     }
 
@@ -85,7 +85,7 @@ public final class RGData {
         LazyOptional<IFavor> original = event.getOriginal().getCapability(RPGGods.FAVOR);
         LazyOptional<IFavor> copy = event.getPlayer().getCapability(RPGGods.FAVOR);
         if(original.isPresent() && copy.isPresent()) {
-            copy.ifPresent(f -> f.deserializeNBT(original.orElseGet(() -> RPGGods.FAVOR.getDefaultInstance()).serializeNBT()));
+            copy.ifPresent(f -> f.deserializeNBT(original.orElse(Favor.EMPTY).serializeNBT()));
         }
     }
 
@@ -107,7 +107,7 @@ public final class RGData {
             // sync tameable entity
             LazyOptional<ITameable> tameable = event.getTarget().getCapability(RPGGods.TAMEABLE);
             if(tameable.isPresent()) {
-                ITameable t = tameable.orElse(null);
+                ITameable t = tameable.orElse(Tameable.EMPTY);
                 t.setSittingWithUpdate(event.getTarget(), t.isSitting());
             }
         }
