@@ -1,5 +1,6 @@
 package rpggods.perk;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -9,6 +10,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.potion.Effect;
 import net.minecraft.tags.BlockTags;
@@ -39,24 +41,35 @@ public class PerkCondition {
     public static final Codec<PerkCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkCondition.Type.CODEC.fieldOf("type").forGetter(PerkCondition::getType),
             Codec.STRING.optionalFieldOf("data").forGetter(PerkCondition::getData),
-            CompoundNBT.CODEC.optionalFieldOf("tag").forGetter(PerkCondition::getTag)
+            Codec.STRING.optionalFieldOf("tag").forGetter(PerkCondition::getTagString)
     ).apply(instance, PerkCondition::new));
 
     private final PerkCondition.Type type;
     private final Optional<String> data;
+    private final Optional<String> tagString;
     private final Optional<CompoundNBT> tag;
     private final Optional<ResourceLocation> id;
 
-    public PerkCondition(PerkCondition.Type type, Optional<String> data, Optional<CompoundNBT> tag) {
+    public PerkCondition(PerkCondition.Type type, Optional<String> data, Optional<String> tag) {
         this.type = type;
         this.data = data;
-        this.tag = tag;
+        this.tagString = tag;
         // parse ResourceLocation ID from data string
         if(data.isPresent() && data.get().contains(":")) {
-            id = Optional.ofNullable(ResourceLocation.tryParse(getData().get()));
+            this.id = Optional.ofNullable(ResourceLocation.tryParse(getData().get()));
         } else {
-            id = Optional.empty();
+            this.id = Optional.empty();
         }
+        // parse NBT from tag string
+        Optional<CompoundNBT> temp = Optional.empty();
+        if(tagString.isPresent()) {
+            try {
+                temp = Optional.of(JsonToNBT.parseTag(tagString.get()));
+            } catch (CommandSyntaxException e) {
+                RPGGods.LOGGER.error("Failed to parse NBT in PerkCondition\n" + e.getMessage());
+            }
+        }
+        this.tag = temp;
     }
 
     public PerkCondition.Type getType() {
@@ -69,6 +82,10 @@ public class PerkCondition {
 
     public Optional<ResourceLocation> getId() {
         return id;
+    }
+
+    public Optional<String> getTagString() {
+        return tagString;
     }
 
     public Optional<CompoundNBT> getTag() {
@@ -163,10 +180,12 @@ public class PerkCondition {
                     idMatch = tag.contains(heldItem.getItem());
                 }
                 // match nbt tag
-                tagMatch = !tag.isPresent();
-                if(tag.isPresent()) {
+                tagMatch = true;
+                if(idMatch && tag.isPresent()) {
                     tagMatch = NBTUtil.compareNbt(tag.get(), heldItem.getTag(), true);
-                    RPGGods.LOGGER.debug("item nbt tag match: " + tagMatch);
+                    if(!tagMatch) {
+                        RPGGods.LOGGER.debug("PerkCondition: Item NBT tags do not match: main=" + tag.get().getAsString() + " and item=" + heldItem.getTag().getAsString());
+                    }
                 }
                 return idMatch && tagMatch;
             case PLAYER_INTERACT_BLOCK:
@@ -205,10 +224,12 @@ public class PerkCondition {
             case PLAYER_KILLED_ENTITY:
             case PLAYER_INTERACT_ENTITY:
                 idMatch = getId().isPresent() && data.isPresent() && getId().get().equals(data.get());
-                tagMatch = !tag.isPresent();
-                if(tag.isPresent()) {
+                tagMatch = true;
+                if(idMatch && tag.isPresent()) {
                     tagMatch = entityTag.isPresent() && NBTUtil.compareNbt(tag.get(), entityTag.get(), true);
-                    RPGGods.LOGGER.debug("entity nbt tag match: " + tagMatch);
+                    if(!tagMatch) {
+                        RPGGods.LOGGER.debug("PerkCondition: Entity NBT tags do not match: main=" + tag.get().getAsString() + " and entity=" + entityTag.get().getAsString());
+                    }
                 }
                 return idMatch && tagMatch;
         }

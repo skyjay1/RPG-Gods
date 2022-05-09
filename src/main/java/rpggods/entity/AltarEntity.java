@@ -439,7 +439,7 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
             }
         }
 
-        return ActionResultType.PASS;
+        return ActionResultType.SUCCESS;
     }
 
     @Override

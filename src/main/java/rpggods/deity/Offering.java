@@ -1,12 +1,18 @@
 package rpggods.deity;
 
 import com.google.common.collect.ImmutableMap;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.INBT;
+import net.minecraft.nbt.JsonToNBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
 import rpggods.RPGGods;
@@ -16,8 +22,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class Offering {
-    public static final Offering EMPTY = new Offering(ItemStack.EMPTY, 0, 0, 0,
-            Optional.empty(), 0, Optional.empty(), Optional.empty());
+    public static final Offering EMPTY = new Offering(ItemStack.EMPTY, Optional.empty(), 0, 0, 0,
+            Optional.empty(), Optional.empty(), 0, Optional.empty(), Optional.empty());
 
     // Codec that accepts Item or ItemStack
     public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(Registry.ITEM, ItemStack.CODEC)
@@ -28,38 +34,65 @@ public class Offering {
 
     public static final Codec<Offering> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ITEM_OR_STACK_CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(Offering::getAccept),
+            Codec.STRING.optionalFieldOf("item_tag").forGetter(Offering::getAcceptTagString),
             Codec.INT.optionalFieldOf("favor", 0).forGetter(Offering::getFavor),
             Codec.INT.optionalFieldOf("maxuses", 16).forGetter(Offering::getMaxUses),
             Codec.INT.optionalFieldOf("cooldown", 12000).forGetter(Offering::getCooldown),
             ITEM_OR_STACK_CODEC.optionalFieldOf("trade").forGetter(Offering::getTrade),
+            Codec.STRING.optionalFieldOf("trade_tag").forGetter(Offering::getTradeTagString),
             Codec.INT.optionalFieldOf("minlevel", 0).forGetter(Offering::getTradeMinLevel),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Offering::getFunction),
             Codec.STRING.optionalFieldOf("function_text").forGetter(Offering::getFunctionText)
     ).apply(instance, Offering::new));
 
     private final ItemStack accept;
-    private final Map<Enchantment, Integer> acceptEnchantments;
+    private final Optional<String> acceptTagString;
+    private final Optional<CompoundNBT> acceptTag;
     private final int favor;
     private final Optional<ItemStack> trade;
+    private final Optional<String> tradeTagString;
+    private final Optional<CompoundNBT> tradeTag;
     private final int tradeMinLevel;
     private final Optional<ResourceLocation> function;
     private final Optional<String> functionText;
     private final int maxUses;
     private final int cooldown;
 
-    public Offering(ItemStack accept, int favor, int maxUses, int cooldown,
-                    Optional<ItemStack> trade, int tradeMinLevel,
+    public Offering(ItemStack accept, Optional<String> acceptTagString, int favor, int maxUses, int cooldown,
+                    Optional<ItemStack> trade, Optional<String> tradeTagString, int tradeMinLevel,
                     Optional<ResourceLocation> function, Optional<String> functionText) {
         this.accept = accept;
+        this.acceptTagString = acceptTagString;
         this.favor = favor;
         this.maxUses = maxUses;
         this.cooldown = cooldown;
         this.trade = trade;
+        this.tradeTagString = tradeTagString;
         this.tradeMinLevel = tradeMinLevel;
         this.function = function;
         this.functionText = functionText;
-        // parse enchantments for accepted item stack
-        this.acceptEnchantments = ImmutableMap.copyOf(EnchantmentHelper.getEnchantments(this.accept));
+        // parse accept tag
+        Optional<CompoundNBT> temp = Optional.empty();
+        if(acceptTagString.isPresent()) {
+            try {
+                temp = Optional.of(JsonToNBT.parseTag(acceptTagString.get()));
+                this.accept.setTag(temp.get());
+            } catch (CommandSyntaxException e) {
+                RPGGods.LOGGER.error("Failed to parse item NBT in Offering\n" + e.getMessage());
+            }
+        }
+        this.acceptTag = temp;
+        // parse trade tag
+        temp = Optional.empty();
+        if(this.trade.isPresent() && tradeTagString.isPresent()) {
+            try {
+                temp = Optional.of(JsonToNBT.parseTag(tradeTagString.get()));
+                this.trade.get().setTag(temp.get());
+            } catch (CommandSyntaxException e) {
+                RPGGods.LOGGER.error("Failed to parse trade NBT in Offering\n" + e.getMessage());
+            }
+        }
+        this.tradeTag = temp;
     }
 
     /**
@@ -87,15 +120,9 @@ public class Offering {
         if(!this.accept.sameItemStackIgnoreDurability(offering) || offering.getCount() < this.accept.getCount()) {
             return false;
         }
-        // check enchantments
-        if(!acceptEnchantments.isEmpty()) {
-            Map<Enchantment, Integer> offeringEnchantments = EnchantmentHelper.getEnchantments(offering);
-            // check each enchantment in accept map to see if a corresponding enchantment exists in the offering
-            for(Map.Entry<Enchantment, Integer> entry : acceptEnchantments.entrySet()) {
-                if(offeringEnchantments.getOrDefault(entry.getKey(), 0).intValue() != entry.getValue().intValue()) {
-                    return false;
-                }
-            }
+        // check tag
+        if(this.acceptTag.isPresent() && !NBTUtil.compareNbt(this.acceptTag.get(), offering.getTag(), true)) {
+            return false;
         }
 
         return true;
@@ -109,26 +136,89 @@ public class Offering {
      */
     public Optional<ItemStack> getTrade(final ItemStack offering) {
         // special handling of trade when same item and NBT is present
-        if(trade.isPresent() && offering.sameItem(trade.get()) && trade.get().hasTag() && offering.hasTag()) {
-            RPGGods.LOGGER.debug("Copying NBT from offering: " + offering.getTag());
-            // create itemstack to modify and return
+        if(trade.isPresent() && offering.sameItem(trade.get()) && tradeTag.isPresent()) {
+            // create copy of offering item with correct count
             ItemStack tradeItem = offering.copy();
             tradeItem.setCount(trade.get().getCount());
-            // determine enchantments
-            Map<Enchantment, Integer> currentEnchantments = EnchantmentHelper.getEnchantments(offering);
-            currentEnchantments.putAll(EnchantmentHelper.getEnchantments(trade.get()));
-            // merge NBT data
-            tradeItem.setTag(trade.get().getTag().merge(tradeItem.getTag()));
-            // set enchantments (they may not have merged correctly)
-            EnchantmentHelper.setEnchantments(currentEnchantments, tradeItem);
-            RPGGods.LOGGER.debug("Trade item NBT is now " + tradeItem.getTag());
+            // merge tags
+            CompoundNBT tradeItemTag = merge(tradeTag.get(), tradeItem.getOrCreateTag(), 0);
+            tradeItem.setTag(tradeItemTag);
+            // merge damage
+            if(offering.isDamageableItem() && offering.isDamaged()) {
+                tradeItem.setDamageValue(offering.getDamageValue());
+            }
             return Optional.of(tradeItem);
         }
-        return getTrade();
+        // copy trade item
+        if(getTrade().isPresent()) {
+            return Optional.of(getTrade().get().copy());
+        }
+        // no trade item
+        return Optional.empty();
+    }
+
+    /**
+     * Checks all of the values in main and merges them with the values in rec
+     * @param main the CompoundNBT that serves as a template
+     * @param rec the CompoundNBT that will be modified
+     * @param depth start at 0
+     * @return the modified CompoundNBT
+     */
+    public static CompoundNBT merge(CompoundNBT main, CompoundNBT rec, int depth) {
+        // prevent tags that are too deep
+        if(depth >= 512) {
+            return rec;
+        }
+        // iterate over all values in main tag
+        for(String key : main.getAllKeys()) {
+            INBT mnbt = main.get(key);
+            // merge the tag value with the value in the other list
+            if(mnbt instanceof CompoundNBT) {
+                CompoundNBT merged = merge((CompoundNBT) mnbt, rec.getCompound(key), depth + 1);
+                rec.put(key, merged);
+            } else if (mnbt instanceof ListNBT) {
+                ListNBT mList = (ListNBT) mnbt;
+                ListNBT rList = rec.getList(key, mList.getElementType());
+                ListNBT merged = merge(mList, rList);
+                rec.put(key, merged);
+            } else {
+                rec.put(key, mnbt.copy());
+            }
+        }
+        return rec;
+    }
+
+    public static ListNBT merge(ListNBT main, ListNBT rec) {
+        // iterate through all items in list
+        for(int m = 0, ml = main.size(); m < ml; m++) {
+            INBT mItem = main.get(m);
+            boolean hasItem = false;
+            // attempt to locate the same item in the other list
+            for(int r = 0, rl = rec.size(); r < rl; r++) {
+                INBT rItem = rec.get(r);
+                if(NBTUtil.compareNbt(mItem, rItem, true)) {
+                    hasItem = true;
+                    break;
+                }
+            }
+            // add the item to the other list
+            if(!hasItem) {
+                rec.add(mItem);
+            }
+        }
+        return rec;
     }
 
     public ItemStack getAccept() {
         return accept;
+    }
+
+    public Optional<String> getAcceptTagString() {
+        return acceptTagString;
+    }
+
+    public Optional<CompoundNBT> getAcceptTag() {
+        return acceptTag;
     }
 
     public int getFavor() {
@@ -147,6 +237,13 @@ public class Offering {
         return trade;
     }
 
+    public Optional<String> getTradeTagString() {
+        return tradeTagString;
+    }
+
+    public Optional<CompoundNBT> getTradeTag() {
+        return tradeTag;
+    }
     public int getTradeMinLevel() {
         return tradeMinLevel;
     }

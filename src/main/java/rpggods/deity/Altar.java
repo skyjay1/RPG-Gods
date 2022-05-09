@@ -46,7 +46,7 @@ public class Altar {
         this.name = name;
         this.female = female;
         this.slim = slim;
-        this.lightLevel = lightLevel;
+        this.lightLevel = Math.max(0, Math.min(15, lightLevel));
         this.items = items;
         this.material = material;
         this.pose = pose;
