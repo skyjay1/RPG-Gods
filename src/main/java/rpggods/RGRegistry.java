@@ -2,6 +2,7 @@ package rpggods;
 
 import com.google.common.collect.Lists;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Material;
@@ -15,19 +16,19 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.registries.ObjectHolder;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 import rpggods.block.GlowBlock;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
@@ -47,140 +48,92 @@ import java.util.List;
 
 public final class RGRegistry {
 
-    public static final class CapabilityReg {
+    private static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, RPGGods.MODID);
+    private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, RPGGods.MODID);
+    private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITIES, RPGGods.MODID);
+    private static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.CONTAINERS, RPGGods.MODID);
+    private static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, RPGGods.MODID);
+    private static final DeferredRegister<GlobalLootModifierSerializer<?>> LOOT_MODIFIER_SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.LOOT_MODIFIER_SERIALIZERS, RPGGods.MODID);
 
-        @SubscribeEvent
-        public static void registerCapabilities(final RegisterCapabilitiesEvent event) {
-            event.register(IFavor.class);
-            event.register(ITameable.class);
-        }
+    public static void register() {
+        // deferred registers
+        BLOCKS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        ENTITY_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
+        MENU_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
+        RECIPE_SERIALIZERS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        LOOT_MODIFIER_SERIALIZERS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        // event listeners
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerEntityAttributes);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerCapabilities);
     }
 
-    public static final class EntityReg {
 
-        public static EntityType<AltarEntity> ALTAR = EntityType.Builder
-                .of(AltarEntity::new, MobCategory.MISC)
-                .sized(0.8F, 2.48F).clientTrackingRange(10)
-                .build("altar");
-
-        @SubscribeEvent
-        public static void registerEntities(final RegistryEvent.Register<EntityType<?>> event) {
-            RPGGods.LOGGER.debug("registerEntities");
-            event.getRegistry().register(ALTAR.setRegistryName(RPGGods.MODID, "altar"));
-        }
-
+    public static void registerEntityAttributes(final EntityAttributeCreationEvent event) {
+        event.put((EntityType<? extends LivingEntity>) ALTAR_TYPE.get(), AltarEntity.registerAttributes().build());
     }
 
-    public static final class AttributesReg {
-
-        @SubscribeEvent
-        public static void registerAttributes(final EntityAttributeCreationEvent event) {
-            RPGGods.LOGGER.debug("registerAttributes");
-            event.put(EntityReg.ALTAR, AltarEntity.registerAttributes().build());
-        }
+    public static void registerCapabilities(final RegisterCapabilitiesEvent event) {
+        event.register(IFavor.class);
+        event.register(ITameable.class);
     }
 
-    @ObjectHolder(RPGGods.MODID)
-    public static final class BlockReg {
-        @ObjectHolder("light")
-        public static final Block LIGHT = null;
+    //// ENTITIES ////
+    public static final RegistryObject<EntityType<?>> ALTAR_TYPE = ENTITY_TYPES.register("altar", () ->
+            EntityType.Builder
+            .of(AltarEntity::new, MobCategory.MISC)
+            .sized(0.8F, 2.48F).clientTrackingRange(10)
+            .build("altar"));
 
-        @SubscribeEvent
-        public static void registerBlocks(final RegistryEvent.Register<Block> event) {
-            RPGGods.LOGGER.debug("registerBlocks");
-            event.getRegistry().register(new GlowBlock(BlockBehaviour.Properties.of(Material.AIR)
-                    .strength(-1F).noCollission().randomTicks().lightLevel(b -> b.getValue(GlowBlock.LIGHT_LEVEL)))
-                    .setRegistryName(RPGGods.MODID, "light"));
-        }
-    }
+    //// BLOCKS ////
+    public static final RegistryObject<GlowBlock> LIGHT_BLOCK = BLOCKS.register("light", () ->
+            new GlowBlock(BlockBehaviour.Properties.of(Material.AIR)
+                .strength(-1F).noCollission().randomTicks()
+                .lightLevel(b -> b.getValue(GlowBlock.LIGHT_LEVEL))));
 
-    @ObjectHolder(RPGGods.MODID)
-    public static final class ItemReg {
+    //// ITEMS ////
+    public static final RegistryObject<AltarItem> ALTAR_ITEM = ITEMS.register("altar", () -> new AltarItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC)));
+    public static final RegistryObject<ScrollItem> SCROLL_ITEM = ITEMS.register("scroll", () -> new ScrollItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC)));
+    public static final RegistryObject<BlockItem> LIGHT_ITEM = ITEMS.register("light", () -> new BlockItem(LIGHT_BLOCK.get(), new Item.Properties()));
 
-        @ObjectHolder("altar")
-        public static final Item ALTAR = null;
+    //// RECIPES ////
+    public static final RegistryObject<ShapelessAltarRecipe.Serializer> SHAPELESS_ALTAR_RECIPE_SERIALIZER =
+            RECIPE_SERIALIZERS.register(ShapelessAltarRecipe.NAME, () -> new ShapelessAltarRecipe.Serializer());
+    public static final RegistryObject<ShapedAltarRecipe.Serializer> SHAPED_ALTAR_RECIPE_SERIALIZER =
+            RECIPE_SERIALIZERS.register(ShapedAltarRecipe.NAME, () -> new ShapedAltarRecipe.Serializer());
 
-        @ObjectHolder("scroll")
-        public static final Item SCROLL = null;
-
-        @SubscribeEvent
-        public static void registerItems(final RegistryEvent.Register<Item> event) {
-            RPGGods.LOGGER.debug("registerItems");
-            event.getRegistry().register(new AltarItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC))
-                    .setRegistryName(RPGGods.MODID, "altar"));
-            event.getRegistry().register(new ScrollItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC))
-                    .setRegistryName(RPGGods.MODID, "scroll"));
-            event.getRegistry().register(new BlockItem(BlockReg.LIGHT, new Item.Properties())
-                    .setRegistryName(RPGGods.MODID, "light"));
-        }
-    }
-
-    @ObjectHolder(RPGGods.MODID)
-    public static final class RecipeReg {
-        @ObjectHolder(ShapelessAltarRecipe.NAME)
-        public static final RecipeSerializer<ShapelessRecipe> SHAPELESS_ALTAR_RECIPE_SERIALIZER = null;
-
-        @ObjectHolder(ShapedAltarRecipe.NAME)
-        public static final RecipeSerializer<ShapedRecipe> SHAPED_ALTAR_RECIPE_SERIALIZER = null;
-
-        @SubscribeEvent
-        public static void registerRecipeSerializers(final RegistryEvent.Register<RecipeSerializer<?>> event) {
-            RPGGods.LOGGER.debug("registerRecipeSerializers");
-            event.getRegistry().register(new ShapelessAltarRecipe.Factory().setRegistryName(RPGGods.MODID, ShapelessAltarRecipe.NAME));
-            event.getRegistry().register(new ShapedAltarRecipe.Factory().setRegistryName(RPGGods.MODID, ShapedAltarRecipe.NAME));
-        }
-
-    }
-
-    @ObjectHolder(RPGGods.MODID)
-    public static final class ContainerReg {
-
-        @ObjectHolder("altar_container")
-        public static final MenuType<AltarContainer> ALTAR_CONTAINER = null;
-        @ObjectHolder("favor_container")
-        public static final MenuType<FavorContainer> FAVOR_CONTAINER = null;
-
-        @SubscribeEvent
-        public static void registerContainers(final RegistryEvent.Register<MenuType<?>> event) {
-            RPGGods.LOGGER.debug("registerContainers");
-            // Altar screen requires UUID of altar entity
-            MenuType<AltarContainer> altarContainer = IForgeMenuType.create((windowId, inv, data) -> {
-                final int entityId = data.readInt();
-                Entity entity = inv.player.level.getEntity(entityId);
-                AltarEntity altarEntity = (AltarEntity) entity;
-                return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity);
-            });
-            // Favor screen requires Favor as a Compound Tag and Deity ID as a ResourceLocation
-            MenuType<FavorContainer> favorContainer = IForgeMenuType.create((windowId, inv, data) -> {
-                CompoundTag nbt = data.readNbt();
-                // load favor capability
-                LazyOptional<IFavor> ifavor = inv.player.getCapability(RPGGods.FAVOR);
-                IFavor favor = ifavor.orElse(Favor.EMPTY);
-                if(favor != Favor.EMPTY && nbt != null) {
-                    favor.deserializeNBT(nbt);
-                }
-                // load deity
-                boolean hasDeity = data.readBoolean();
-                ResourceLocation deityId = null;
-                if(hasDeity) {
-                    deityId = data.readResourceLocation();
-                }
-                return new FavorContainer(windowId, inv, favor, deityId);
-            });
-            event.getRegistry().register(altarContainer.setRegistryName(RPGGods.MODID, "altar_container"));
-            event.getRegistry().register(favorContainer.setRegistryName(RPGGods.MODID, "favor_container"));
-        }
-    }
-
-    public static final class LootModifierReg {
-        @SubscribeEvent
-        public static void registerLootModifiers(final RegistryEvent.Register<GlobalLootModifierSerializer<?>> event) {
-            event.getRegistry().registerAll(
-                    new AutosmeltOrCobbleModifier.Serializer().setRegistryName(RPGGods.MODID, "autosmelt_or_cobble"),
-                    new CropMultiplierModifier.Serializer().setRegistryName(RPGGods.MODID, "crop_multiplier")
-            );
-        }
-    }
+    //// MENU TYPES ////
+    public static final RegistryObject<MenuType<AltarContainer>> ALTAR_CONTAINER = MENU_TYPES.register("altar_container", () ->
+        IForgeMenuType.create((windowId, inv, data) -> {
+            final int entityId = data.readInt();
+            Entity entity = inv.player.level.getEntity(entityId);
+            AltarEntity altarEntity = (AltarEntity) entity;
+            return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity);
+        })
+    );
+    public static final RegistryObject<MenuType<FavorContainer>> FAVOR_CONTAINER = MENU_TYPES.register("favor_container", () ->
+        IForgeMenuType.create((windowId, inv, data) -> {
+            CompoundTag nbt = data.readNbt();
+            // load favor capability
+            LazyOptional<IFavor> ifavor = inv.player.getCapability(RPGGods.FAVOR);
+            IFavor favor = ifavor.orElse(Favor.EMPTY);
+            if(favor != Favor.EMPTY && nbt != null) {
+                favor.deserializeNBT(nbt);
+            }
+            // load deity
+            boolean hasDeity = data.readBoolean();
+            ResourceLocation deityId = null;
+            if(hasDeity) {
+                deityId = data.readResourceLocation();
+            }
+            return new FavorContainer(windowId, inv, favor, deityId);
+        })
+    );
+    //// LOOT MODIFER SERIALIZERS ////
+    public static final RegistryObject<AutosmeltOrCobbleModifier.Serializer> AUTOSMELT_LOOT_MODIFIER =
+            LOOT_MODIFIER_SERIALIZERS.register("autosmelt_or_cobble", () -> new AutosmeltOrCobbleModifier.Serializer());
+    public static final RegistryObject<CropMultiplierModifier.Serializer> CROP_LOOT_MODIFIER =
+            LOOT_MODIFIER_SERIALIZERS.register("crop_multiplier", () -> new CropMultiplierModifier.Serializer());
 
     public static final class ClientReg {
 
@@ -205,13 +158,13 @@ public final class RGRegistry {
         @SubscribeEvent
         public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
             RPGGods.LOGGER.debug("registerEntityRenderers");
-            event.registerEntityRenderer(EntityReg.ALTAR, rpggods.client.render.AltarRenderer::new);
+            event.registerEntityRenderer((EntityType<? extends AltarEntity>) ALTAR_TYPE.get(), rpggods.client.render.AltarRenderer::new);
         }
 
         private static void registerContainerRenders() {
             RPGGods.LOGGER.debug("registerContainerRenders");
-            MenuScreens.register(RGRegistry.ContainerReg.ALTAR_CONTAINER, rpggods.client.screen.AltarScreen::new);
-            MenuScreens.register(RGRegistry.ContainerReg.FAVOR_CONTAINER, rpggods.client.screen.FavorScreen::new);
+            MenuScreens.register(RGRegistry.ALTAR_CONTAINER.get(), rpggods.client.screen.AltarScreen::new);
+            MenuScreens.register(RGRegistry.FAVOR_CONTAINER.get(), rpggods.client.screen.FavorScreen::new);
         }
 
         private static List<ResourceLocation> altars = Lists.newArrayList();
@@ -219,10 +172,10 @@ public final class RGRegistry {
         private static void registerModelProperties() {
             RPGGods.LOGGER.debug("registerModelProperties");
             // Scroll properites
-            ItemProperties.register(ItemReg.SCROLL, new ResourceLocation("open"),
+            ItemProperties.register(SCROLL_ITEM.get(), new ResourceLocation("open"),
                     (item, world, entity, i) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
             // Altar properties
-            ItemProperties.register(ItemReg.ALTAR, new ResourceLocation("index"), (item, world, entity, i) -> {
+            ItemProperties.register(ALTAR_ITEM.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
                 if(altars.isEmpty() || entity.tickCount % 100 == 0) {
                     altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());

@@ -106,7 +106,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     public static AltarEntity createAltar(final Level world, final BlockPos pos, Direction facing, final ResourceLocation altar) {
-        AltarEntity entity = new AltarEntity(RGRegistry.EntityReg.ALTAR, world);
+        AltarEntity entity = new AltarEntity((EntityType<? extends AltarEntity>) RGRegistry.ALTAR_TYPE.get(), world);
         float f = facing.toYRot();
         entity.absMoveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, f, 0);
         entity.yHeadRot = f;
@@ -314,11 +314,11 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     BlockState blockIn = level.getBlockState(posIn);
                     // check if current block can be replaced
                     if((blockIn.getMaterial() == Material.AIR || blockIn.getMaterial().isLiquid())
-                            && !RGRegistry.BlockReg.LIGHT.defaultBlockState().is(blockIn.getBlock())) {
+                            && !RGRegistry.LIGHT_BLOCK.get().defaultBlockState().is(blockIn.getBlock())) {
                         // determine waterlog value
                         boolean waterlogged = blockIn.getFluidState().isSource() && blockIn.getFluidState().is(FluidTags.WATER);
                         // create light block
-                        BlockState lightBlock = RGRegistry.BlockReg.LIGHT
+                        BlockState lightBlock = RGRegistry.LIGHT_BLOCK.get()
                                 .defaultBlockState()
                                 .setValue(GlowBlock.LIGHT_LEVEL, lightLevel)
                                 .setValue(GlowBlock.WATERLOGGED, waterlogged);
@@ -349,7 +349,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
 
     private void brokenByPlayer(DamageSource p_213815_1_) {
         // drop altar
-        final ItemStack altarItem = new ItemStack(RGRegistry.ItemReg.ALTAR);
+        final ItemStack altarItem = new ItemStack(RGRegistry.ALTAR_ITEM.get());
         altarItem.getOrCreateTag().putString(AltarItem.KEY_ALTAR, getAltar().toString());
         Block.popResource(level, blockPosition().above(), altarItem);
         // drop other

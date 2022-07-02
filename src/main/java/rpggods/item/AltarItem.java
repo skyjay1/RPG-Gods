@@ -75,7 +75,7 @@ public class AltarItem extends Item {
     public static void addAltarItems(List<ItemStack> items) {
         // add altar item stacks for each registered altar
         for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
-            ItemStack itemStack = new ItemStack(RGRegistry.ItemReg.ALTAR);
+            ItemStack itemStack = new ItemStack(RGRegistry.ALTAR_ITEM.get());
             itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
             items.add(itemStack);
         }
@@ -85,7 +85,7 @@ public class AltarItem extends Item {
         // add altar item stacks for each registered altar that does not have a deity
         for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
             if(!RPGGods.ALTAR.get(altarId).get().getDeity().isPresent()) {
-                ItemStack itemStack = new ItemStack(RGRegistry.ItemReg.ALTAR);
+                ItemStack itemStack = new ItemStack(RGRegistry.ALTAR_ITEM.get());
                 itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
                 items.add(itemStack);
             }
@@ -110,7 +110,7 @@ public class AltarItem extends Item {
             BlockPos blockpos = blockitemusecontext.getClickedPos();
             ItemStack itemstack = context.getItemInHand();
             Vec3 vector3d = Vec3.atBottomCenterOf(blockpos);
-            AABB axisalignedbb = RGRegistry.EntityReg.ALTAR.getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
+            AABB axisalignedbb = RGRegistry.ALTAR_TYPE.get().getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
             if (world.noCollision(null, axisalignedbb) && world.getEntities(null, axisalignedbb).isEmpty()) {
                 if (world instanceof ServerLevel) {
                     ServerLevel serverworld = (ServerLevel)world;

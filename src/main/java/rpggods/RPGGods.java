@@ -111,23 +111,17 @@ public class RPGGods {
 
     public RPGGods() {
         LOGGER.debug("registerListeners");
+        // Deferred registers
+        RGRegistry.register();
         // Mod event bus listeners
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.CapabilityReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.BlockReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ItemReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.EntityReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.AttributesReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ContainerReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.RecipeReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.LootModifierReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(FavorEventHandler.ModEvents.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);
         // Config file
         RPGGods.LOGGER.debug("registerConfig");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);
         // Required for data pack sync and favor capability
         MinecraftForge.EVENT_BUS.register(RGData.class);
         // Events that affect Favor and Perks

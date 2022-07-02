@@ -47,8 +47,6 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         super(conditionsIn);
         stone = stoneIn;
         oresTag = oresTagIn;
-        // TODO make sure this works
-        // TODO figure out why the loot modifier "fails to parse"
         ores = BlockTags.create(oresTagIn);
     }
 

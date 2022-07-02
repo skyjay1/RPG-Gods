@@ -50,14 +50,14 @@ public class ShapelessAltarRecipe extends ShapelessRecipe {
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return RGRegistry.RecipeReg.SHAPELESS_ALTAR_RECIPE_SERIALIZER;
+        return RGRegistry.SHAPELESS_ALTAR_RECIPE_SERIALIZER.get();
     }
 
     public Optional<ResourceLocation> getAltarId() {
         return altarId;
     }
 
-    public static class Factory extends ShapelessRecipe.Serializer {
+    public static class Serializer extends ShapelessRecipe.Serializer {
 
         @Override
         public ShapelessRecipe fromJson(ResourceLocation recipeId, JsonObject json) {

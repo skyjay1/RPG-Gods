@@ -50,14 +50,14 @@ public class ShapedAltarRecipe extends ShapedRecipe {
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return RGRegistry.RecipeReg.SHAPED_ALTAR_RECIPE_SERIALIZER;
+        return RGRegistry.SHAPED_ALTAR_RECIPE_SERIALIZER.get();
     }
 
     public Optional<ResourceLocation> getAltarId() {
         return altarId;
     }
 
-    public static class Factory extends ShapedRecipe.Serializer {
+    public static class Serializer extends ShapedRecipe.Serializer {
 
         @Override
         public ShapedRecipe fromJson(ResourceLocation recipeId, JsonObject json) {

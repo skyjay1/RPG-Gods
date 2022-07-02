@@ -43,7 +43,7 @@ public class AltarContainer extends AbstractContainerMenu {
     }
 
     public AltarContainer(final int id, final Inventory playerInv, final Container altarInv, final AltarEntity entity) {
-        super(RGRegistry.ContainerReg.ALTAR_CONTAINER, id);
+        super(RGRegistry.ALTAR_CONTAINER.get(), id);
         this.entity = entity;
         this.altar = entity != null ? entity.createAltarProperties() : Altar.EMPTY;
         this.altarInv = altarInv;

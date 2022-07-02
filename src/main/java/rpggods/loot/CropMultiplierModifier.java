@@ -38,7 +38,6 @@ public class CropMultiplierModifier extends LootModifier {
     protected CropMultiplierModifier(final LootItemCondition[] conditionsIn, final ResourceLocation cropsTagIn) {
         super(conditionsIn);
         cropsTag = cropsTagIn;
-        // TODO make sure this works
         crops = BlockTags.create(cropsTagIn);
     }
 
