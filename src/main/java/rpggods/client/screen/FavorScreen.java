@@ -33,6 +33,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
@@ -183,77 +184,105 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         this.imageHeight = SCREEN_HEIGHT;
         // add all deities to list
         final IFavor favor = screenContainer.getFavor();
+
+        // clear maps to prepare for updated values
         deityList.clear();
-        for(Map.Entry<ResourceLocation, Optional<Deity>> entry : RPGGods.DEITY.getEntries()) {
-            if(entry.getValue().isPresent()) {
-                boolean unlocked = favor.getFavor(entry.getKey()).isEnabled();
-                if(unlocked) {
-                    deityList.add(entry.getKey());
+        offeringMap.clear();
+        tradeMap.clear();
+        sacrificeMap.clear();
+        perkMap.clear();
+
+        // Iterate over all deities using their deity helper.
+        // This allows us to skip items that were invalidated by the deity helper, such as empty offerings or perks.
+        for(DeityHelper deityHelper : RPGGods.DEITY_HELPER.values()) {
+            // skip deities that are not enabled or not unlocked
+            Deity d = deityHelper.getDeity().orElse(Deity.EMPTY);
+            if(!d.isEnabled() || !favor.getFavor(d.getId()).isEnabled()) {
+                continue;
+            }
+            // add deity to list
+            deityList.add(deityHelper.id);
+            // add entries to all lists for this deity
+            offeringMap.put(d.getId(), Lists.newArrayList());
+            tradeMap.put(d.getId(), Lists.newArrayList());
+            sacrificeMap.put(d.getId(), Lists.newArrayList());
+            // add entries to perk map based on favor level min and max
+            FavorLevel favorLevel = favor.getFavor(d.getId());
+            Map<Integer, List<Perk>> perkSubMap = new HashMap<>();
+            for(int i = favorLevel.getMin(), j = favorLevel.getMax(); i <= j; i++) {
+                perkSubMap.put(i, Lists.newArrayList());
+            }
+            perkMap.put(deityHelper.id, perkSubMap);
+            // add all offerings to map using deity helper (so we can skip offerings that were invalid)
+            for(List<ResourceLocation> entry : deityHelper.offeringMap.values()) {
+                for(ResourceLocation offeringId : entry) {
+                    Optional<Offering> optional = RPGGods.OFFERING.get(offeringId);
+                    optional.ifPresent(offering -> {
+                        // determine which map to use (offering or trade)
+                        Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
+                        // add the offering to the map
+                        map.get(d.getId()).add(ImmutablePair.of(deityHelper.id, offering));
+                    });
+                }
+            }
+            // add all sacrifices to map using deity helper (so we can skip sacrifices that were invalid)
+            for(List<ResourceLocation> entry : deityHelper.sacrificeMap.values()) {
+                for(ResourceLocation sacrificeId : entry) {
+                    Optional<Sacrifice> optional = RPGGods.SACRIFICE.get(sacrificeId);
+                    optional.ifPresent(sacrifice -> {
+                        // add the sacrifice to the map
+                        sacrificeMap.get(d.getId()).add(ImmutablePair.of(deityHelper.id, sacrifice));
+                    });
+                }
+            }
+            // add all non-hidden perks to map using deity helper (so we can skip perks that were invalid)
+            Perk perk;
+            for(ResourceLocation entry : deityHelper.perkList) {
+                Optional<Perk> optional = RPGGods.PERK.get(entry);
+                if(optional.isPresent()) {
+                    perk = optional.get();
+                    // skip hidden perks
+                    if(perk.getIcon().isHidden()) {
+                        continue;
+                    }
+                    // determine which level to place the perk
+                    int min = perk.getRange().getMinLevel();
+                    int max = perk.getRange().getMaxLevel();
+                    int unlock;
+                    if(min >= 0 && max >= 0) unlock = min;
+                    else if(min <= 0 && max <= 0) unlock = max;
+                    else unlock = Math.min(Math.abs(min), Math.abs(max));
+                    // actually add the perk to the map
+                    if(perkMap.get(d.getId()).containsKey(unlock)) {
+                        perkMap.get(d.getId()).get(unlock).add(perk);
+                    }
                 }
             }
         }
+        // sort deity list
         deityList.sort((d1, d2) -> favor.getFavor(d2).compareToAbs(favor.getFavor(d1)));
-        // add all offerings to map
-        offeringMap.clear();
-        tradeMap.clear();
-        for(Map.Entry<ResourceLocation, Optional<Offering>> entry : RPGGods.OFFERING.getEntries()) {
-            entry.getValue().ifPresent(offering -> {
-                if(offering.getFavor() != 0 || offering.getFunction().isPresent() || offering.getTrade().isPresent()) {
-                    Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
-                    map.computeIfAbsent(Offering.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(ImmutablePair.of(entry.getKey(), offering));
-                }
-            });
-        }
+        // update offering and trade counts
         offeringCount = OFFERING_COUNT;
         tradeCount = TRADE_COUNT;
         // sort offerings by favor (descending)
         offeringMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getRight().getFavor() - t1.getRight().getFavor()));
         // sort trades by unlock level (ascending)
         tradeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t1.getRight().getTradeMinLevel() - t2.getRight().getTradeMinLevel()));
-        // add all sacrifices to map
-        sacrificeMap.clear();
-        for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
-            entry.getValue().ifPresent(sacrifice -> {
-                if(sacrifice.getFavor() != 0 || sacrifice.getFunction().isPresent()) {
-                    sacrificeMap.computeIfAbsent(Sacrifice.getDeity(entry.getKey()), id -> Lists.newArrayList()).add(ImmutablePair.of(entry.getKey(), sacrifice));
-                }
-            });
-        }
+        // update sacrifice counts
         sacrificeCount = SACRIFICE_COUNT;
         // sort sacrifices by favor (descending)
         sacrificeMap.values().forEach(l -> Collections.sort(l, (t1, t2) -> t2.getRight().getFavor() - t1.getRight().getFavor()));
-        // add all perks to map
-        perkMap.clear();
-        Perk perk;
-        for(Optional<Perk> optional : RPGGods.PERK.getValues()) {
-            if(optional.isPresent() && !optional.get().getIcon().isHidden() && !FavorRange.EMPTY.equals(optional.get().getRange())) {
-                perk = optional.get();
-                if(!perkMap.containsKey(perk.getDeity())) {
-                    // add map with keys for all levels
-                    FavorLevel favorLevel = favor.getFavor(perk.getDeity());
-                    Map<Integer, List<Perk>> map = new HashMap<>();
-                    for(int i = favorLevel.getMin(), j = favorLevel.getMax(); i <= j; i++) {
-                        map.put(i, Lists.newArrayList());
-                    }
-                    perkMap.put(perk.getDeity(), map);
-                }
-                // determine which level to place the perk
-                int min = perk.getRange().getMinLevel();
-                int max = perk.getRange().getMaxLevel();
-                int unlock;
-                if(min >= 0 && max >= 0) unlock = min;
-                else if(min <= 0 && max <= 0) unlock = max;
-                else unlock = Math.min(Math.abs(min), Math.abs(max));
-                // actually add the perk to the map
-                if(perkMap.get(perk.getDeity()).containsKey(unlock)) {
-                    perkMap.get(perk.getDeity()).get(unlock).add(perk);
-                }
-            }
-        }
+
         // determine current page
         if(deityList.size() > 0) {
             deity = screenContainer.getDeity().orElse(deityList.get(0));
+            // ensure deity is unlocked
+            Deity d = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY);
+            if(!favor.getFavor(deity).isEnabled()) {
+                deity = deityList.get(0);
+            }
         }
+
         // initialize number of tabs
         tabCount = Math.min(deityList.size(), TAB_COUNT);
         tabGroupCount = Math.max(1, (int)Math.ceil((double)deityList.size() / (double)TAB_COUNT));

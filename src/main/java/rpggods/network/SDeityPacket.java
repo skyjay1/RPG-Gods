@@ -9,6 +9,7 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
 import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -70,7 +71,10 @@ public class SDeityPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 Deity deity = message.deity;
+                // add deity to client-side list
                 RPGGods.DEITY.put(message.deityId, deity);
+                // clear deity helper if it already exists
+                RPGGods.DEITY_HELPER.getOrDefault(message.deityId, DeityHelper.EMPTY).clear();
             });
         }
         context.setPacketHandled(true);

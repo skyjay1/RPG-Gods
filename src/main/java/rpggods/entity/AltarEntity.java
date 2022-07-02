@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
@@ -401,6 +402,9 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     IFavor ifavor = favor.orElse(Favor.EMPTY);
                     boolean enabled = ifavor.getFavor(deity).isEnabled();
                     if(!enabled) {
+                        // send feedback about disabled deity
+                        Component message = new TranslatableComponent("favor.locked");
+                        player.displayClientMessage(message, true);
                         return InteractionResult.PASS;
                     }
                     // detect item in mainhand

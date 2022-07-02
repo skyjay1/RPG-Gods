@@ -9,6 +9,8 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.deity.Deity;
+import rpggods.deity.DeityHelper;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -70,6 +72,8 @@ public class SAltarPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 RPGGods.ALTAR.put(message.altarId, message.altar);
+                ResourceLocation deityId = message.altar.getDeity().orElse(Deity.EMPTY.getId());
+                RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new).add(message.altarId, message.altar);
             });
         }
         context.setPacketHandled(true);

@@ -8,6 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
+import rpggods.deity.DeityHelper;
 import rpggods.deity.Sacrifice;
 
 import java.util.Optional;
@@ -16,7 +17,7 @@ import java.util.function.Supplier;
 /**
  * Called when datapacks are (re)loaded.
  * Sent from the server to the client with a single ResourceLocation ID
- * and the corresponding Offering as it was read from JSON.
+ * and the corresponding Sacrifice as it was read from JSON.
  **/
 public class SSacrificePacket {
 
@@ -70,6 +71,8 @@ public class SSacrificePacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 RPGGods.SACRIFICE.put(message.sacrificeId, message.sacrifice);
+                ResourceLocation deityId = Sacrifice.getDeity(message.sacrificeId);
+                RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new).add(message.sacrificeId, message.sacrifice);
             });
         }
         context.setPacketHandled(true);

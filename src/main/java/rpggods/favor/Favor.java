@@ -40,7 +40,7 @@ public class Favor implements IFavor {
             final FavorLevel level = new FavorLevel(0);
             Optional<Deity> deity = RPGGods.DEITY.get(deityId);
             deity.ifPresent(d -> {
-                level.setEnabled(d.isUnlocked());
+                level.setEnabled(d.isUnlocked() && d.isEnabled());
                 level.setLevelBounds(d.getMinLevel(), d.getMaxLevel());
             });
             return level;

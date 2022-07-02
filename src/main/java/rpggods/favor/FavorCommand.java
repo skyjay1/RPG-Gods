@@ -6,18 +6,24 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.TranslatableComponent;
 import rpggods.RPGGods;
+import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class FavorCommand {
@@ -27,6 +33,8 @@ public class FavorCommand {
         LiteralCommandNode<CommandSourceStack> commandNode = commandSource.register(
                 Commands.literal("favor")
                         .requires(p -> p.hasPermission(2))
+                        .then(Commands.literal("list")
+                                .executes(command -> queryDeityList(command.getSource())))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("targets", EntityArgument.players())
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
@@ -105,6 +113,37 @@ public class FavorCommand {
         commandSource.register(Commands.literal("favor")
                 .requires(p -> p.hasPermission(2))
                 .redirect(commandNode));
+    }
+
+    private static int queryDeityList(CommandSourceStack source) {
+        // create list of IDs, sorted by namespace
+        List<ResourceLocation> list = new ArrayList<>(RPGGods.DEITY.getKeys());
+        list.sort(ResourceLocation::compareNamespaced);
+        // create string builder to add each deity
+        TextComponent builder = new TextComponent("");
+        final String commandKey = "commands.favor.list";
+        // add text to describe each deity
+        for(ResourceLocation deityId : list) {
+            Optional<Deity> optional = RPGGods.DEITY.get(deityId);
+            optional.ifPresent(deity -> {
+                // add ID and name
+                builder.append("\n").append(new TextComponent(deity.getId().toString()).withStyle(ChatFormatting.WHITE));
+                builder.append(" - ").append(DeityHelper.getName(deity.getId()).copy().withStyle(ChatFormatting.AQUA)).append(" - ");
+                // add enabled/disabled
+                if(deity.isEnabled()) {
+                    builder.append(new TranslatableComponent(commandKey + ".enabled").withStyle(ChatFormatting.GREEN));
+                } else {
+                    builder.append(new TranslatableComponent(commandKey + ".disabled").withStyle(ChatFormatting.RED));
+                }
+                // add always unlocked
+                if(deity.isUnlocked()) {
+                    builder.append(" ").append(new TranslatableComponent(commandKey + ".always_unlocked").withStyle(ChatFormatting.YELLOW));
+                }
+            });
+        }
+        Component feedback = new TranslatableComponent(commandKey, list.size()).withStyle(ChatFormatting.GOLD).append(builder);
+        source.sendSuccess(feedback, false);
+        return list.size();
     }
 
     private static int queryFavor(CommandSourceStack source, ServerPlayer player, ResourceLocation deity, Type type) throws CommandSyntaxException {

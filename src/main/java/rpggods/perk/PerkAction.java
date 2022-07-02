@@ -55,6 +55,7 @@ import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 import rpggods.event.FavorEventHandler;
@@ -250,8 +251,9 @@ public final class PerkAction {
                     // add or remove durability
                     if(!item.isEmpty() && item.isDamageableItem()) {
                         float multiplier = Math.max(-1.0F, Math.min(1.0F, getMultiplier().get()));
-                        int durability = Math.round(multiplier * item.getMaxDamage());
-                        item.setDamageValue(item.getDamageValue() + durability);
+                        int delta = Math.round(multiplier * item.getMaxDamage());
+                        int damage = Math.max(0, item.getDamageValue() - delta);
+                        item.setDamageValue(damage);
                         return true;
                     }
                 }
@@ -299,7 +301,7 @@ public final class PerkAction {
             case UNLOCK:
                 if(getId().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
-                    if(!level.isEnabled()) {
+                    if(!level.isEnabled() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
                         favor.getFavor(getId().get()).setEnabled(true);
                         // send player feedback
                         Component message = getDisplayDescription();
