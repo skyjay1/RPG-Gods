@@ -27,6 +27,8 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.level.levelgen.feature.StructureFeature;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.BiomeDictionary;
@@ -134,7 +136,12 @@ public final class PerkCondition {
         if(type == PerkCondition.Type.STRUCTURE && id.isPresent()) {
             StructureFeature<?> structure = ForgeRegistries.STRUCTURE_FEATURES.getValue(id.get());
             if(structure != null) {
-                // TODO isInStructure broken
+                world.structureFeatureManager().getAllStructuresAt(pos);
+                for(ConfiguredStructureFeature<?, ?> f : world.structureFeatureManager().getAllStructuresAt(pos).keySet()) {
+                    if(id.get().equals(f.feature.getRegistryName())) {
+                        return true;
+                    }
+                }
                 return false;
                 //return world.structureFeatureManager().getStructureAt(pos, structure).isValid();
             }

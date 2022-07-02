@@ -1,4 +1,5 @@
 {
+  "type": "rpggods:autosmelt_or_cobble",
   "conditions": [
     {
       "condition": "minecraft:entity_properties",
