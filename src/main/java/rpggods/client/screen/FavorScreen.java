@@ -125,9 +125,13 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
 
     // Data
     private static final List<ResourceLocation> deityList = new ArrayList<>();
+    // Key: deity ID; Value: Altar Entity instance
     private static final Map<ResourceLocation, AltarEntity> entityMap = new HashMap<>();
+    // Key: deity ID; Value: List of Offerings by ID and value
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> offeringMap = new HashMap();
+    // Key: deity ID; Value: List of Trade Offerings by ID and value
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> tradeMap = new HashMap();
+    // Key: deity ID; Value: List of Sacrifices by ID and value
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Sacrifice>>> sacrificeMap = new HashMap();
     // Key: deity ID; Value: Map of perk level to list of available perks
     private static final Map<ResourceLocation, Map<Integer, List<Perk>>> perkMap = new HashMap();
@@ -198,6 +202,17 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             }
             // add deity to list
             deityList.add(deityHelper.id);
+            // add entries to all lists for this deity
+            offeringMap.put(d.getId(), Lists.newArrayList());
+            tradeMap.put(d.getId(), Lists.newArrayList());
+            sacrificeMap.put(d.getId(), Lists.newArrayList());
+            // add entries to perk map based on favor level min and max
+            FavorLevel favorLevel = favor.getFavor(d.getId());
+            Map<Integer, List<Perk>> perkSubMap = new HashMap<>();
+            for(int i = favorLevel.getMin(), j = favorLevel.getMax(); i <= j; i++) {
+                perkSubMap.put(i, Lists.newArrayList());
+            }
+            perkMap.put(deityHelper.id, perkSubMap);
             // add all offerings to map using deity helper (so we can skip offerings that were invalid)
             for(List<ResourceLocation> entry : deityHelper.offeringMap.values()) {
                 for(ResourceLocation offeringId : entry) {
@@ -206,7 +221,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                         // determine which map to use (offering or trade)
                         Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
                         // add the offering to the map
-                        map.computeIfAbsent(Offering.getDeity(deityHelper.id), id -> Lists.newArrayList()).add(ImmutablePair.of(deityHelper.id, offering));
+                        map.get(d.getId()).add(ImmutablePair.of(deityHelper.id, offering));
                     });
                 }
             }
@@ -216,7 +231,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     Optional<Sacrifice> optional = RPGGods.SACRIFICE.get(sacrificeId);
                     optional.ifPresent(sacrifice -> {
                         // add the sacrifice to the map
-                        sacrificeMap.computeIfAbsent(Sacrifice.getDeity(deityHelper.id), id -> Lists.newArrayList()).add(ImmutablePair.of(deityHelper.id, sacrifice));
+                        sacrificeMap.get(d.getId()).add(ImmutablePair.of(deityHelper.id, sacrifice));
                     });
                 }
             }
@@ -230,16 +245,6 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     if(perk.getIcon().isHidden()) {
                         continue;
                     }
-                    // add entry to perk map if absent
-                    if(!perkMap.containsKey(deityHelper.id)) {
-                        // add map with keys for all levels
-                        FavorLevel favorLevel = favor.getFavor(perk.getDeity());
-                        Map<Integer, List<Perk>> map = new HashMap<>();
-                        for(int i = favorLevel.getMin(), j = favorLevel.getMax(); i <= j; i++) {
-                            map.put(i, Lists.newArrayList());
-                        }
-                        perkMap.put(deityHelper.id, map);
-                    }
                     // determine which level to place the perk
                     int min = perk.getRange().getMinLevel();
                     int max = perk.getRange().getMaxLevel();
@@ -248,8 +253,8 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
                     else if(min <= 0 && max <= 0) unlock = max;
                     else unlock = Math.min(Math.abs(min), Math.abs(max));
                     // actually add the perk to the map
-                    if(perkMap.get(deityHelper.id).containsKey(unlock)) {
-                        perkMap.get(deityHelper.id).get(unlock).add(perk);
+                    if(perkMap.get(d.getId()).containsKey(unlock)) {
+                        perkMap.get(d.getId()).get(unlock).add(perk);
                     }
                 }
             }

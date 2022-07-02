@@ -8,6 +8,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.network.NetworkEvent;
 import rpggods.RPGGods;
+import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 
 import java.util.Optional;
@@ -70,6 +71,8 @@ public class SOfferingPacket {
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
                 RPGGods.OFFERING.put(message.offeringId, message.offering);
+                ResourceLocation deityId = Offering.getDeity(message.offeringId);
+                RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new).add(message.offeringId, message.offering);
             });
         }
         context.setPacketHandled(true);
