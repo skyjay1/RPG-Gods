@@ -242,11 +242,16 @@ public class PerkCondition {
             case PATRON: case UNLOCKED:
                 return new TranslationTextComponent(Altar.createTranslationKey(rl));
             case MAINHAND_ITEM: case RITUAL:
+                // display name of item tag
+                if(d.startsWith("#")) {
+                    return new TranslationTextComponent("favor.perk.condition.mainhand_item.tag", d);
+                }
+                // display name of item
                 Item item = ForgeRegistries.ITEMS.getValue(rl);
                 if(item != null) {
                     ItemStack itemStack = new ItemStack(item);
                     tag.ifPresent(nbt -> itemStack.setTag(nbt));
-                    return itemStack.getDisplayName();
+                    return itemStack.getItem().getName(itemStack);
                 }
                 return new StringTextComponent(d);
             case BIOME:

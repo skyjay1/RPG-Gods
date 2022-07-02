@@ -3,6 +3,7 @@ package rpggods.deity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
+import rpggods.RPGGods;
 import rpggods.favor.FavorRange;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
@@ -13,6 +14,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Centralizes all offerings, sacrifices, and perks
@@ -88,8 +90,19 @@ public class DeityHelper {
      * @param perk the Perk to add
      */
     public void add(final ResourceLocation id, final Perk perk) {
+        // validate perk has a favor range and at least one action
         if(FavorRange.EMPTY.equals(perk.getRange()) || perk.getActions().isEmpty()) {
             return;
+        }
+        // validate actions can only unlock deities that are enabled
+        for(PerkAction action : perk.getActions()) {
+            if(action.getType() == PerkAction.Type.UNLOCK) {
+               Deity deity = RPGGods.DEITY.get(action.getId().orElse(Deity.EMPTY.getId())).orElse(Deity.EMPTY);
+               if(!deity.isEnabled()) {
+                   RPGGods.LOGGER.info("Skipping perk with ID " + id + " because it unlocks a deity that is disabled.");
+                   return;
+               }
+            }
         }
         // add to list
         perkList.add(id);
@@ -102,6 +115,10 @@ public class DeityHelper {
             PerkAction.Type type = action.getType();
             perkByTypeMap.computeIfAbsent(type, r -> new ArrayList<>()).add(id);
         }
+    }
+
+    public Optional<Deity> getDeity() {
+        return RPGGods.DEITY.get(this.id);
     }
 
     public static ITextComponent getName(final ResourceLocation id) {

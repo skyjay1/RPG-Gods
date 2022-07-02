@@ -46,6 +46,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.Constants;
@@ -401,6 +402,9 @@ public class AltarEntity extends LivingEntity implements IInventoryChangedListen
                     IFavor ifavor = favor.orElse(RPGGods.FAVOR.getDefaultInstance());
                     boolean enabled = ifavor.getFavor(deity).isEnabled();
                     if(!enabled) {
+                        // send feedback about disabled deity
+                        ITextComponent message = new TranslationTextComponent("favor.locked");
+                        player.displayClientMessage(message, true);
                         return ActionResultType.PASS;
                     }
                     // detect item in mainhand

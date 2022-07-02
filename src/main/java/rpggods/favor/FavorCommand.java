@@ -12,12 +12,19 @@ import net.minecraft.command.arguments.EntityArgument;
 import net.minecraft.command.arguments.ResourceLocationArgument;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.IFormattableTextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextComponent;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import rpggods.RPGGods;
+import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class FavorCommand {
@@ -27,6 +34,8 @@ public class FavorCommand {
         LiteralCommandNode<CommandSource> commandNode = commandSource.register(
                 Commands.literal("favor")
                         .requires(p -> p.hasPermission(2))
+                        .then(Commands.literal("list")
+                                .executes(command -> queryDeityList(command.getSource())))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("targets", EntityArgument.players())
                                         .then(Commands.argument("deity", ResourceLocationArgument.id())
@@ -105,6 +114,37 @@ public class FavorCommand {
         commandSource.register(Commands.literal("favor")
                 .requires(p -> p.hasPermission(2))
                 .redirect(commandNode));
+    }
+
+    private static int queryDeityList(CommandSource source) {
+        // create list of IDs, sorted by namespace
+        List<ResourceLocation> list = new ArrayList<>(RPGGods.DEITY.getKeys());
+        list.sort(ResourceLocation::compareNamespaced);
+        // create string builder to add each deity
+        StringTextComponent builder = new StringTextComponent("");
+        final String commandKey = "commands.favor.list";
+        // add text to describe each deity
+        for(ResourceLocation deityId : list) {
+            Optional<Deity> optional = RPGGods.DEITY.get(deityId);
+            optional.ifPresent(deity -> {
+                // add ID and name
+                builder.append("\n").append(new StringTextComponent(deity.getId().toString()).withStyle(TextFormatting.WHITE));
+                builder.append(" - ").append(DeityHelper.getName(deity.getId()).copy().withStyle(TextFormatting.AQUA)).append(" - ");
+                // add enabled/disabled
+                if(deity.isEnabled()) {
+                    builder.append(new TranslationTextComponent(commandKey + ".enabled").withStyle(TextFormatting.GREEN));
+                } else {
+                    builder.append(new TranslationTextComponent(commandKey + ".disabled").withStyle(TextFormatting.RED));
+                }
+                // add always unlocked
+                if(deity.isUnlocked()) {
+                    builder.append(" ").append(new TranslationTextComponent(commandKey + ".always_unlocked").withStyle(TextFormatting.YELLOW));
+                }
+            });
+        }
+        IFormattableTextComponent feedback = new TranslationTextComponent(commandKey, list.size()).withStyle(TextFormatting.GOLD).append(builder);
+        source.sendSuccess(feedback, false);
+        return list.size();
     }
 
     private static int queryFavor(CommandSource source, ServerPlayerEntity player, ResourceLocation deity, Type type) throws CommandSyntaxException {

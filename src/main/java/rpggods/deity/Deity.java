@@ -7,7 +7,7 @@ import net.minecraft.util.ResourceLocation;
 
 public class Deity {
 
-    public static final Deity EMPTY = new Deity(new ResourceLocation("null"), ItemStack.EMPTY, false, 0, 0);
+    public static final Deity EMPTY = new Deity(new ResourceLocation("null"), ItemStack.EMPTY, false, false, 0, 0);
 
     private static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Offering.ITEM_OR_STACK_CODEC;
 
@@ -15,6 +15,7 @@ public class Deity {
             ResourceLocation.CODEC.fieldOf("name").forGetter(Deity::getId),
             ITEM_OR_STACK_CODEC.optionalFieldOf("icon", ItemStack.EMPTY).forGetter(Deity::getIcon),
             Codec.BOOL.optionalFieldOf("unlocked", true).forGetter(Deity::isUnlocked),
+            Codec.BOOL.optionalFieldOf("enabled", true).forGetter(Deity::isEnabled),
             Codec.INT.optionalFieldOf("minlevel", -10).forGetter(Deity::getMinLevel),
             Codec.INT.optionalFieldOf("maxlevel", 10).forGetter(Deity::getMaxLevel)
     ).apply(instance, Deity::new));
@@ -25,15 +26,18 @@ public class Deity {
     private final ItemStack icon;
     /** True if the deity is unlocked **/
     private final boolean unlocked;
+    /** True if the deity is enabled **/
+    private final boolean enabled;
     /** The minimum favor level **/
     private final int minLevel;
     /** The maximum favor level **/
     private final int maxLevel;
 
-    public Deity(ResourceLocation id, ItemStack icon, boolean unlocked, int minLevel, int maxLevel) {
+    public Deity(ResourceLocation id, ItemStack icon, boolean unlocked, boolean enabled, int minLevel, int maxLevel) {
         this.id = id;
         this.icon = icon;
         this.unlocked = unlocked;
+        this.enabled = enabled;
         this.minLevel = minLevel;
         this.maxLevel = maxLevel;
     }
@@ -53,6 +57,11 @@ public class Deity {
         return unlocked;
     }
 
+    /** @return True if the deity is enabled **/
+    public boolean isEnabled() {
+        return enabled;
+    }
+
     /** @return The minimum favor level for this deity **/
     public int getMinLevel() {
         return minLevel;
@@ -68,6 +77,7 @@ public class Deity {
         return "Deity{" +
                 "id=" + id +
                 ", unlocked=" + unlocked +
+                ", enabled=" + enabled +
                 ", minLevel=" + minLevel +
                 ", maxLevel=" + maxLevel +
                 '}';

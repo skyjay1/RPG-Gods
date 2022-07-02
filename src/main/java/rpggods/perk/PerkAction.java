@@ -58,6 +58,7 @@ import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 import rpggods.event.FavorEventHandler;
@@ -300,7 +301,7 @@ public class PerkAction {
                 }
                 return false;
             case UNLOCK:
-                if(getId().isPresent()) {
+                if(getId().isPresent() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
                     FavorLevel level = favor.getFavor(getId().get());
                     if(!level.isEnabled()) {
                         favor.getFavor(getId().get()).setEnabled(true);

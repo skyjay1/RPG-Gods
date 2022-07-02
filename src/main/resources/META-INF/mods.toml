@@ -7,7 +7,7 @@ issueTrackerURL="https://github.com/skyjay1/RPG-Gods/issues"
 
 [[mods]]
     modId="rpggods"
-    version="16.5.4-alpha"
+    version="16.5.4"
     displayName="RPG Gods"
     credits=""
     authors="skyjay1"
