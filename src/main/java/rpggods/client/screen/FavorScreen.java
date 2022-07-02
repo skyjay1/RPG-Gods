@@ -197,7 +197,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
         for(DeityHelper deityHelper : RPGGods.DEITY_HELPER.values()) {
             // skip deities that are not enabled or not unlocked
             Deity d = deityHelper.getDeity().orElse(Deity.EMPTY);
-            if(!d.isEnabled() || !favor.getFavor(deityHelper.id).isEnabled()) {
+            if(!d.isEnabled() || !favor.getFavor(d.getId()).isEnabled()) {
                 continue;
             }
             // add deity to list
@@ -278,7 +278,7 @@ public class FavorScreen extends ContainerScreen<FavorContainer> {
             deity = screenContainer.getDeity().orElse(deityList.get(0));
             // ensure deity is unlocked
             Deity d = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY);
-            if(!d.isUnlocked() || !d.isEnabled()) {
+            if(!favor.getFavor(deity).isEnabled()) {
                 deity = deityList.get(0);
             }
         }

@@ -254,8 +254,9 @@ public class PerkAction {
                     // add or remove durability
                     if(!item.isEmpty() && item.isDamageableItem()) {
                         float multiplier = Math.max(-1.0F, Math.min(1.0F, getMultiplier().get()));
-                        int durability = Math.round(multiplier * item.getMaxDamage());
-                        item.setDamageValue(item.getDamageValue() + durability);
+                        int delta = Math.round(multiplier * item.getMaxDamage());
+                        int damage = Math.max(0, item.getDamageValue() - delta);
+                        item.setDamageValue(damage);
                         return true;
                     }
                 }
