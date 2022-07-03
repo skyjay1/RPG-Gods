@@ -145,7 +145,7 @@ public final class RGRegistry {
 
         @SubscribeEvent
         public static void registerEntityLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
-            RPGGods.LOGGER.debug("registerEntityRenderers");
+            RPGGods.LOGGER.debug("registerEntityLayerDefinitions");
             // create cube deformations
             net.minecraft.client.model.geom.builders.CubeDeformation inner = new net.minecraft.client.model.geom.builders.CubeDeformation(0.25F);
             net.minecraft.client.model.geom.builders.CubeDeformation outer = new net.minecraft.client.model.geom.builders.CubeDeformation(0.5F);

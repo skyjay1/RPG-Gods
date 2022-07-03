@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -242,16 +243,17 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
     public void render(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         super.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw entity preview
-        drawEntityOnScreen(matrixStack, this.leftPos + PREVIEW_X + 12, this.topPos + PREVIEW_Y + 4, mouseX, mouseY, partialTicks);
+        drawEntityOnScreen(matrixStack, this.leftPos + PREVIEW_X + PREVIEW_WIDTH / 2, this.topPos + PREVIEW_Y + PREVIEW_HEIGHT, mouseX, mouseY, partialTicks);
         // draw text box
         this.nameField.render(matrixStack, mouseX, mouseY, partialTicks);
         // draw hovering text LAST
-        // TODO
-        /*for (final AbstractWidget b : this.buttons) {
-            if (b.visible && b.isFocused()) {
+        for(GuiEventListener w : this.children()) {
+            if(w instanceof Button b && b.visible && b.isHoveredOrFocused()) {
+                matrixStack.pushPose();
                 b.renderToolTip(matrixStack, mouseX, mouseY);
+                matrixStack.popPose();
             }
-        }*/
+        }
         this.renderTooltip(matrixStack, mouseX, mouseY);
     }
 
@@ -342,9 +344,11 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         PoseStack posestack1 = new PoseStack();
         posestack1.translate(0.0D, 0.0D, 1000.0D);
         posestack1.scale(scale, scale, scale);
-        Quaternion quaternion = Vector3f.ZP.rotationDegrees(rotX * 15.0F); // was 180.0F
-        Quaternion quaternion1 = Vector3f.XP.rotationDegrees(rotY * 15.0F);
+        Quaternion quaternion = Vector3f.YP.rotationDegrees(rotX * -15.0F + 180.0F - menu.getEntity().getYRot()); // was 180.0F
+        Quaternion quaternion1 = Vector3f.XP.rotationDegrees(rotY * -15.0F);
+        Quaternion quaternion2 = Vector3f.ZP.rotationDegrees(180.0F);
         quaternion.mul(quaternion1);
+        quaternion.mul(quaternion2);
         posestack1.mulPose(quaternion);
         Lighting.setupForEntityInInventory();
         EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
@@ -422,7 +426,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         @Override
         public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible) {
-                final boolean selected = isFocused();
+                final boolean selected = isHoveredOrFocused();
                 final int xOffset = 25;
                 final int yOffset = 130 + (selected ? this.height : 0);
                 RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
@@ -449,7 +453,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         public void renderButton(PoseStack matrixStack, int mouseX, int mouseY, float partialTicks) {
             if (this.visible) {
                 int xOffset = 97;
-                int yOffset = 130 + (this.isFocused() ? this.height : 0);
+                int yOffset = 130 + (this.isHoveredOrFocused() ? this.height : 0);
                 // draw button background
                 RenderSystem.setShaderTexture(0, SCREEN_WIDGETS);
                 this.blit(matrixStack, this.x, this.y, xOffset, yOffset, this.width, this.height);

@@ -223,6 +223,11 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     @Override
+    public void kill() {
+        this.remove(Entity.RemovalReason.KILLED);
+    }
+
+    @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!this.level.isClientSide && !this.isRemoved()) {
             if (DamageSource.OUT_OF_WORLD.equals(source)) {
