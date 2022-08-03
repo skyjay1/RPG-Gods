@@ -1,7 +1,8 @@
-package rpggods.entity.ai;
+package rpggods.entity;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
@@ -98,6 +99,11 @@ public class AffinityGoal {
         return ImmutablePair.of(false, false);
     }
 
+    /**
+     * @param creature the creature that wants to know if it is passive
+     * @param playerFavor the player favor capability
+     * @return true if the creature is passive toward players with the given favor
+     */
     public static boolean isPassive(final LivingEntity creature, final IFavor playerFavor) {
         final ResourceLocation id = creature.getType().getRegistryName();
         Perk p;
@@ -110,6 +116,11 @@ public class AffinityGoal {
         return false;
     }
 
+    /**
+     * @param creature the creature that wants to know if it is hostile
+     * @param playerFavor the player favor capability
+     * @return true if the creature is hostile toward players with the given favor
+     */
     public static boolean isHostile(final LivingEntity creature, final IFavor playerFavor) {
         final ResourceLocation id = creature.getType().getRegistryName();
         Perk p;
@@ -426,13 +437,13 @@ public class AffinityGoal {
         }
     }
 
-    public static class OwnerHurtTargetGoal extends TargetGoal {
+    public static class AffinityOwnerHurtTargetGoal extends TargetGoal {
         private final Mob entity;
         private LivingEntity owner;
         private LivingEntity attacker;
         private int timestamp;
 
-        public OwnerHurtTargetGoal(Mob entity) {
+        public AffinityOwnerHurtTargetGoal(Mob entity) {
             super(entity, false);
             this.entity = entity;
             this.setFlags(EnumSet.of(Goal.Flag.TARGET));
@@ -464,6 +475,22 @@ public class AffinityGoal {
             }
 
             super.start();
+        }
+    }
+
+    public static class AffinityMeleeAttackGoal extends MeleeAttackGoal {
+
+        public AffinityMeleeAttackGoal(PathfinderMob mob, double speedModifier, boolean followEvenIfNotSeen) {
+            super(mob, speedModifier, followEvenIfNotSeen);
+        }
+
+        @Override
+        public boolean canUse() {
+            if(this.mob.getTarget() instanceof Player player) {
+                IFavor favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+                return super.canUse() && isHostile(mob, favor);
+            }
+            return false;
         }
     }
 }

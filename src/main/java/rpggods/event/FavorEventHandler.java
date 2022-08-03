@@ -63,7 +63,7 @@ import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
-import rpggods.entity.ai.AffinityGoal;
+import rpggods.entity.AffinityGoal;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.network.SUpdateSittingPacket;
@@ -619,7 +619,7 @@ public class FavorEventHandler {
                     mob.goalSelector.addGoal(0, new AffinityGoal.AffinitySittingResetGoal(mob));
                     mob.goalSelector.addGoal(1, new AffinityGoal.AffinityFollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
                     mob.goalSelector.addGoal(1, new AffinityGoal.AffinityOwnerHurtByTargetGoal(mob));
-                    mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtTargetGoal(mob));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.AffinityOwnerHurtTargetGoal(mob));
                     checkAttackGoal = true;
                 }
                 // add flee goal
@@ -649,7 +649,7 @@ public class FavorEventHandler {
                     }
                     // add attack goal if none was found
                     if(!hasAttackGoal) {
-                        mob.goalSelector.addGoal(4, new MeleeAttackGoal((PathfinderMob) event.getEntity(), 1.2D, false));
+                        mob.goalSelector.addGoal(4, new AffinityGoal.AffinityMeleeAttackGoal((PathfinderMob) event.getEntity(), 1.2D, false));
                         // ensure mob has attack damage
                         AttributeInstance attack = mob.getAttribute(Attributes.ATTACK_DAMAGE);
                         if(attack != null && attack.getBaseValue() < 0.5D && !attack.hasModifier(MOB_ATTACK)) {
