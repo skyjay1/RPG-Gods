@@ -110,7 +110,6 @@ public class RPGGods {
     public static final Logger LOGGER = LogManager.getFormatterLogger(RPGGods.MODID);
 
     public RPGGods() {
-        LOGGER.debug("registerListeners");
         // Deferred registers
         RGRegistry.register();
         // Mod event bus listeners
@@ -118,7 +117,6 @@ public class RPGGods {
         FMLJavaModLoadingContext.get().getModEventBus().register(FavorEventHandler.ModEvents.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         // Config file
-        RPGGods.LOGGER.debug("registerConfig");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::loadConfig);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::reloadConfig);
@@ -128,11 +126,9 @@ public class RPGGods {
         MinecraftForge.EVENT_BUS.register(FavorEventHandler.ForgeEvents.class);
         // Events that are client-only
         DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> {
-            RPGGods.LOGGER.debug("registerClientEvents");
             MinecraftForge.EVENT_BUS.register(FavorEventHandler.ClientEvents.class);
         });
         // Packets
-        LOGGER.debug("registerNetwork");
         int messageId = 0;
         CHANNEL.registerMessage(messageId++, SDeityPacket.class, SDeityPacket::toBytes, SDeityPacket::fromBytes, SDeityPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SAltarPacket.class, SAltarPacket::toBytes, SAltarPacket::fromBytes, SAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));

@@ -82,7 +82,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class FavorEventHandler {
 
@@ -167,7 +166,9 @@ public class FavorEventHandler {
     public static boolean onSacrifice(final Player player, final IFavor favor, final LivingEntity entity) {
         boolean success = false;
         ResourceLocation entityId = entity.getType().getRegistryName();
-        if(favor.isEnabled() && entityId != null) {
+        Optional<ResourceLocation> optionalEntityId = Optional.of(entityId);
+        Optional<CompoundTag> optionalEntityTag = Optional.of(entity.serializeNBT());
+        if(favor.isEnabled()) {
             // find and process all matching sacrifices
             ResourceLocation deityId;
             Sacrifice sacrifice;
@@ -182,11 +183,23 @@ public class FavorEventHandler {
                         deityId = Sacrifice.getDeity(entry.getKey());
                         boolean deityEnabled = favor.getFavor(deityId).isEnabled();
                         if(deityEnabled && cooldown.canUse()) {
-                            // add sacrifice cooldown
-                            cooldown.addUse();
-                            // add favor and run function, if any
-                            favor.getFavor(deityId).addFavor(player, deityId, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
-                            sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                            // check sacrifice conditions
+                            boolean matchConditions = true;
+                            for(PerkCondition condition : sacrifice.getConditions()) {
+                                if(!condition.match(deityId, player, favor, optionalEntityId, optionalEntityTag)) {
+                                    matchConditions = false;
+                                    break;
+                                }
+                            }
+                            // attempt to process the sacrifice
+                            if(sacrifice.getConditions().isEmpty() || matchConditions) {
+                                success = true;
+                                // add sacrifice cooldown
+                                cooldown.addUse();
+                                // add favor and run function, if any
+                                favor.getFavor(deityId).addFavor(player, deityId, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
+                                sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                            }
                         }
                     }
                 }
@@ -446,7 +459,6 @@ public class FavorEventHandler {
 
         @SubscribeEvent
         public static void onAddEntityAttributes(final EntityAttributeModificationEvent event) {
-            RPGGods.LOGGER.debug("onAddEntityAttributes");
             for(final EntityType<? extends LivingEntity> type : event.getTypes()) {
                 if(!event.has(type, Attributes.ATTACK_DAMAGE)) {
                     event.add(type, Attributes.ATTACK_DAMAGE, 0);
@@ -603,25 +615,25 @@ public class FavorEventHandler {
                 boolean checkAttackGoal = false;
                 // add tameable goals
                 if(tameableEnabled && event.getEntity().getCapability(RPGGods.TAMEABLE).isPresent()) {
-                    mob.goalSelector.addGoal(0, new AffinityGoal.SittingGoal(mob));
-                    mob.goalSelector.addGoal(0, new AffinityGoal.SittingResetGoal(mob));
-                    mob.goalSelector.addGoal(1, new AffinityGoal.FollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
-                    mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtByTargetGoal(mob));
+                    mob.goalSelector.addGoal(0, new AffinityGoal.AffinitySittingGoal(mob));
+                    mob.goalSelector.addGoal(0, new AffinityGoal.AffinitySittingResetGoal(mob));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.AffinityFollowOwnerGoal(mob, 1.0D, 10.0F, 5.0F, false));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.AffinityOwnerHurtByTargetGoal(mob));
                     mob.goalSelector.addGoal(1, new AffinityGoal.OwnerHurtTargetGoal(mob));
                     checkAttackGoal = true;
                 }
                 // add flee goal
                 if(fleeEnabled && event.getEntity() instanceof PathfinderMob) {
-                    mob.goalSelector.addGoal(1, new AffinityGoal.FleeGoal((PathfinderMob) mob));
+                    mob.goalSelector.addGoal(1, new AffinityGoal.AffinityFleeGoal((PathfinderMob) mob));
                 }
                 // add hostile goal
                 if(hostileEnabled) {
-                    mob.goalSelector.addGoal(4, new AffinityGoal.NearestAttackableGoal(mob, 0.1F));
+                    mob.goalSelector.addGoal(4, new AffinityGoal.AffinityNearestAttackableGoal(mob, 0.1F));
                     checkAttackGoal = true;
                 }
                 // add target reset goal
                 if(hostileEnabled || passiveEnabled) {
-                    mob.goalSelector.addGoal(2, new AffinityGoal.NearestAttackableResetGoal(mob));
+                    mob.goalSelector.addGoal(2, new AffinityGoal.AffinityNearestAttackableResetGoal(mob));
                 }
                 // ensure target has attack goal
                 if(checkAttackGoal && event.getEntity() instanceof PathfinderMob

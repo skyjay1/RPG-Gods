@@ -1,8 +1,6 @@
 package rpggods.item;
 
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.CreativeModeTab;
@@ -26,7 +24,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import javax.annotation.Nullable;
@@ -48,10 +45,10 @@ public class AltarItem extends Item {
         if(sAltarId != null && !sAltarId.isEmpty()) {
             ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             // determine if altar is a deity
-            Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
+            Optional<rpggods.deity.Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && altar.get().getDeity().isPresent()) {
                 return new TranslatableComponent("item.rpggods.altar_x",
-                        new TranslatableComponent(Altar.createTranslationKey(altarId)));
+                        new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(altarId)));
             }
         }
         // fallback when no altar information provided
@@ -65,7 +62,7 @@ public class AltarItem extends Item {
         if(!sAltarId.isEmpty()) {
             ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             // determine if altar is not a deity but has a name
-            Optional<Altar> altar = RPGGods.ALTAR.get(altarId);
+            Optional<rpggods.deity.Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && !altar.get().getDeity().isPresent() && altar.get().getName().isPresent()) {
                 tooltip.add(new TextComponent(altar.get().getName().get()));
             }
@@ -81,6 +78,7 @@ public class AltarItem extends Item {
         }
     }
 
+    // unused
     public static void addStatueItemsOnly(List<ItemStack> items) {
         // add altar item stacks for each registered altar that does not have a deity
         for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
@@ -123,7 +121,7 @@ public class AltarItem extends Item {
                         return InteractionResult.FAIL;
                     }
                     serverworld.addFreshEntity(altarEntity);
-                    world.playSound((Player)null, altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundSource.BLOCKS, 0.75F, 0.8F);
+                    world.playSound(null, altarEntity.getX(), altarEntity.getY(), altarEntity.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundSource.BLOCKS, 0.75F, 0.8F);
                 }
 
                 itemstack.shrink(1);

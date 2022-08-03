@@ -139,15 +139,19 @@ public final class PerkAction {
             case SUMMON:
                 float distance = getMultiplier().orElse(9F);
                 return getTag().isPresent() && summonEntityNearPlayer(player.level, player, getTag(), distance).isPresent();
-            case ITEM: if(getItem().isPresent()) {
-                ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), getItem().get().copy());
-                itemEntity.setNoPickUpDelay();
-                return player.level.addFreshEntity(itemEntity);
-            }
+            case ITEM:
+                if(getItem().isPresent()) {
+                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), getItem().get().copy());
+                    itemEntity.setNoPickUpDelay();
+                    return player.level.addFreshEntity(itemEntity);
+                }
                 return false;
-            case FAVOR: return getFavor().isPresent() && getId().isPresent()
-                    && favor.getFavor(getId().get()).addFavor(player, getId().get(), getFavor().get(), FavorChangedEvent.Source.PERK)
-                    != favor.getFavor(getId().get()).getFavor();
+            case FAVOR:
+                if(getFavor().isPresent() && getFavor().get() != 0 && getId().isPresent()) {
+                    favor.getFavor(getId().get()).addFavor(player, getId().get(), getFavor().get(), FavorChangedEvent.Source.PERK);
+                    return true;
+                }
+                return false;
             case AFFINITY:
                 if(getAffinity().isPresent() && entity.isPresent() && data.isPresent() && getAffinity().get().getType() == Affinity.Type.TAME) {
                     LazyOptional<ITameable> tameable = entity.get().getCapability(RPGGods.TAMEABLE);

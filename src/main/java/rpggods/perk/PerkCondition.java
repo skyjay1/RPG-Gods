@@ -4,6 +4,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.tags.TagKey;
@@ -38,6 +39,9 @@ import rpggods.deity.Altar;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public final class PerkCondition {
@@ -239,9 +243,6 @@ public final class PerkCondition {
                 tagMatch = true;
                 if(idMatch && tag.isPresent()) {
                     tagMatch = entityTag.isPresent() && NbtUtils.compareNbt(tag.get(), entityTag.get(), true);
-                    //if(!tagMatch) {
-                        //RPGGods.LOGGER.debug("PerkCondition: Entity NBT tags do not match: main=" + tag.get().getAsString() + " and entity=" + entityTag.get().getAsString());
-                    //}
                 }
                 return idMatch && tagMatch;
         }
@@ -297,6 +298,37 @@ public final class PerkCondition {
             case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: case PLAYER_CROUCHING: default:
                 return TextComponent.EMPTY;
         }
+    }
+
+    /**
+     * @param list the component list
+     * @param color the text component formatting
+     * @param blacklist perk condition types to not include in the list
+     * @return a list of Components, one for each perk condition, with plurality and formatting
+     */
+    public static List<Component> formatDescriptions(List<PerkCondition> list, ChatFormatting color, Collection<PerkCondition.Type> blacklist) {
+        List<Component> perkConditions = new ArrayList<>();
+        // add perk condition texts
+        for(PerkCondition condition : list) {
+            // do not show ommitted conditions
+            if(!blacklist.contains(condition.getType())) {
+                perkConditions.add(condition.getDisplayName().copy().withStyle(color));
+            }
+        }
+        // add prefix to each condition based on plurality
+        if (perkConditions.size() > 0) {
+            // add prefix to first condition
+            Component t2 = new TranslatableComponent("favor.perk.condition.single", perkConditions.get(0))
+                    .withStyle(color);
+            perkConditions.set(0, t2);
+            // add prefix to following conditions
+            for (int i = 1, l = perkConditions.size(); i < l; i++) {
+                t2 = new TranslatableComponent("favor.perk.condition.multiple", perkConditions.get(i))
+                        .withStyle(color);
+                perkConditions.set(i, t2);
+            }
+        }
+        return perkConditions;
     }
 
     public static enum Type implements StringRepresentable {

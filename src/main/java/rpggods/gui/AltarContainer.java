@@ -16,7 +16,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ForgeMod;
 import rpggods.RGRegistry;
-import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import java.util.ArrayList;
@@ -35,7 +34,7 @@ public class AltarContainer extends AbstractContainerMenu {
     private List<Slot> altarSlots;
 
     private AltarEntity entity;
-    private Altar altar;
+    private rpggods.deity.Altar altar;
     private Container altarInv;
 
     public AltarContainer(int id, final Inventory inventory) {
@@ -45,7 +44,7 @@ public class AltarContainer extends AbstractContainerMenu {
     public AltarContainer(final int id, final Inventory playerInv, final Container altarInv, final AltarEntity entity) {
         super(RGRegistry.ALTAR_CONTAINER.get(), id);
         this.entity = entity;
-        this.altar = entity != null ? entity.createAltarProperties() : Altar.EMPTY;
+        this.altar = entity != null ? entity.createAltarProperties() : rpggods.deity.Altar.EMPTY;
         this.altarInv = altarInv;
         checkContainerSize(altarInv, ALTAR_INV_SIZE);
         altarInv.startOpen(playerInv.player);
@@ -83,9 +82,9 @@ public class AltarContainer extends AbstractContainerMenu {
         return getEntity() != null && getEntity().isAlive() && playerIn.distanceToSqr(getEntity()) < maxDistanceSq;
     }
 
-    public Altar getAltar() { return altar; }
+    public rpggods.deity.Altar getAltar() { return altar; }
 
-    public void setAltar(final Altar altar) { this.altar = altar; }
+    public void setAltar(final rpggods.deity.Altar altar) { this.altar = altar; }
 
     public AltarEntity getEntity() { return entity; }
 

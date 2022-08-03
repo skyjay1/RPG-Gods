@@ -23,7 +23,6 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import javax.annotation.Nullable;
@@ -84,7 +83,7 @@ public class GlowBlock extends Block implements SimpleWaterloggedBlock {
         // check if any altar entity has light level
         boolean hasAltar = false;
         for(AltarEntity altarEntity : list) {
-            Altar altar = RPGGods.ALTAR.get(altarEntity.getAltar()).orElse(Altar.EMPTY);
+            rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarEntity.getAltar()).orElse(rpggods.deity.Altar.EMPTY);
             if(altar.getLightLevel() > 0) {
                 hasAltar = true;
                 break;

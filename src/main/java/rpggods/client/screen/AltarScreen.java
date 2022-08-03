@@ -23,10 +23,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import rpggods.RPGGods;
-import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.altar.HumanoidPart;
-import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 import rpggods.gui.AltarContainer;
 import rpggods.network.CUpdateAltarPacket;
@@ -107,7 +105,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.imageHeight = SCREEN_HEIGHT - TAB_HEIGHT / 2;
         this.inventoryLabelX = this.leftPos + AltarContainer.PLAYER_INV_X;
         this.inventoryLabelY = this.topPos + AltarContainer.PLAYER_INV_Y - 10;
-        Altar altar = screenContainer.getAltar();
+        rpggods.deity.Altar altar = screenContainer.getAltar();
         if(altar.getDeity().isPresent()) {
             name = Optional.empty();
         } else if(screenContainer.getEntity().hasCustomName()) {

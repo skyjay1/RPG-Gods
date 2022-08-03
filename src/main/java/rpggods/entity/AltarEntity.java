@@ -58,7 +58,7 @@ import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.block.GlowBlock;
-import rpggods.deity.Altar;
+import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.Favor;
@@ -106,7 +106,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     public static AltarEntity createAltar(final Level world, final BlockPos pos, Direction facing, final ResourceLocation altar) {
-        AltarEntity entity = new AltarEntity((EntityType<? extends AltarEntity>) RGRegistry.ALTAR_TYPE.get(), world);
+        AltarEntity entity = new AltarEntity(RGRegistry.ALTAR_TYPE.get(), world);
         float f = facing.toYRot();
         entity.absMoveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, f, 0);
         entity.yHeadRot = f;
@@ -311,7 +311,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
             }
             // attempt to place light block
             if(tickCount % 4 == 1) {
-                Altar altar = RPGGods.ALTAR.get(getAltar()).orElse(Altar.EMPTY);
+                rpggods.deity.Altar altar = RPGGods.ALTAR.get(getAltar()).orElse(rpggods.deity.Altar.EMPTY);
                 int lightLevel = altar.getLightLevel();
                 // check light level
                 if(lightLevel > 0) {
@@ -565,7 +565,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
      */
     public void applyAltarProperties(final ResourceLocation altarId) {
         // query altar by id
-        Altar altar = RPGGods.ALTAR.get(altarId).orElse(Altar.EMPTY);
+        rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
         // apply properties
         setDeity(altar.getDeity());
         setFemale(altar.isFemale());
@@ -590,9 +590,70 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     /**
+     * Directly writes properties from an Altar to a Compound NBT Tag
+     * @param altarId the Altar ID
+     * @return a CompoundTag that represents the Altar applied to an AltarEntity
+     */
+    public static CompoundTag writeAltarProperties(final ResourceLocation altarId) {
+        // query altar by id
+        rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
+        // create compound tag
+        CompoundTag compoundTag = new CompoundTag();
+        // write altar properties to the tag
+        // write deity
+        Optional<Deity> deity = Optional.empty();
+        if (altar.getDeity().isPresent() && !altar.getDeity().get().toString().isEmpty()) {
+            // determine string to save deity name
+            ResourceLocation deityId = altar.getDeity().get();
+            deity = RPGGods.DEITY.get(deityId);
+            compoundTag.putString(KEY_DEITY, deityId.toString());
+        }
+        // write altar
+        compoundTag.putString(KEY_ALTAR, altarId.toString());
+        // write inventory
+        ListTag listNBT = new ListTag();
+        // write inventory slots to NBT
+        for(EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack stack = altar.getItems().getItemStackFromSlot(slot);
+            if (!stack.isEmpty()) {
+                CompoundTag slotNBT = new CompoundTag();
+                slotNBT.putByte(KEY_SLOT, (byte) slot.getFilterFlag());
+                stack.save(slotNBT);
+                listNBT.add(slotNBT);
+            }
+        }
+        // write block to NBT
+        ItemStack stack = new ItemStack(altar.getItems().getBlock());
+        if (!stack.isEmpty()) {
+            CompoundTag slotNBT = new CompoundTag();
+            slotNBT.putByte(KEY_SLOT, (byte) (INV_SIZE - 1));
+            stack.save(slotNBT);
+            listNBT.add(slotNBT);
+        }
+        compoundTag.put(KEY_INVENTORY, listNBT);
+        // determine flags
+        byte flags = 0;
+        if(altar.isFemale()) flags = (byte) (flags | 0x01);
+        if(altar.isSlim()) flags = (byte) (flags | 0x02);
+        // write flags
+        compoundTag.putByte(KEY_FLAGS, flags);
+        // determine locked flags
+        byte locked = 0;
+        if(altar.getItems().isArmorLocked()) locked = (byte) (locked | 0x01);
+        if(altar.getItems().isHandsLocked()) locked = (byte) (locked | 0x02);
+        if(altar.getItems().isBlockLocked()) locked = (byte) (locked | 0x04);
+        if(altar.isPoseLocked()) locked = (byte) (locked | 0x08);
+        // write locked flags
+        compoundTag.putByte(KEY_LOCKED, locked);
+        // write pose
+        compoundTag.put(KEY_POSE, altar.getPose().serializeNBT());
+        return compoundTag;
+    }
+
+    /**
      * @return a new Altar instance with the same properties as found in this entity.
      */
-    public Altar createAltarProperties() {
+    public rpggods.deity.Altar createAltarProperties() {
         AltarItems items;
         items = new AltarItems(
                 getItemBySlot(EquipmentSlot.HEAD),
@@ -605,9 +666,9 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 isArmorLocked(), isHandsLocked(), isBlockLocked());
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
-        ResourceLocation material = Altar.MATERIAL; // TODO
+        ResourceLocation material = rpggods.deity.Altar.MATERIAL; // TODO
         int lightLevel = 0; // TODO
-        return new Altar(enabled, name, isFemale(), isSlim(), lightLevel, items,
+        return new rpggods.deity.Altar(enabled, name, isFemale(), isSlim(), lightLevel, items,
                 material, getAltarPose(), isAltarPoseLocked());
     }
 
@@ -689,7 +750,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     private byte getLocked() {
-        return getEntityData().get(LOCKED).byteValue();
+        return getEntityData().get(LOCKED);
     }
 
     private void setLocked(byte b) {

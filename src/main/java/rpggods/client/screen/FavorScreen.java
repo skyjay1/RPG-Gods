@@ -4,17 +4,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.math.Quaternion;
-import com.mojang.math.Vector3d;
 import com.mojang.math.Vector3f;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Widget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.MultiBufferSource;
 import com.mojang.blaze3d.platform.Lighting;
@@ -34,14 +30,12 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.FavorLevel;
-import rpggods.favor.FavorRange;
 import rpggods.favor.IFavor;
 import rpggods.gui.FavorContainer;
 import rpggods.perk.Perk;
@@ -54,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 
 public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
@@ -303,7 +298,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         int startX = (this.imageWidth - (TAB_WIDTH * TAB_COUNT)) / 2;
         int startY;
         for(int i = 0; i < tabCount; i++) {
-            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, new TranslatableComponent(Altar.createTranslationKey(deityList.get(i))),
+            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deityList.get(i))),
                     leftPos + startX + (i * TAB_WIDTH), topPos - TAB_HEIGHT + 13));
         }
         // add tab buttons
@@ -580,7 +575,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     public void updateDeity(final ResourceLocation deity) {
         this.deity = deity;
         // update deity name and favor text for header
-        deityName = new TranslatableComponent(Altar.createTranslationKey(deity))
+        deityName = new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity))
                 .withStyle(ChatFormatting.WHITE);
         final FavorLevel favorLevel = getMenu().getFavor().getFavor(deity);
         deityFavor = new TextComponent(favorLevel.getLevel() + " / " + favorLevel.getMax())
@@ -591,7 +586,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         scrollEnabled = false;
         switch (this.page) {
             case SUMMARY:
-                deityTitle = new TranslatableComponent(Altar.createTranslationKey(deity) + ".title")
+                deityTitle = new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity) + ".title")
                         .withStyle(ChatFormatting.BLACK, ChatFormatting.ITALIC);
                 break;
             case OFFERINGS:
@@ -911,6 +906,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         private Perk perk;
         private List<Component> perkActions;
         private List<Component> perkConditions;
+        private Set<PerkCondition.Type> perkConditionBlacklist = Set.of(PerkCondition.Type.RANDOM_TICK);
         private Component perkChance;
         private Component perkRange;
         private boolean enabled;
@@ -977,25 +973,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 // add perk condition texts
                 for(PerkCondition condition : perk.getConditions()) {
                     // do not show "random tick" conditions
-                    if(condition.getType() != PerkCondition.Type.RANDOM_TICK) {
-                        perkConditions.add(condition.getDisplayName().copy().withStyle(ChatFormatting.DARK_GRAY));
-                    } else {
+                    if(condition.getType() == PerkCondition.Type.RANDOM_TICK) {
                         isRandomPerk = true;
                     }
                 }
-                // add prefix to each condition based on plurality
-                if (perkConditions.size() > 0) {
-                    // add prefix to first condition
-                    Component t2 = new TranslatableComponent("favor.perk.condition.single", perkConditions.get(0))
-                            .withStyle(ChatFormatting.DARK_GRAY);
-                    perkConditions.set(0, t2);
-                    // add prefix to following conditions
-                    for (int i = 1, l = perkConditions.size(); i < l; i++) {
-                        t2 = new TranslatableComponent("favor.perk.condition.multiple", perkConditions.get(i))
-                                .withStyle(ChatFormatting.DARK_GRAY);
-                        perkConditions.set(i, t2);
-                    }
-                }
+                this.perkConditions.addAll(PerkCondition.formatDescriptions(perk.getConditions(), ChatFormatting.DARK_GRAY, perkConditionBlacklist));
                 // add text to display favor range
                 FavorLevel favorLevel = FavorScreen.this.getMenu().getFavor().getFavor(perk.getDeity());
                 ChatFormatting color = perk.getRange().isInRange(favorLevel.getLevel()) ? ChatFormatting.DARK_GREEN : ChatFormatting.RED;
@@ -1285,15 +1267,26 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected long cooldown;
         protected Component entityText;
         protected Component favorText;
+        protected List<Component> conditionsTooltip;
+        protected Set<PerkCondition.Type> perkConditionBlacklist = Set.of(PerkCondition.Type.RANDOM_TICK, PerkCondition.Type.RITUAL,
+                PerkCondition.Type.EFFECT_START, PerkCondition.Type.ENTITY_HURT_PLAYER,
+                PerkCondition.Type.ENTITY_KILLED_PLAYER, PerkCondition.Type.PLAYER_KILLED_ENTITY,
+                PerkCondition.Type.PLAYER_INTERACT_ENTITY);
         protected final Component functionText;
         protected Component functionTooltip;
 
         public SacrificeButton(final FavorScreen gui, final int index, int x, int y) {
             super(x, y, SACRIFICE_WIDTH, SACRIFICE_HEIGHT, TextComponent.EMPTY, b -> {},
-                    (b, m, bx, by) -> ((SacrificeButton)b).getTooltip(bx, by).ifPresent(t -> gui.renderTooltip(m, t, bx, by)));
+                    (b, m, bx, by) -> {
+                        List<Component> tooltip = ((SacrificeButton)b).getTooltip(bx, by);
+                        if(!tooltip.isEmpty()) {
+                            gui.renderTooltip(m, tooltip, Optional.empty(), bx, by, gui.font);
+                        }
+                    });
             this.id = index;
             this.entityText = TextComponent.EMPTY;
             this.favorText = TextComponent.EMPTY;
+            this.conditionsTooltip = new ArrayList<>();
             this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
             this.functionTooltip = TextComponent.EMPTY;
         }
@@ -1332,6 +1325,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected void updateSacrifice(final ResourceLocation sacrificeId, final Sacrifice sacrifice) {
             this.sacrifice = sacrifice;
             this.cooldown = FavorScreen.this.getMenu().getFavor().getSacrificeCooldown(sacrificeId).getCooldown();
+            this.conditionsTooltip.clear();
             // determine entity text
             EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(sacrifice.getEntity());
             if(entityType != null) {
@@ -1349,18 +1343,24 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 color = ChatFormatting.DARK_RED;
             }
             this.favorText = new TextComponent(favorString).withStyle(color);
+            // determine function tooltip
             if(sacrifice.getFunctionText().isPresent()) {
                 this.functionTooltip = new TranslatableComponent(sacrifice.getFunctionText().get());
             } else {
                 this.functionTooltip = new TranslatableComponent("gui.favor.sacrifice.function.tooltip");
             }
+            // determine conditions tooltip
+            if(!sacrifice.getConditions().isEmpty()) {
+                this.conditionsTooltip.addAll(PerkCondition.formatDescriptions(sacrifice.getConditions(), ChatFormatting.WHITE, perkConditionBlacklist));
+            }
         }
 
-        protected Optional<Component> getTooltip(final int mouseX, final int mouseY) {
+        protected List<Component> getTooltip(final int mouseX, final int mouseY) {
             if(sacrifice != null && sacrifice.getFunction().isPresent() && mouseX > (this.x + 18 * 8)) {
-                return Optional.of(functionTooltip);
+                // display sacrifice tooltip
+                return List.of(functionTooltip);
             }
-            return Optional.empty();
+            return conditionsTooltip;
         }
     }
 
@@ -1432,7 +1432,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             if(deityId < FavorScreen.this.deityList.size()) {
                 this.visible = true;
                 this.deity = FavorScreen.this.deityList.get(deityId);
-                this.setMessage(new TranslatableComponent(Altar.createTranslationKey(deity)));
+                this.setMessage(new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity)));
                 this.item = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY).getIcon();
             } else {
                 this.visible = false;

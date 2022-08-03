@@ -9,11 +9,15 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
 
     private static final String MAX_USES = "maxuses";
     private static final String MAX_COOLDOWN = "maxcooldown";
+    private static final String MAX_RESTOCKS = "maxrestocks";
+    private static final String RESTOCKS = "restocks";
     private static final String COOLDOWN = "cooldown";
     private static final String USES = "uses";
 
     private int maxUses;
     private int uses;
+    private int maxRestocks;
+    private int restocks;
     private long maxCooldown;
     private long cooldown;
 
@@ -22,10 +26,16 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
     }
 
     public Cooldown(int maxUses, long maxCooldown) {
+        this(maxUses, maxCooldown, -1);
+    }
+
+    public Cooldown(int maxUses, long maxCooldown, int maxRestocks) {
         this.maxUses = maxUses;
         this.maxCooldown = maxCooldown;
+        this.maxRestocks = maxRestocks;
         this.cooldown = 0;
         this.uses = 0;
+        this.restocks = 0;
     }
 
     /** @return the maximum number of uses until cooldown is triggered **/
@@ -33,30 +43,34 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
         return maxUses;
     }
 
+    /** @return the maximum number of restocks **/
+    public int getMaxRestocks() {
+        return maxRestocks;
+    }
+
     /** @return the cooldown amount (consider un-usable if cooldown is above zero) **/
     public long getCooldown() {
         return cooldown;
     }
 
-    /** @param add the amount of favor to add or remove **/
+    /** @param add the amount of cooldown to add or remove **/
     public void addCooldown(long add) {
         this.cooldown += add;
     }
 
-    /** Sets cooldown to the max and resets uses **/
+    /** Sets cooldown to the max **/
     public void applyCooldown() {
         cooldown = maxCooldown;
     }
 
     /**
-     * Adds to the amount of uses
+     * Adds to the amount of uses and applies cooldown and restocks if needed
      * @return true if there are any uses remaining
      */
     public boolean addUse() {
-        // apply cooldown
         if(++uses >= maxUses) {
             applyCooldown();
-            resetUses();
+            restock();
             return false;
         }
         return true;
@@ -65,6 +79,12 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
     /** Sets uses to 0 **/
     public void resetUses() {
         uses = 0;
+    }
+
+    /** Resets uses and increases restock count **/
+    public void restock() {
+        resetUses();
+        restocks++;
     }
 
     /** @return the number of uses left before triggering the cooldown **/
@@ -79,7 +99,7 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
 
     /** @return true if there are uses remaining and no cooldown **/
     public boolean canUse() {
-        return uses < maxUses && cooldown <= 0;
+        return uses < maxUses && cooldown <= 0 && (maxRestocks < 0 || restocks < maxRestocks);
     }
 
     @Override
@@ -87,6 +107,8 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
         StringBuilder sb = new StringBuilder("Cooldown: [");
         sb.append(" uses=").append(uses);
         sb.append(" maxuses=").append(maxUses);
+        sb.append(" restocks=").append(restocks);
+        sb.append(" maxrestocks=").append(maxRestocks);
         sb.append(" cooldown=").append(cooldown);
         sb.append(" maxcooldown=").append(maxCooldown);
         sb.append("]");
@@ -100,6 +122,8 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
         tag.putLong(MAX_COOLDOWN, maxCooldown);
         tag.putLong(COOLDOWN, cooldown);
         tag.putInt(USES, uses);
+        tag.putInt(RESTOCKS, restocks);
+        tag.putInt(MAX_RESTOCKS, maxRestocks);
         return tag;
     }
 
@@ -109,5 +133,7 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
         this.maxCooldown = nbt.getLong(MAX_COOLDOWN);
         this.cooldown = nbt.getLong(COOLDOWN);
         this.uses = nbt.getInt(USES);
+        this.restocks = nbt.getInt(RESTOCKS);
+        this.maxRestocks = nbt.getInt(MAX_RESTOCKS);
     }
 }

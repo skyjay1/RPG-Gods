@@ -135,22 +135,22 @@ public class AffinityGoal {
         return false;
     }
 
-    public static class NearestAttackableGoal extends NearestAttackableTargetGoal<Player> {
+    public static class AffinityNearestAttackableGoal extends NearestAttackableTargetGoal<Player> {
 
-        public NearestAttackableGoal(final Mob entity, float chance) {
+        public AffinityNearestAttackableGoal(final Mob entity, float chance) {
             super(entity, Player.class, Math.round(chance * 100), true, false, e -> getPassiveAndHostile(entity, e).getRight());
         }
     }
 
-    public static class NearestAttackableResetGoal extends Goal {
+    public static class AffinityNearestAttackableResetGoal extends Goal {
         protected Mob entity;
         protected int interval;
 
         protected final Predicate<LivingEntity> passivePredicate;
 
-        public NearestAttackableResetGoal(final Mob entityIn) { this(entityIn, 10, e -> getPassiveAndHostile(entityIn, e).getLeft()); }
+        public AffinityNearestAttackableResetGoal(final Mob entityIn) { this(entityIn, 10, e -> getPassiveAndHostile(entityIn, e).getLeft()); }
 
-        public NearestAttackableResetGoal(final Mob entityIn, int intervalIn, Predicate<LivingEntity> passivePredicate) {
+        public AffinityNearestAttackableResetGoal(final Mob entityIn, int intervalIn, Predicate<LivingEntity> passivePredicate) {
             entity = entityIn;
             interval = intervalIn;
             this.passivePredicate = passivePredicate;
@@ -177,13 +177,13 @@ public class AffinityGoal {
         }
     }
 
-    public static class FleeGoal extends AvoidEntityGoal<Player> {
+    public static class AffinityFleeGoal extends AvoidEntityGoal<Player> {
 
-        public FleeGoal(final PathfinderMob entityIn) {
+        public AffinityFleeGoal(final PathfinderMob entityIn) {
             this(entityIn, 8.0F);
         }
 
-        public FleeGoal(final PathfinderMob owner, float distanceIn) {
+        public AffinityFleeGoal(final PathfinderMob owner, float distanceIn) {
             super(owner, Player.class, distanceIn, 1.30D, 1.20D, createAvoidPredicate(owner));
         }
 
@@ -210,10 +210,10 @@ public class AffinityGoal {
         }
     }
 
-    public static class SittingGoal extends Goal {
+    public static class AffinitySittingGoal extends Goal {
         private final Mob entity;
 
-        public SittingGoal(Mob entity) {
+        public AffinitySittingGoal(Mob entity) {
             this.entity = entity;
             this.setFlags(EnumSet.of(Flag.MOVE, Flag.JUMP, Flag.TARGET));
         }
@@ -234,10 +234,10 @@ public class AffinityGoal {
         }
     }
 
-    public static class SittingResetGoal extends Goal {
+    public static class AffinitySittingResetGoal extends Goal {
         private final Mob entity;
 
-        public SittingResetGoal(Mob entity) {
+        public AffinitySittingResetGoal(Mob entity) {
             this.entity = entity;
         }
 
@@ -255,7 +255,7 @@ public class AffinityGoal {
         }
     }
 
-    public static class FollowOwnerGoal extends Goal {
+    public static class AffinityFollowOwnerGoal extends Goal {
         private final Mob entity;
         private LivingEntity owner;
         private final double followSpeed;
@@ -266,7 +266,7 @@ public class AffinityGoal {
         private float oldWaterCost;
         private final boolean teleportToLeaves;
 
-        public FollowOwnerGoal(Mob entityIn, double followSpeedIn, float farDistance, float closeDistance, boolean teleportToLeavesIn) {
+        public AffinityFollowOwnerGoal(Mob entityIn, double followSpeedIn, float farDistance, float closeDistance, boolean teleportToLeavesIn) {
             this.entity = entityIn;
             this.followSpeed = followSpeedIn;
             this.navigator = entityIn.getNavigation();
@@ -388,12 +388,12 @@ public class AffinityGoal {
         }
     }
 
-    public static class OwnerHurtByTargetGoal extends TargetGoal {
+    public static class AffinityOwnerHurtByTargetGoal extends TargetGoal {
         private LivingEntity attacker;
         private LivingEntity owner;
         private int timestamp;
 
-        public OwnerHurtByTargetGoal(Mob entity) {
+        public AffinityOwnerHurtByTargetGoal(Mob entity) {
             super(entity, false);
             this.setFlags(EnumSet.of(Goal.Flag.TARGET));
         }

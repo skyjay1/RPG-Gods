@@ -8,7 +8,6 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.NetworkEvent;
-import rpggods.RPGGods;
 import rpggods.altar.AltarPose;
 import rpggods.entity.AltarEntity;
 

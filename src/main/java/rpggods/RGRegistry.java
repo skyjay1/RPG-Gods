@@ -2,9 +2,9 @@ package rpggods;
 
 import com.google.common.collect.Lists;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.world.entity.Entity;
@@ -25,6 +25,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -42,6 +43,7 @@ import rpggods.loot.CropMultiplierModifier;
 import rpggods.recipe.ShapedAltarRecipe;
 import rpggods.recipe.ShapelessAltarRecipe;
 import rpggods.tameable.ITameable;
+import rpggods.util.AltarStructureProcessor;
 
 import java.util.Collections;
 import java.util.List;
@@ -66,11 +68,13 @@ public final class RGRegistry {
         // event listeners
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerEntityAttributes);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerCapabilities);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerStructureProcessors);
     }
 
 
+
     public static void registerEntityAttributes(final EntityAttributeCreationEvent event) {
-        event.put((EntityType<? extends LivingEntity>) ALTAR_TYPE.get(), AltarEntity.registerAttributes().build());
+        event.put(ALTAR_TYPE.get(), AltarEntity.registerAttributes().build());
     }
 
     public static void registerCapabilities(final RegisterCapabilitiesEvent event) {
@@ -78,8 +82,19 @@ public final class RGRegistry {
         event.register(ITameable.class);
     }
 
+    //// STRUCTURE PROCESSORS ////
+    public static StructureProcessorType<AltarStructureProcessor> ALTAR_STRUCTURE_PROCESSOR;
+
+    public static void registerStructureProcessors(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            // register loc processor
+            ResourceLocation altarProcessorId = new ResourceLocation(RPGGods.MODID, "altar");
+            ALTAR_STRUCTURE_PROCESSOR = StructureProcessorType.register(altarProcessorId.toString(), AltarStructureProcessor.CODEC);
+        });
+    }
+
     //// ENTITIES ////
-    public static final RegistryObject<EntityType<?>> ALTAR_TYPE = ENTITY_TYPES.register("altar", () ->
+    public static final RegistryObject<EntityType<? extends AltarEntity>> ALTAR_TYPE = ENTITY_TYPES.register("altar", () ->
             EntityType.Builder
             .of(AltarEntity::new, MobCategory.MISC)
             .sized(0.8F, 2.48F).clientTrackingRange(10)
@@ -145,7 +160,6 @@ public final class RGRegistry {
 
         @SubscribeEvent
         public static void registerEntityLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
-            RPGGods.LOGGER.debug("registerEntityLayerDefinitions");
             // create cube deformations
             net.minecraft.client.model.geom.builders.CubeDeformation inner = new net.minecraft.client.model.geom.builders.CubeDeformation(0.25F);
             net.minecraft.client.model.geom.builders.CubeDeformation outer = new net.minecraft.client.model.geom.builders.CubeDeformation(0.5F);
@@ -157,12 +171,10 @@ public final class RGRegistry {
 
         @SubscribeEvent
         public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-            RPGGods.LOGGER.debug("registerEntityRenderers");
-            event.registerEntityRenderer((EntityType<? extends AltarEntity>) ALTAR_TYPE.get(), rpggods.client.render.AltarRenderer::new);
+            event.registerEntityRenderer(ALTAR_TYPE.get(), rpggods.client.render.AltarRenderer::new);
         }
 
         private static void registerContainerRenders() {
-            RPGGods.LOGGER.debug("registerContainerRenders");
             MenuScreens.register(RGRegistry.ALTAR_CONTAINER.get(), rpggods.client.screen.AltarScreen::new);
             MenuScreens.register(RGRegistry.FAVOR_CONTAINER.get(), rpggods.client.screen.FavorScreen::new);
         }
@@ -170,14 +182,13 @@ public final class RGRegistry {
         private static List<ResourceLocation> altars = Lists.newArrayList();
 
         private static void registerModelProperties() {
-            RPGGods.LOGGER.debug("registerModelProperties");
             // Scroll properites
             ItemProperties.register(SCROLL_ITEM.get(), new ResourceLocation("open"),
                     (item, world, entity, i) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
             // Altar properties
             ItemProperties.register(ALTAR_ITEM.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
-                if(altars.isEmpty() || entity.tickCount % 100 == 0) {
+                if(altars.isEmpty() || (world != null && world.getGameTime() % 100 == 0)) {
                     altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());
                     Collections.sort(altars, ResourceLocation::compareNamespaced);
                 }

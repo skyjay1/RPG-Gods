@@ -51,7 +51,6 @@ public final class RGData {
      **/
     @SubscribeEvent
     public static void onReloadListeners(final AddReloadListenerEvent event) {
-        RPGGods.LOGGER.debug("onReloadListeners");
         RPGGods.DEITY_HELPER.forEach((id, deity) -> deity.clear());
         RPGGods.AFFINITY.clear();
         event.addListener(RPGGods.DEITY);
