@@ -20,13 +20,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 import rpggods.RPGGods;
 import rpggods.altar.AltarPose;
 import rpggods.altar.HumanoidPart;
+import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
-import rpggods.gui.AltarContainer;
+import rpggods.menu.AltarContainer;
 import rpggods.network.CUpdateAltarPacket;
 
 import java.util.Optional;
@@ -105,11 +104,11 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.imageHeight = SCREEN_HEIGHT - TAB_HEIGHT / 2;
         this.inventoryLabelX = this.leftPos + AltarContainer.PLAYER_INV_X;
         this.inventoryLabelY = this.topPos + AltarContainer.PLAYER_INV_Y - 10;
-        rpggods.deity.Altar altar = screenContainer.getAltar();
+        Altar altar = screenContainer.getAltar();
         if(altar.getDeity().isPresent()) {
             name = Optional.empty();
         } else if(screenContainer.getEntity().hasCustomName()) {
-            name = Optional.of(screenContainer.getEntity().getCustomName().getContents());
+            name = Optional.of(screenContainer.getEntity().getCustomName().getString());
         } else {
             name = Optional.empty();
         }
@@ -123,14 +122,14 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
     public void init() {
         super.init();
         // add tab buttons
-        tabButtons[0] = addRenderableWidget(new AltarScreen.TabButton(this, 0, new TranslatableComponent("gui.altar.pose"),
+        tabButtons[0] = addRenderableWidget(new AltarScreen.TabButton(this, 0, Component.translatable("gui.altar.pose"),
                 leftPos + (0 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.ARMOR_STAND)));
-        tabButtons[1] = addRenderableWidget(new AltarScreen.TabButton(this, 1, new TranslatableComponent("gui.altar.items"),
+        tabButtons[1] = addRenderableWidget(new AltarScreen.TabButton(this, 1, Component.translatable("gui.altar.items"),
                 leftPos + (1 * TAB_WIDTH), topPos - TAB_HEIGHT + 4, new ItemStack(Items.IRON_SWORD)));
         // add part buttons
         for (int i = 0, l = HumanoidPart.values().length; i < l; i++) {
             final HumanoidPart p = HumanoidPart.values()[i];
-            final Component title = new TranslatableComponent("gui.altar." + p.getSerializedName());
+            final Component title = Component.translatable("gui.altar." + p.getSerializedName());
             partButtons[i] = this.addRenderableWidget(new PartButton(this, this.leftPos + PARTS_X, this.topPos + PARTS_Y + (PART_HEIGHT * i), title, button -> {
                 this.selectedPart = p;
                 AltarScreen.this.updateSliders();
@@ -142,20 +141,20 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             });
         }
         // add randomize button
-        final Component titlePreset = new TranslatableComponent("gui.altar.preset");
+        final Component titlePreset = Component.translatable("gui.altar.preset");
         final AltarPose[] presets = new AltarPose[] { AltarPose.STANDING_HOLDING, AltarPose.STANDING_RAISED,
                 AltarPose.STANDING_HOLDING_DRAMATIC, AltarPose.WALKING, AltarPose.WEEPING, AltarPose.DAB };
         presetButton = this.addRenderableWidget(new IconButton(this, this.leftPos + PRESET_X, this.topPos + PRESET_Y, 16, 202, titlePreset, button -> {
             this.pose = presets[(int)Math.floor(Math.random() * presets.length)];
         }));
         // add reset button
-        final Component titleReset = new TranslatableComponent("controls.reset");
+        final Component titleReset = Component.translatable("controls.reset");
         resetButton = this.addRenderableWidget(new IconButton(this, this.leftPos + RESET_X, this.topPos + RESET_Y, 0, 202, titleReset, button -> {
             AltarScreen.this.pose.set(AltarScreen.this.selectedPart, 0, 0, 0);
             AltarScreen.this.updateSliders();
         }));
         // add gender button
-        final Component titleGender = new TranslatableComponent("gui.altar.gender");
+        final Component titleGender = Component.translatable("gui.altar.gender");
         genderButton = this.addRenderableWidget(new IconButton(this, this.leftPos + GENDER_X, this.topPos + GENDER_Y, 0, 218, titleGender, button -> AltarScreen.this.female = !AltarScreen.this.female) {
             @Override
             public int getIconX() {
@@ -163,7 +162,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             }
         });
         // add slim button
-        final Component titleSlim = new TranslatableComponent("gui.altar.slim");
+        final Component titleSlim = Component.translatable("gui.altar.slim");
         slimButton = this.addRenderableWidget(new IconButton(this, this.leftPos + SLIM_X, this.topPos + SLIM_Y, 32, 218, titleSlim, button -> AltarScreen.this.slim = !AltarScreen.this.slim) {
             @Override
             public int getIconX() {
@@ -196,7 +195,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.minecraft.keyboardHandler.setSendRepeatsToGui(true);
         int i = (this.width - this.imageWidth) / 2;
         int j = (this.height - this.imageHeight) / 2;
-        this.nameField = new EditBox(this.font, this.leftPos + TEXT_X, this.topPos + TEXT_Y, TEXT_WIDTH, TEXT_HEIGHT, new TranslatableComponent("gui.altar.name"));
+        this.nameField = new EditBox(this.font, this.leftPos + TEXT_X, this.topPos + TEXT_Y, TEXT_WIDTH, TEXT_HEIGHT, Component.translatable("gui.altar.name"));
         this.nameField.setValue(name.orElse(""));
         this.nameField.setCanLoseFocus(true);
         this.nameField.setTextColor(-1);
@@ -378,7 +377,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         }
         if(name.isPresent() && !nameField.isFocused() &&
                 (null == entity.getPlayerProfile() || !entity.getCustomName().getContents().equals(name.get()))) {
-            entity.setCustomName(new TextComponent(name.get()));
+            entity.setCustomName(Component.literal(name.get()));
         }
     }
 
@@ -441,7 +440,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
 
         public IconButton(final AltarScreen screenIn, final int x, final int y, final int tX, final int tY,
                           final Component title, final OnPress pressedAction) {
-            super(x, y, ICON_WIDTH, ICON_HEIGHT, TextComponent.EMPTY, pressedAction,
+            super(x, y, ICON_WIDTH, ICON_HEIGHT, Component.empty(), pressedAction,
                     (b, m, bx, by) -> screenIn.renderTooltip(m, screenIn.minecraft.font.split(title, Math.max(screenIn.width / 2 - 43, 170)), bx, by));
             this.textureX = tX;
             this.textureY = tY;
@@ -475,14 +474,14 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         private final String rotationName;
 
         public AngleSlider(final int x, final int y, final String rName) {
-            super(x, y, SLIDER_WIDTH, SLIDER_HEIGHT, TextComponent.EMPTY, 0.5D);
+            super(x, y, SLIDER_WIDTH, SLIDER_HEIGHT, Component.empty(), 0.5D);
             rotationName = rName;
             this.updateMessage();
         }
 
         // called when the value is changed
         protected void updateMessage() {
-            this.setMessage(new TranslatableComponent("gui.altar.rotation", rotationName, Math.round(getAngleValue())));
+            this.setMessage(Component.translatable("gui.altar.rotation", rotationName, Math.round(getAngleValue())));
         }
 
         // called when the value is changed and is different from its previous value

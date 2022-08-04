@@ -1,10 +1,10 @@
 package rpggods.network;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.NetworkEvent;
@@ -97,7 +97,7 @@ public class CUpdateAltarPacket {
                     AltarEntity altar = (AltarEntity) entity;
                     altar.setAltarPose(message.pose);
                     if (message.customName != null && !message.customName.isEmpty()) {
-                        altar.setCustomName(new TextComponent(message.customName));
+                        altar.setCustomName(Component.literal(message.customName));
                     }
                 }
             });

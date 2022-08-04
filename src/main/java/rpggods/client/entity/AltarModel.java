@@ -1,4 +1,4 @@
-package rpggods.client.render;
+package rpggods.client.entity;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;

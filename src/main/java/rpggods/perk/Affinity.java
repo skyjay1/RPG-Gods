@@ -7,8 +7,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 
 import java.util.Optional;
 
@@ -43,7 +41,7 @@ public final class Affinity {
 
     public Component getDisplayDescription() {
         Optional<EntityType<?>> entityType = EntityType.byString(getEntity().toString());
-        Component entityName = entityType.isPresent() ? entityType.get().getDescription() : new TextComponent(getEntity().toString());
+        Component entityName = entityType.isPresent() ? entityType.get().getDescription() : Component.literal(getEntity().toString());
         return getType().getDisplayDescription(entityName);
     }
 
@@ -70,11 +68,11 @@ public final class Affinity {
         }
 
         public Component getDisplayName() {
-            return new TranslatableComponent("favor.affinity." + getSerializedName());
+            return Component.translatable("favor.affinity." + getSerializedName());
         }
 
         public Component getDisplayDescription(Component entityName) {
-            return new TranslatableComponent("favor.affinity." + getSerializedName() + ".description", entityName);
+            return Component.translatable("favor.affinity." + getSerializedName() + ".description", entityName);
         }
 
         @Override

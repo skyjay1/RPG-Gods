@@ -1,8 +1,9 @@
 package rpggods.deity;
 
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.favor.FavorRange;
 import rpggods.perk.Perk;
@@ -67,7 +68,7 @@ public class DeityHelper {
         if(offering.getFavor() == 0 && !offering.getFunction().isPresent() && !offering.getTrade().isPresent()) {
             return;
         }
-        ResourceLocation itemId = offering.getAccept().getItem().getRegistryName();
+        ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(offering.getAccept().getItem());
         offeringMap.computeIfAbsent(itemId, r -> new ArrayList<>()).add(id);
     }
 
@@ -121,8 +122,8 @@ public class DeityHelper {
         return RPGGods.DEITY.get(this.id);
     }
 
-    public static Component getName(final ResourceLocation id) {
-        return new TranslatableComponent(Altar.createTranslationKey(id));
+    public static MutableComponent getName(final ResourceLocation id) {
+        return Component.translatable(Altar.createTranslationKey(id));
     }
 
     @Override

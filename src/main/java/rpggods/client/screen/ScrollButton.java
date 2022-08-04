@@ -4,9 +4,9 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.network.chat.TextComponent;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -38,7 +38,7 @@ public class ScrollButton<T extends Screen> extends Button {
                         final int width, final int height, final int uX, final int vY,
                         final ResourceLocation textureIn, final boolean isVertical, final Predicate<T> isEnabled,
                         final Consumer<ScrollButton<T>> onScrollEnd) {
-        super(x, y, width, height, TextComponent.EMPTY, b -> {
+        super(x, y, width, height, Component.empty(), b -> {
         });
         screen = gui;
         u = uX;

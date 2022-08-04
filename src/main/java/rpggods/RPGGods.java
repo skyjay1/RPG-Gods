@@ -26,8 +26,6 @@ import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
-import rpggods.event.FavorEventHandler;
-import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.network.CUpdateAltarPacket;
 import rpggods.network.SAltarPacket;
@@ -41,7 +39,6 @@ import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
-import rpggods.tameable.Tameable;
 import rpggods.util.GenericJsonReloadListener;
 
 import java.util.EnumMap;
@@ -114,7 +111,7 @@ public class RPGGods {
         RGRegistry.register();
         // Mod event bus listeners
         FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
-        FMLJavaModLoadingContext.get().getModEventBus().register(FavorEventHandler.ModEvents.class);
+        FMLJavaModLoadingContext.get().getModEventBus().register(RGEvents.ModEvents.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         // Config file
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CONFIG_SPEC);
@@ -123,10 +120,10 @@ public class RPGGods {
         // Required for data pack sync and favor capability
         MinecraftForge.EVENT_BUS.register(RGData.class);
         // Events that affect Favor and Perks
-        MinecraftForge.EVENT_BUS.register(FavorEventHandler.ForgeEvents.class);
+        MinecraftForge.EVENT_BUS.register(RGEvents.ForgeEvents.class);
         // Events that are client-only
         DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> {
-            MinecraftForge.EVENT_BUS.register(FavorEventHandler.ClientEvents.class);
+            MinecraftForge.EVENT_BUS.register(RGEvents.ClientEvents.class);
         });
         // Packets
         int messageId = 0;

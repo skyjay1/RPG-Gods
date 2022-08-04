@@ -1,4 +1,4 @@
-package rpggods.client.render;
+package rpggods.client.entity;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
@@ -22,9 +22,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import com.mojang.math.Vector3f;
 import net.minecraftforge.client.event.RenderLivingEvent;
-import net.minecraftforge.client.model.data.EmptyModelData;
+import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.altar.AltarPose;
 import rpggods.altar.HumanoidPart;
@@ -47,38 +46,38 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
 
     public AltarRenderer(final EntityRendererProvider.Context context) {
         super(context, new AltarModel(context.bakeLayer(ALTAR_MODEL_RESOURCE)), 0.5F);
-        this.addLayer(new HumanoidArmorLayer(this,
+        this.addLayer(new HumanoidArmorLayer<>(this,
                 new AltarArmorModel(context.bakeLayer(ALTAR_INNER_ARMOR_RESOURCE)),
                 new AltarArmorModel(context.bakeLayer(ALTAR_OUTER_ARMOR_RESOURCE))));
-        this.addLayer(new ItemInHandLayer<>(this));
+        this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
         this.addLayer(new ElytraLayer<>(this, context.getModelSet()));
-        this.addLayer(new CustomHeadLayer<>(this, context.getModelSet()));
+        this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getItemInHandRenderer()));
     }
 
     @Override
-    public void render(AltarEntity entityIn, float entityYaw, float partialTicks, PoseStack matrixStackIn,
+    public void render(AltarEntity entityIn, float entityYaw, float partialTicks, PoseStack poseStack,
                        MultiBufferSource bufferIn, int packedLightIn) {
         // intentional omission of super call
         // pre-render event
-        if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre<>(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn))) {
+        if (MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Pre<>(entityIn, this, partialTicks, poseStack, bufferIn, packedLightIn))) {
             return;
         }
-        matrixStackIn.pushPose();
+        poseStack.pushPose();
         // rotate around entity body rotation
-        matrixStackIn.mulPose(Vector3f.YN.rotationDegrees(entityIn.yBodyRot));
+        poseStack.mulPose(Vector3f.YN.rotationDegrees(entityIn.yBodyRot));
 
         // render base
         float baseHeight = -0.5F;
         ItemStack blockItem = entityIn.getBlockBySlot();
         if(!blockItem.isEmpty()) {
-            final Block block = ForgeRegistries.BLOCKS.getValue(blockItem.getItem().getRegistryName());
+            final Block block = Block.byItem(blockItem.getItem());
             if(block != null) {
                 baseHeight = 0.0F;
-                matrixStackIn.pushPose();
-                matrixStackIn.translate(-0.5D, 0.0D, -0.5D);
+                poseStack.pushPose();
+                poseStack.translate(-0.5D, 0.0D, -0.5D);
                 Minecraft.getInstance().getBlockRenderer().renderSingleBlock(block.defaultBlockState(),
-                        matrixStackIn, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY, EmptyModelData.INSTANCE);
-                matrixStackIn.popPose();
+                        poseStack, bufferIn, packedLightIn, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+                poseStack.popPose();
             }
         }
 
@@ -95,33 +94,33 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
         RenderType rendertype = this.getRenderType(entityIn, flag, flag1, flag2);
 
         // rotate around body and translate according to pose offsets
-        getModel().translateRotateAroundBody(pose.get(HumanoidPart.OFFSET), pose.get(HumanoidPart.BODY), matrixStackIn, partialTicks);
+        getModel().translateRotateAroundBody(pose.get(HumanoidPart.OFFSET), pose.get(HumanoidPart.BODY), poseStack, partialTicks);
         // translate and rotate so the model is not upside-down
-        matrixStackIn.translate(0.0F, 2.0F + baseHeight, 0.0F);
-        matrixStackIn.mulPose(Vector3f.XP.rotationDegrees(180.0F));
+        poseStack.translate(0.0F, 2.0F + baseHeight, 0.0F);
+        poseStack.mulPose(Vector3f.XP.rotationDegrees(180.0F));
         if (rendertype != null) {
             VertexConsumer ivertexbuilder = bufferIn.getBuffer(rendertype);
-            getModel().render(entityIn, matrixStackIn, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
+            getModel().render(entityIn, poseStack, ivertexbuilder, packedLightIn, OverlayTexture.NO_OVERLAY,
                     entityIn.isFemale(), entityIn.isSlim(), 1.0F, 1.0F, 1.0F, 1.0F);
         }
 
         // render layers
         if (!entityIn.isSpectator()) {
             for(RenderLayer layerrenderer : this.layers) {
-                layerrenderer.render(matrixStackIn, bufferIn, packedLightIn, entityIn, entityIn.animationPosition, entityIn.animationSpeed, partialTicks, entityIn.tickCount, entityIn.getYHeadRot(), entityIn.getViewXRot(partialTicks));
+                layerrenderer.render(poseStack, bufferIn, packedLightIn, entityIn, entityIn.animationPosition, entityIn.animationSpeed, partialTicks, entityIn.tickCount, entityIn.getYHeadRot(), entityIn.getViewXRot(partialTicks));
             }
         }
-        matrixStackIn.popPose();
+        poseStack.popPose();
 
         // render nametag
-        net.minecraftforge.client.event.RenderNameplateEvent renderNameplateEvent = new net.minecraftforge.client.event.RenderNameplateEvent(entityIn, entityIn.getDisplayName(), this, matrixStackIn, bufferIn, packedLightIn, partialTicks);
-        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(renderNameplateEvent);
-        if (renderNameplateEvent.getResult() != net.minecraftforge.eventbus.api.Event.Result.DENY && (renderNameplateEvent.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW || this.shouldShowName(entityIn))) {
-            this.renderNameTag(entityIn, renderNameplateEvent.getContent(), matrixStackIn, bufferIn, packedLightIn);
+        net.minecraftforge.client.event.RenderNameTagEvent renderNameTagEvent = new net.minecraftforge.client.event.RenderNameTagEvent(entityIn, entityIn.getDisplayName(), this, poseStack, bufferIn, packedLightIn, partialTicks);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(renderNameTagEvent);
+        if (renderNameTagEvent.getResult() != net.minecraftforge.eventbus.api.Event.Result.DENY && (renderNameTagEvent.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW || this.shouldShowName(entityIn))) {
+            this.renderNameTag(entityIn, renderNameTagEvent.getContent(), poseStack, bufferIn, packedLightIn);
         }
 
         // post-render event
-        MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Post<>(entityIn, this, partialTicks, matrixStackIn, bufferIn, packedLightIn));
+        MinecraftForge.EVENT_BUS.post(new RenderLivingEvent.Post<>(entityIn, this, partialTicks, poseStack, bufferIn, packedLightIn));
     }
 
     @Override

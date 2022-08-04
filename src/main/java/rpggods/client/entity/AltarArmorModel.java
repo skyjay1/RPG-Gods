@@ -1,4 +1,4 @@
-package rpggods.client.render;
+package rpggods.client.entity;
 
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;

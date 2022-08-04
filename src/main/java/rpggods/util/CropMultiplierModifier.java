@@ -1,8 +1,12 @@
-package rpggods.loot;
+package rpggods.util;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraft.core.Registry;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -12,16 +16,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.Tag;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
+import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorEventHandler;
+import rpggods.RGEvents;
 import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
@@ -29,20 +30,28 @@ import rpggods.perk.PerkAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class CropMultiplierModifier extends LootModifier {
 
-    private final ResourceLocation cropsTag;
+    public static final Supplier<Codec<CropMultiplierModifier>> CODEC_SUPPLIER = Suppliers.memoize(() -> RecordCodecBuilder.create(inst ->
+            codecStart(inst)
+                    .and(TagKey.codec(Registry.BLOCK_REGISTRY).fieldOf("crops").forGetter(CropMultiplierModifier::getCrops))
+                    .apply(inst, CropMultiplierModifier::new)));;
+
     private final TagKey<Block> crops;
 
-    protected CropMultiplierModifier(final LootItemCondition[] conditionsIn, final ResourceLocation cropsTagIn) {
+    protected CropMultiplierModifier(final LootItemCondition[] conditionsIn, final TagKey<Block> crops) {
         super(conditionsIn);
-        cropsTag = cropsTagIn;
-        crops = BlockTags.create(cropsTagIn);
+        this.crops = crops;
+    }
+
+    public TagKey<Block> getCrops() {
+        return crops;
     }
 
     @Override
-    public List<ItemStack> doApply(List<ItemStack> generatedLoot, LootContext context) {
+    public ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> generatedLoot, LootContext context) {
         Entity entity = context.getParamOrNull(LootContextParams.THIS_ENTITY);
         BlockState block = context.getParamOrNull(LootContextParams.BLOCK_STATE);
         // do not apply when entity is null or breaking non-crops
@@ -68,7 +77,7 @@ public class CropMultiplierModifier extends LootModifier {
                 Perk perk;
                 for (ResourceLocation id : cropHarvest) {
                     perk = RPGGods.PERK.get(id).orElse(null);
-                    if (FavorEventHandler.runPerk(perk, player, f)) {
+                    if (RGEvents.runPerk(perk, player, f)) {
                         float multiplier = 0;
                         for(PerkAction action : perk.getActions()) {
                             if(action.getType() == PerkAction.Type.CROP_HARVEST && action.getMultiplier().isPresent()) {
@@ -86,21 +95,8 @@ public class CropMultiplierModifier extends LootModifier {
         return generatedLoot;
     }
 
-    public static class Serializer extends GlobalLootModifierSerializer<CropMultiplierModifier> {
-
-        private static final String CROPS = "crops";
-
-        @Override
-        public CropMultiplierModifier read(ResourceLocation name, JsonObject object, LootItemCondition[] conditionsIn) {
-            ResourceLocation cropsTag = new ResourceLocation(GsonHelper.getAsString(object, CROPS));
-            return new CropMultiplierModifier(conditionsIn, cropsTag);
-        }
-
-        @Override
-        public JsonObject write(CropMultiplierModifier instance) {
-            JsonObject json = makeConditions(instance.conditions);
-            json.addProperty(CROPS, instance.cropsTag.toString());
-            return json;
-        }
+    @Override
+    public Codec<? extends IGlobalLootModifier> codec() {
+        return CODEC_SUPPLIER.get();
     }
 }

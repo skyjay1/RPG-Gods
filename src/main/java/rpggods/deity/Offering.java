@@ -12,6 +12,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 
 import java.util.Optional;
@@ -22,7 +23,7 @@ public class Offering {
             Optional.empty(), Optional.empty(), 0, Optional.empty(), Optional.empty());
 
     // Codec that accepts Item or ItemStack
-    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(Registry.ITEM.byNameCodec(), ItemStack.CODEC)
+    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(ForgeRegistries.ITEMS.getCodec(), ItemStack.CODEC)
             .xmap(either -> either.map(ItemStack::new, Function.identity()),
                     stack -> stack.getCount() == 1 && !stack.hasTag()
                             ? Either.left(stack.getItem())

@@ -1,6 +1,7 @@
 package rpggods;
 
 import com.google.common.collect.Lists;
+import com.mojang.serialization.Codec;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Block;
@@ -20,7 +21,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.extensions.IForgeMenuType;
-import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
+import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -30,18 +31,18 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
-import rpggods.block.GlowBlock;
+import rpggods.block.AltarLightBlock;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
-import rpggods.gui.AltarContainer;
-import rpggods.gui.FavorContainer;
+import rpggods.screen.AltarContainer;
+import rpggods.screen.FavorContainer;
 import rpggods.item.AltarItem;
 import rpggods.item.ScrollItem;
-import rpggods.loot.AutosmeltOrCobbleModifier;
-import rpggods.loot.CropMultiplierModifier;
-import rpggods.recipe.ShapedAltarRecipe;
-import rpggods.recipe.ShapelessAltarRecipe;
+import rpggods.util.AutosmeltOrCobbleModifier;
+import rpggods.util.CropMultiplierModifier;
+import rpggods.util.ShapedAltarRecipe;
+import rpggods.util.ShapelessAltarRecipe;
 import rpggods.tameable.ITameable;
 import rpggods.util.AltarStructureProcessor;
 
@@ -52,10 +53,10 @@ public final class RGRegistry {
 
     private static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, RPGGods.MODID);
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, RPGGods.MODID);
-    private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITIES, RPGGods.MODID);
-    private static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.CONTAINERS, RPGGods.MODID);
+    private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, RPGGods.MODID);
+    private static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.MENU_TYPES, RPGGods.MODID);
     private static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, RPGGods.MODID);
-    private static final DeferredRegister<GlobalLootModifierSerializer<?>> LOOT_MODIFIER_SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.LOOT_MODIFIER_SERIALIZERS, RPGGods.MODID);
+    private static final DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, RPGGods.MODID);
 
     public static void register() {
         // deferred registers
@@ -70,8 +71,6 @@ public final class RGRegistry {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerCapabilities);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RGRegistry::registerStructureProcessors);
     }
-
-
 
     public static void registerEntityAttributes(final EntityAttributeCreationEvent event) {
         event.put(ALTAR_TYPE.get(), AltarEntity.registerAttributes().build());
@@ -101,10 +100,10 @@ public final class RGRegistry {
             .build("altar"));
 
     //// BLOCKS ////
-    public static final RegistryObject<GlowBlock> LIGHT_BLOCK = BLOCKS.register("light", () ->
-            new GlowBlock(BlockBehaviour.Properties.of(Material.AIR)
+    public static final RegistryObject<AltarLightBlock> LIGHT_BLOCK = BLOCKS.register("light", () ->
+            new AltarLightBlock(BlockBehaviour.Properties.of(Material.AIR)
                 .strength(-1F).noCollission().randomTicks()
-                .lightLevel(b -> b.getValue(GlowBlock.LIGHT_LEVEL))));
+                .lightLevel(b -> b.getValue(AltarLightBlock.LEVEL))));
 
     //// ITEMS ////
     public static final RegistryObject<AltarItem> ALTAR_ITEM = ITEMS.register("altar", () -> new AltarItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC)));
@@ -145,10 +144,10 @@ public final class RGRegistry {
         })
     );
     //// LOOT MODIFER SERIALIZERS ////
-    public static final RegistryObject<AutosmeltOrCobbleModifier.Serializer> AUTOSMELT_LOOT_MODIFIER =
-            LOOT_MODIFIER_SERIALIZERS.register("autosmelt_or_cobble", () -> new AutosmeltOrCobbleModifier.Serializer());
-    public static final RegistryObject<CropMultiplierModifier.Serializer> CROP_LOOT_MODIFIER =
-            LOOT_MODIFIER_SERIALIZERS.register("crop_multiplier", () -> new CropMultiplierModifier.Serializer());
+    public static final RegistryObject<Codec<? extends AutosmeltOrCobbleModifier>> AUTOSMELT_LOOT_MODIFIER =
+            LOOT_MODIFIER_SERIALIZERS.register("autosmelt_or_cobble", AutosmeltOrCobbleModifier.CODEC_SUPPLIER);
+    public static final RegistryObject<Codec<? extends CropMultiplierModifier>> CROP_LOOT_MODIFIER =
+            LOOT_MODIFIER_SERIALIZERS.register("crop_multiplier", CropMultiplierModifier.CODEC_SUPPLIER);
 
     public static final class ClientReg {
 
@@ -164,14 +163,14 @@ public final class RGRegistry {
             net.minecraft.client.model.geom.builders.CubeDeformation inner = new net.minecraft.client.model.geom.builders.CubeDeformation(0.25F);
             net.minecraft.client.model.geom.builders.CubeDeformation outer = new net.minecraft.client.model.geom.builders.CubeDeformation(0.5F);
             // register layer definitions
-            event.registerLayerDefinition(rpggods.client.render.AltarRenderer.ALTAR_MODEL_RESOURCE, () -> rpggods.client.render.AltarModel.createBodyLayer());
-            event.registerLayerDefinition(rpggods.client.render.AltarRenderer.ALTAR_INNER_ARMOR_RESOURCE, () -> rpggods.client.render.AltarArmorModel.createBodyLayer(inner));
-            event.registerLayerDefinition(rpggods.client.render.AltarRenderer.ALTAR_OUTER_ARMOR_RESOURCE, () -> rpggods.client.render.AltarArmorModel.createBodyLayer(outer));
+            event.registerLayerDefinition(rpggods.client.entity.AltarRenderer.ALTAR_MODEL_RESOURCE, () -> rpggods.client.entity.AltarModel.createBodyLayer());
+            event.registerLayerDefinition(rpggods.client.entity.AltarRenderer.ALTAR_INNER_ARMOR_RESOURCE, () -> rpggods.client.entity.AltarArmorModel.createBodyLayer(inner));
+            event.registerLayerDefinition(rpggods.client.entity.AltarRenderer.ALTAR_OUTER_ARMOR_RESOURCE, () -> rpggods.client.entity.AltarArmorModel.createBodyLayer(outer));
         }
 
         @SubscribeEvent
         public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-            event.registerEntityRenderer(ALTAR_TYPE.get(), rpggods.client.render.AltarRenderer::new);
+            event.registerEntityRenderer(ALTAR_TYPE.get(), rpggods.client.entity.AltarRenderer::new);
         }
 
         private static void registerContainerRenders() {

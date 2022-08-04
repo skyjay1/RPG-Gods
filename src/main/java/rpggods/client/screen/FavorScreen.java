@@ -24,9 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
@@ -37,7 +35,7 @@ import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
-import rpggods.gui.FavorContainer;
+import rpggods.menu.FavorContainer;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkAction;
@@ -133,8 +131,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     private static final Map<ResourceLocation, Map<Integer, List<Perk>>> perkMap = new HashMap();
     private Inventory inventory;
     private ResourceLocation deity;
-    private MutableComponent deityName = (MutableComponent) TextComponent.EMPTY;
-    private MutableComponent deityFavor = (MutableComponent) TextComponent.EMPTY;
+    private MutableComponent deityName = Component.empty();
+    private MutableComponent deityFavor = Component.empty();
     private long openTimestamp;
     private int tabGroupCount;
     private int tabGroup;
@@ -152,7 +150,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     private boolean scrollEnabled;
 
     // Summary page
-    private MutableComponent deityTitle = (MutableComponent) TextComponent.EMPTY;
+    private MutableComponent deityTitle = (MutableComponent) Component.empty();
 
     // Offering page
     private TextButton offeringTitle;
@@ -298,7 +296,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         int startX = (this.imageWidth - (TAB_WIDTH * TAB_COUNT)) / 2;
         int startY;
         for(int i = 0; i < tabCount; i++) {
-            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deityList.get(i))),
+            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, Component.translatable(rpggods.deity.Altar.createTranslationKey(deityList.get(i))),
                     leftPos + startX + (i * TAB_WIDTH), topPos - TAB_HEIGHT + 13));
         }
         // add tab buttons
@@ -309,7 +307,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         for(int i = 0; i < PAGE_COUNT; i++) {
             FavorScreen.Page p = FavorScreen.Page.values()[i];
             pageButtons[i] = this.addRenderableWidget(new PageButton(this, leftPos + startX + (i * PAGE_WIDTH), topPos + SCREEN_HEIGHT - 7,
-                    125 + 18 * i, 130, new TranslatableComponent(p.getTitle()), new TranslatableComponent(p.getTitle() + ".tooltip"), p));
+                    125 + 18 * i, 130, Component.translatable(p.getTitle()), Component.translatable(p.getTitle() + ".tooltip"), p));
         }
         // add scroll bar
         scrollButton = this.addRenderableWidget(new ScrollButton<>(this, this.leftPos + SCROLL_X, this.topPos + SCROLL_Y, SCROLL_WIDTH, SCROLL_HEIGHT,
@@ -318,11 +316,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         Component text;
         Component tooltip;
         // add offering UI elements
-        text = new TranslatableComponent("gui.favor.offerings").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
-        tooltip = new TranslatableComponent("gui.favor.offerings.tooltip");
+        text = Component.translatable("gui.favor.offerings").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
+        tooltip = Component.translatable("gui.favor.offerings.tooltip");
         offeringTitle = this.addRenderableWidget(new TextButton(this, this.leftPos + OFFERING_X, this.topPos + OFFERING_Y - 16, OFFERING_WIDTH * 2, 12, text, tooltip));
-        text = new TranslatableComponent("gui.favor.trades").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
-        tooltip = new TranslatableComponent("gui.favor.trades.tooltip");
+        text = Component.translatable("gui.favor.trades").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
+        tooltip = Component.translatable("gui.favor.trades.tooltip");
         tradeTitle = this.addRenderableWidget(new TextButton(this, this.leftPos + TRADE_X, this.topPos + TRADE_Y - 16, TRADE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < OFFERING_COUNT; i++) {
             offeringButtons[i] = this.addRenderableWidget(new OfferingButton(this, i, this.leftPos + OFFERING_X + OFFERING_WIDTH * (i % 2), this.topPos + OFFERING_Y + OFFERING_HEIGHT * (i / 2)));
@@ -331,8 +329,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             tradeButtons[i] = this.addRenderableWidget(new TradeButton(this, i, this.leftPos + TRADE_X, this.topPos + TRADE_Y + i * OFFERING_HEIGHT));
         }
         // add sacrifice UI elements
-        text = new TranslatableComponent("gui.favor.sacrifices").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
-        tooltip = new TranslatableComponent("gui.favor.sacrifices.tooltip");
+        text = Component.translatable("gui.favor.sacrifices").withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
+        tooltip = Component.translatable("gui.favor.sacrifices.tooltip");
         sacrificeTitle = this.addRenderableWidget(new TextButton(this, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y - 16, SACRIFICE_WIDTH, 12, text, tooltip));
         for(int i = 0; i < SACRIFICE_COUNT; i++) {
             sacrificeButtons[i] = this.addRenderableWidget(new SacrificeButton(this, i, this.leftPos + SACRIFICE_X, this.topPos + SACRIFICE_Y + i * SACRIFICE_HEIGHT));
@@ -355,7 +353,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                     perkCount++;
                 }
                 // add level number button
-                text = new TextComponent(perksAtLevel.getKey().toString()).withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
+                text = Component.literal(perksAtLevel.getKey().toString()).withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE);
                 if(!perkLevelButtonMap.containsKey(perksAtLevel.getKey())) {
                     perkLevelButtonMap.put(perksAtLevel.getKey(), this.addRenderableWidget(
                             new TextButton(this, startX + perksAtLevel.getKey() * (PERK_WIDTH + PERK_SPACE_X) + 4, startY - 12,
@@ -481,25 +479,25 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         // draw "Patron" text
         Optional<ResourceLocation> patron = getMenu().getFavor().getPatron();
         if(patron.isPresent() && patron.get().equals(this.deity)) {
-            this.font.draw(matrixStack, new TranslatableComponent("favor.patron")
+            this.font.draw(matrixStack, Component.translatable("favor.patron")
                             .withStyle(ChatFormatting.WHITE),
                     leftPos + SUMMARY_X, startY + 1, 0xFFFFFF);
             startY += font.lineHeight * 3 / 2;
         }
         // draw favor amounts
-        this.font.draw(matrixStack, new TranslatableComponent("favor.favor").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
+        this.font.draw(matrixStack, Component.translatable("favor.favor").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
                 leftPos + SUMMARY_X, startY, 0xFFFFFF);
-        this.font.draw(matrixStack, new TextComponent(curFavor + " / " + nextFavor)
+        this.font.draw(matrixStack, Component.literal(curFavor + " / " + nextFavor)
                         .withStyle(ChatFormatting.DARK_PURPLE),
                 leftPos + SUMMARY_X, startY + font.lineHeight * 1 + 1, 0xFFFFFF);
-        this.font.draw(matrixStack, new TranslatableComponent("favor.level").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
+        this.font.draw(matrixStack, Component.translatable("favor.level").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
                 leftPos + SUMMARY_X, startY + font.lineHeight * 5 / 2, 0xFFFFFF);
-        this.font.draw(matrixStack, new TextComponent(String.valueOf(level.getLevel() + " / " + (curFavor < 0 ? level.getMin() : level.getMax()))).withStyle(ChatFormatting.DARK_PURPLE),
+        this.font.draw(matrixStack, Component.literal(String.valueOf(level.getLevel() + " / " + (curFavor < 0 ? level.getMin() : level.getMax()))).withStyle(ChatFormatting.DARK_PURPLE),
                 leftPos + SUMMARY_X, startY + font.lineHeight * 7 / 2 + 1, 0xFFFFFF);
-        this.font.draw(matrixStack, new TranslatableComponent("favor.next_level").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
+        this.font.draw(matrixStack, Component.translatable("favor.next_level").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC),
                 leftPos + SUMMARY_X, startY + font.lineHeight * 5, 0xFFFFFF);
         final boolean capped = level.getLevel() == level.getMin() || level.getLevel() == level.getMax();
-        this.font.draw(matrixStack, new TextComponent(capped ? "--" : String.valueOf(nextFavor - curFavor)).withStyle(ChatFormatting.DARK_PURPLE),
+        this.font.draw(matrixStack, Component.literal(capped ? "--" : String.valueOf(nextFavor - curFavor)).withStyle(ChatFormatting.DARK_PURPLE),
                 leftPos + SUMMARY_X, startY + font.lineHeight * 6 + 1, 0xFFFFFF);
         // draw entity
         drawEntityOnScreen(getOrCreateEntity(deity), matrixStack, this.leftPos + PREVIEW_X + PREVIEW_WIDTH / 2, this.topPos + PREVIEW_Y + PREVIEW_HEIGHT, (float) mouseX, (float) mouseY, partialTicks);
@@ -575,10 +573,10 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     public void updateDeity(final ResourceLocation deity) {
         this.deity = deity;
         // update deity name and favor text for header
-        deityName = new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity))
+        deityName = Component.translatable(rpggods.deity.Altar.createTranslationKey(deity))
                 .withStyle(ChatFormatting.WHITE);
         final FavorLevel favorLevel = getMenu().getFavor().getFavor(deity);
-        deityFavor = new TextComponent(favorLevel.getLevel() + " / " + favorLevel.getMax())
+        deityFavor = Component.literal(favorLevel.getLevel() + " / " + favorLevel.getMax())
                 .withStyle(ChatFormatting.DARK_PURPLE);
         // update based on current page
         int scrollIndex;
@@ -586,7 +584,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         scrollEnabled = false;
         switch (this.page) {
             case SUMMARY:
-                deityTitle = new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity) + ".title")
+                deityTitle = Component.translatable(rpggods.deity.Altar.createTranslationKey(deity) + ".title")
                         .withStyle(ChatFormatting.BLACK, ChatFormatting.ITALIC);
                 break;
             case OFFERINGS:
@@ -913,7 +911,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         private int tooltipWidth;
 
         public PerkButton(final FavorScreen gui, final Perk perk, int x, int y) {
-            super(x, y, PERK_WIDTH, PERK_HEIGHT, TextComponent.EMPTY, b -> {});
+            super(x, y, PERK_WIDTH, PERK_HEIGHT, Component.empty(), b -> {});
             this.perkActions = new ArrayList<>();
             this.perkConditions = new ArrayList<>();
             this.setPerk(perk);
@@ -961,8 +959,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             this.perk = perk;
             this.perkActions.clear();
             this.perkConditions.clear();
-            this.perkChance = TextComponent.EMPTY;
-            this.perkRange = TextComponent.EMPTY;
+            this.perkChance = Component.empty();
+            this.perkRange = Component.empty();
             boolean isRandomPerk = false;
             if(perk != null) {
                 // add all perk action titles
@@ -982,11 +980,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 FavorLevel favorLevel = FavorScreen.this.getMenu().getFavor().getFavor(perk.getDeity());
                 ChatFormatting color = perk.getRange().isInRange(favorLevel.getLevel()) ? ChatFormatting.DARK_GREEN : ChatFormatting.RED;
                 if(perk.getRange().getMaxLevel() == favorLevel.getMax()) {
-                    perkRange = new TranslatableComponent("gui.favor.perk.range.above_min", perk.getRange().getMinLevel()).withStyle(color);
+                    perkRange = Component.translatable("gui.favor.perk.range.above_min", perk.getRange().getMinLevel()).withStyle(color);
                 } else if(perk.getRange().getMinLevel() == favorLevel.getMin()) {
-                    perkRange = new TranslatableComponent("gui.favor.perk.range.below_max", perk.getRange().getMaxLevel()).withStyle(color);
+                    perkRange = Component.translatable("gui.favor.perk.range.below_max", perk.getRange().getMaxLevel()).withStyle(color);
                 } else {
-                    perkRange = new TranslatableComponent("gui.favor.perk.range.between",
+                    perkRange = Component.translatable("gui.favor.perk.range.between",
                             perk.getRange().getMinLevel(), perk.getRange().getMaxLevel()).withStyle(color);
                 }
                 // determine perk chance
@@ -999,7 +997,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                     String chanceString = String.format("%.2f", chance * 100.0F)
                             .replaceAll("0*$", "")
                             .replaceAll("\\.$", "");
-                    perkChance = new TranslatableComponent("gui.favor.perk.chance", chanceString)
+                    perkChance = Component.translatable("gui.favor.perk.chance", chanceString)
                             .withStyle(ChatFormatting.BLACK);
                 }
             }
@@ -1031,7 +1029,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             final int lineHeight = 11;
             // determine background size
             int lines = perkActions.size() + perkConditions.size() + 6;
-            if(perkChance.equals(TextComponent.EMPTY)) {
+            if(perkChance.equals(Component.empty())) {
                 lines--;
             }
             renderPerkTooltipBackground(matrixStack, startX, startY, tooltipWidth + margin, lines * lineHeight + 6);
@@ -1053,13 +1051,13 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 startY += 5;
             }
             // draw chance
-            if(!perkChance.equals(TextComponent.EMPTY)) {
+            if(!perkChance.equals(Component.empty())) {
                 FavorScreen.this.font.draw(matrixStack, perkChance, startX, startY + lineHeight * (line++), 0xFFFFFF);
                 // line space
                 startY += 5;
             }
             // draw range
-            Component unlock = new TranslatableComponent("gui.favor.perk.unlock")
+            Component unlock = Component.translatable("gui.favor.perk.unlock")
                     .withStyle(ChatFormatting.BLACK);
             FavorScreen.this.font.draw(matrixStack, unlock, startX, startY + lineHeight * (line++), 0xFFFFFF);
             FavorScreen.this.font.draw(matrixStack, perkRange, startX, startY + lineHeight * (line++), 0xFFFFFF);
@@ -1093,7 +1091,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
         public TradeButton(FavorScreen gui, int index, int x, int y) {
             super(gui, index, x, y, TRADE_WIDTH, OFFERING_HEIGHT);
-            tradeFunctionText = new TranslatableComponent("?")
+            tradeFunctionText = Component.translatable("?")
                     .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_BLUE);
         }
 
@@ -1146,8 +1144,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             this.hasTrade = offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty();
             // determine item tooltip
             if(offering.getTrade().isPresent()) {
-                this.unlockText = new TextComponent("" + offering.getTradeMinLevel()).withStyle(ChatFormatting.DARK_PURPLE);
-                this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.tooltip", offering.getTradeMinLevel());
+                this.unlockText = Component.literal("" + offering.getTradeMinLevel()).withStyle(ChatFormatting.DARK_PURPLE);
+                this.unlockTooltip = Component.translatable("gui.favor.offering.unlock.tooltip", offering.getTradeMinLevel());
             }
         }
 
@@ -1188,12 +1186,12 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         }
 
         public OfferingButton(final FavorScreen gui, final int index, int x, int y,final int width, final int height) {
-            super(x, y, width, height, TextComponent.EMPTY, b -> {},
+            super(x, y, width, height, Component.empty(), b -> {},
                     (b, m, bx, by) -> gui.renderTooltip(m, ((OfferingButton)b).getTooltip(bx, by), Optional.empty(), bx, by, gui.font));
             this.id = index;
-            this.favorText = TextComponent.EMPTY;
-            this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
-            this.functionTooltip = TextComponent.EMPTY;
+            this.favorText = Component.empty();
+            this.functionText = Component.literal(" \u2605 ").withStyle(ChatFormatting.BLUE);
+            this.functionTooltip = Component.empty();
         }
 
         @Override
@@ -1242,11 +1240,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 favorString = "" + favorAmount;
                 color = ChatFormatting.DARK_RED;
             }
-            this.favorText = new TextComponent(favorString).withStyle(color);
+            this.favorText = Component.literal(favorString).withStyle(color);
             if(offering.getFunctionText().isPresent()) {
-                this.functionTooltip = new TranslatableComponent(offering.getFunctionText().get());
+                this.functionTooltip = Component.translatable(offering.getFunctionText().get());
             } else {
-                this.functionTooltip = new TranslatableComponent("gui.favor.offering.function.tooltip");
+                this.functionTooltip = Component.translatable("gui.favor.offering.function.tooltip");
             }
         }
 
@@ -1276,7 +1274,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected Component functionTooltip;
 
         public SacrificeButton(final FavorScreen gui, final int index, int x, int y) {
-            super(x, y, SACRIFICE_WIDTH, SACRIFICE_HEIGHT, TextComponent.EMPTY, b -> {},
+            super(x, y, SACRIFICE_WIDTH, SACRIFICE_HEIGHT, Component.empty(), b -> {},
                     (b, m, bx, by) -> {
                         List<Component> tooltip = ((SacrificeButton)b).getTooltip(bx, by);
                         if(!tooltip.isEmpty()) {
@@ -1284,11 +1282,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                         }
                     });
             this.id = index;
-            this.entityText = TextComponent.EMPTY;
-            this.favorText = TextComponent.EMPTY;
+            this.entityText = Component.empty();
+            this.favorText = Component.empty();
             this.conditionsTooltip = new ArrayList<>();
-            this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
-            this.functionTooltip = TextComponent.EMPTY;
+            this.functionText = Component.literal(" \u2605 ").withStyle(ChatFormatting.BLUE);
+            this.functionTooltip = Component.empty();
         }
 
         @Override
@@ -1329,7 +1327,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // determine entity text
             EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(sacrifice.getEntity());
             if(entityType != null) {
-                this.entityText = new TranslatableComponent(entityType.getDescriptionId()).withStyle(ChatFormatting.BLACK);
+                this.entityText = Component.translatable(entityType.getDescriptionId()).withStyle(ChatFormatting.BLACK);
             }
             // determine favor text
             int favorAmount = sacrifice.getFavor();
@@ -1342,12 +1340,12 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 favorString = "" + favorAmount;
                 color = ChatFormatting.DARK_RED;
             }
-            this.favorText = new TextComponent(favorString).withStyle(color);
+            this.favorText = Component.literal(favorString).withStyle(color);
             // determine function tooltip
             if(sacrifice.getFunctionText().isPresent()) {
-                this.functionTooltip = new TranslatableComponent(sacrifice.getFunctionText().get());
+                this.functionTooltip = Component.translatable(sacrifice.getFunctionText().get());
             } else {
-                this.functionTooltip = new TranslatableComponent("gui.favor.sacrifice.function.tooltip");
+                this.functionTooltip = Component.translatable("gui.favor.sacrifice.function.tooltip");
             }
             // determine conditions tooltip
             if(!sacrifice.getConditions().isEmpty()) {
@@ -1432,7 +1430,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             if(deityId < FavorScreen.this.deityList.size()) {
                 this.visible = true;
                 this.deity = FavorScreen.this.deityList.get(deityId);
-                this.setMessage(new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity)));
+                this.setMessage(Component.translatable(rpggods.deity.Altar.createTranslationKey(deity)));
                 this.item = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY).getIcon();
             } else {
                 this.visible = false;
@@ -1445,7 +1443,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected boolean left;
 
         public TabArrowButton(FavorScreen gui, int x, int y, boolean left) {
-            super(x, y, ARROW_WIDTH, ARROW_HEIGHT, TextComponent.EMPTY,
+            super(x, y, ARROW_WIDTH, ARROW_HEIGHT, Component.empty(),
                     b -> gui.updateTabGroup(gui.tabGroup + (left ? -1 : 1)));
             this.left = left;
         }

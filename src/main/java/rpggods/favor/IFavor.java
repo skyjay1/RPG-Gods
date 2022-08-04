@@ -9,7 +9,7 @@ import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.RPGGods;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
-import rpggods.event.FavorChangedEvent;
+import rpggods.util.FavorChangedEvent;
 import rpggods.deity.Cooldown;
 import rpggods.perk.Patron;
 

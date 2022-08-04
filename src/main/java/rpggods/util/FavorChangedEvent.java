@@ -1,4 +1,4 @@
-package rpggods.event;
+package rpggods.util;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.util.StringRepresentable;

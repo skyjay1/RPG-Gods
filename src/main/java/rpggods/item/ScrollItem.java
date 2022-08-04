@@ -1,5 +1,6 @@
 package rpggods.item;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -8,14 +9,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
 import rpggods.RPGGods;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
-import rpggods.gui.FavorContainer;
+import rpggods.menu.FavorContainer;
 
 public class ScrollItem extends Item {
 
@@ -51,10 +51,10 @@ public class ScrollItem extends Item {
                     return InteractionResultHolder.pass(player.getItemInHand(hand));
                 }
                 // open Favor GUI
-                NetworkHooks.openGui((ServerPlayer)player,
+                NetworkHooks.openScreen((ServerPlayer)player,
                         new SimpleMenuProvider((id, inventory, p) ->
                                 new FavorContainer(id, inventory, ifavor, null),
-                                TextComponent.EMPTY),
+                                Component.empty()),
                         buf -> {
                             buf.writeNbt(ifavor.serializeNBT());
                             buf.writeBoolean(false);

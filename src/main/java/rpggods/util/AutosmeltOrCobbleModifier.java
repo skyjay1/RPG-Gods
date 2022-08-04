@@ -1,12 +1,15 @@
-package rpggods.loot;
+package rpggods.util;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraft.core.Registry;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -17,41 +20,50 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.Tag;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
+import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorEventHandler;
+import rpggods.RGEvents;
 import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class AutosmeltOrCobbleModifier extends LootModifier {
 
+    public static final Supplier<Codec<AutosmeltOrCobbleModifier>> CODEC_SUPPLIER = Suppliers.memoize(() -> RecordCodecBuilder.create(inst ->
+            codecStart(inst)
+                    .and(ForgeRegistries.BLOCKS.getCodec().fieldOf("stone").forGetter(AutosmeltOrCobbleModifier::getStone))
+                    .and(TagKey.codec(Registry.BLOCK_REGISTRY).fieldOf("ores").forGetter(AutosmeltOrCobbleModifier::getOres))
+                    .apply(inst, AutosmeltOrCobbleModifier::new)));;
+
     private final Block stone;
-    private final ResourceLocation oresTag;
     private final TagKey<Block> ores;
 
-    protected AutosmeltOrCobbleModifier(final LootItemCondition[] conditionsIn, final Block stoneIn, final ResourceLocation oresTagIn) {
-        super(conditionsIn);
-        stone = stoneIn;
-        oresTag = oresTagIn;
-        ores = BlockTags.create(oresTagIn);
+    protected AutosmeltOrCobbleModifier(final LootItemCondition[] conditions, final Block stone, final TagKey<Block> ores) {
+        super(conditions);
+        this.stone = stone;
+        this.ores = ores;
+    }
+
+    public Block getStone() {
+        return stone;
+    }
+
+    public TagKey<Block> getOres() {
+        return ores;
     }
 
     @Override
-    public List<ItemStack> doApply(List<ItemStack> generatedLoot, LootContext context) {
+    public ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> generatedLoot, LootContext context) {
         Entity entity = context.getParamOrNull(LootContextParams.THIS_ENTITY);
         ItemStack itemStack = context.getParamOrNull(LootContextParams.TOOL);
         BlockState block = context.getParamOrNull(LootContextParams.BLOCK_STATE);
@@ -60,7 +72,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
             return generatedLoot;
         }
         // do not apply when using silk touch tool
-        if(EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, itemStack) > 0) {
+        if(itemStack.getEnchantmentLevel(Enchantments.SILK_TOUCH) > 0) {
             return generatedLoot;
         }
         // determine which of the mining effects can activate
@@ -78,13 +90,13 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
             // determine results using player favor
             if(favor.isPresent() && favor.orElse(null).isEnabled()) {
                 IFavor f = favor.orElse(null);
-                ArrayList<ItemStack> replacement = new ArrayList<>();
+                ObjectArrayList<ItemStack> replacement = new ObjectArrayList<>();
                 // attempt to autosmelt
                 Collections.shuffle(autosmelt);
                 Perk perk;
                 for(ResourceLocation id : autosmelt) {
                     perk = RPGGods.PERK.get(id).orElse(null);
-                    if(FavorEventHandler.runPerk(perk, player, f)) {
+                    if(RGEvents.runPerk(perk, player, f)) {
                         generatedLoot.forEach((stack) -> replacement.add(smelt(stack, context)));
                         return replacement;
                     }
@@ -93,7 +105,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
                 Collections.shuffle(unsmelt);
                 for(ResourceLocation id : unsmelt) {
                     perk = RPGGods.PERK.get(id).orElse(null);
-                    if(FavorEventHandler.runPerk(perk, player, f)) {
+                    if(RGEvents.runPerk(perk, player, f)) {
                         replacement.add(new ItemStack(stone.asItem()));
                         return replacement;
                     }
@@ -103,7 +115,6 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         }
         return generatedLoot;
     }
-
 
     /**
      * @param stack   the item to smelt
@@ -118,28 +129,8 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
                 .orElse(stack);
     }
 
-    private static ItemStack cobble(ItemStack stack, Block stone) {
-        return new ItemStack(stone.asItem());
-    }
-
-    public static class Serializer extends GlobalLootModifierSerializer<AutosmeltOrCobbleModifier> {
-
-        private static final String STONE = "stone";
-        private static final String ORES = "ores";
-
-        @Override
-        public AutosmeltOrCobbleModifier read(ResourceLocation name, JsonObject object, LootItemCondition[] conditionsIn) {
-            Block stone = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(GsonHelper.getAsString(object, STONE)));
-            ResourceLocation oresTag = new ResourceLocation(GsonHelper.getAsString(object, ORES));
-            return new AutosmeltOrCobbleModifier(conditionsIn, stone, oresTag);
-        }
-
-        @Override
-        public JsonObject write(AutosmeltOrCobbleModifier instance) {
-            JsonObject json = makeConditions(instance.conditions);
-            json.addProperty(STONE, instance.stone.getRegistryName().toString());
-            json.addProperty(ORES, instance.oresTag.toString());
-            return json;
-        }
+    @Override
+    public Codec<? extends IGlobalLootModifier> codec() {
+        return CODEC_SUPPLIER.get();
     }
 }

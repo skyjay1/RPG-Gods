@@ -24,6 +24,7 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
 import rpggods.favor.Favor;
@@ -44,20 +45,19 @@ import java.util.stream.Collectors;
 public class AffinityGoal {
 
     private static boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-        if (!(target instanceof Creeper) && !(target instanceof Ghast)) {
-            if (target instanceof Mob) {
-                ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
-                return !t.isTamed() || !t.getOwnerId().isPresent() || !t.getOwnerId().get().equals(owner.getUUID());
-            } else if (target instanceof Player && owner instanceof Player && !((Player)owner).canHarmPlayer((Player)target)) {
-                return false;
-            } else if (target instanceof AbstractHorse && ((AbstractHorse)target).isTamed()) {
-                return false;
-            } else {
-                return !(target instanceof TamableAnimal) || !((TamableAnimal)target).isTame();
-            }
-        } else {
+        if(target instanceof Creeper || target instanceof Ghast) {
+            return false;
+        } else if (target instanceof AbstractHorse && ((AbstractHorse)target).isTamed()) {
+            return false;
+        } else if(target instanceof TamableAnimal tamable && !tamable.isTame()) {
+            return false;
+        } else if (target instanceof Mob) {
+            ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
+            return !t.isTamed() || !t.getOwnerId().isPresent() || !t.getOwnerId().get().equals(owner.getUUID());
+        } else if (target instanceof Player && owner instanceof Player && !((Player)owner).canHarmPlayer((Player)target)) {
             return false;
         }
+        return true;
     }
 
     /**
@@ -68,7 +68,7 @@ public class AffinityGoal {
      * @return an Immutable Pair where Left=isPassive and Right=isHostile
      */
     public static ImmutablePair<Boolean, Boolean> getPassiveAndHostile(final LivingEntity creature, final LivingEntity target) {
-        final ResourceLocation id = creature.getType().getRegistryName();
+        final ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(creature.getType());
         // passive behavior based on tame status
         if(AffinityGoal.isOwnerOrTeam(creature, target)) {
             return ImmutablePair.of(true, false);
@@ -87,9 +87,9 @@ public class AffinityGoal {
                 if(isPassive && isHostile) {
                     final Map<Affinity.Type, List<ResourceLocation>> affinityMap = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of());
                     final List<FavorRange> passivePerks = affinityMap.getOrDefault(Affinity.Type.PASSIVE, ImmutableList.of())
-                            .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());
+                            .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).toList();
                     final List<FavorRange> hostilePerks = affinityMap.getOrDefault(Affinity.Type.HOSTILE, ImmutableList.of())
-                            .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());;
+                            .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).toList();;
                     RPGGods.LOGGER.error("Conflicting affinity perks for " + id + " ; Hostile is " + hostilePerks + " and Passive is " + passivePerks);
                     return ImmutablePair.of(false, false);
                 }
@@ -105,7 +105,7 @@ public class AffinityGoal {
      * @return true if the creature is passive toward players with the given favor
      */
     public static boolean isPassive(final LivingEntity creature, final IFavor playerFavor) {
-        final ResourceLocation id = creature.getType().getRegistryName();
+        final ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(creature.getType());
         Perk p;
         for(ResourceLocation r : RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.PASSIVE, ImmutableList.of())) {
             p = RPGGods.PERK.get(r).orElse(null);
@@ -122,7 +122,7 @@ public class AffinityGoal {
      * @return true if the creature is hostile toward players with the given favor
      */
     public static boolean isHostile(final LivingEntity creature, final IFavor playerFavor) {
-        final ResourceLocation id = creature.getType().getRegistryName();
+        final ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(creature.getType());
         Perk p;
         for(ResourceLocation r : RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.HOSTILE, ImmutableList.of())) {
             p = RPGGods.PERK.get(r).orElse(null);
@@ -199,7 +199,7 @@ public class AffinityGoal {
         }
 
         private static Predicate<LivingEntity> createAvoidPredicate(final PathfinderMob creature) {
-            final ResourceLocation id = creature.getType().getRegistryName();
+            final ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(creature.getType());
             return e -> {
                 if(e instanceof Player && e != creature.getLastHurtByMob() && !isOwnerOrTeam(creature, e)) {
                     List<ResourceLocation> perks = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.FLEE, ImmutableList.of());

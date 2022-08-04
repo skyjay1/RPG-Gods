@@ -16,8 +16,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.api.distmarker.Dist;
@@ -47,12 +45,12 @@ public class AltarItem extends Item {
             // determine if altar is a deity
             Optional<rpggods.deity.Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && altar.get().getDeity().isPresent()) {
-                return new TranslatableComponent("item.rpggods.altar_x",
-                        new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(altarId)));
+                return Component.translatable("item.rpggods.altar_x",
+                        Component.translatable(rpggods.deity.Altar.createTranslationKey(altarId)));
             }
         }
         // fallback when no altar information provided
-        return new TranslatableComponent(this.getDescriptionId(stack));
+        return Component.translatable(this.getDescriptionId(stack));
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -64,7 +62,7 @@ public class AltarItem extends Item {
             // determine if altar is not a deity but has a name
             Optional<rpggods.deity.Altar> altar = RPGGods.ALTAR.get(altarId);
             if(altar.isPresent() && !altar.get().getDeity().isPresent() && altar.get().getName().isPresent()) {
-                tooltip.add(new TextComponent(altar.get().getName().get()));
+                tooltip.add(Component.literal(altar.get().getName().get()));
             }
         }
     }
@@ -92,7 +90,7 @@ public class AltarItem extends Item {
 
     @Override
     public void fillItemCategory(CreativeModeTab group, NonNullList<ItemStack> items) {
-        if (this.allowdedIn(group)) {
+        if (this.allowedIn(group)) {
             addAltarItems(items);
         }
     }

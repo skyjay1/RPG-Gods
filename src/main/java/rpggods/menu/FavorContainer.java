@@ -1,12 +1,11 @@
-package rpggods.gui;
+package rpggods.menu;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import rpggods.RGRegistry;
-import rpggods.RPGGods;
-import rpggods.deity.Altar;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 
@@ -25,6 +24,11 @@ public class FavorContainer extends AbstractContainerMenu {
         super(RGRegistry.FAVOR_CONTAINER.get(), id);
         favor = favorIn;
         deity = Optional.ofNullable(deityIn);
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int slot) {
+        return ItemStack.EMPTY;
     }
 
     @Override

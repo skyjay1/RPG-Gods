@@ -1,21 +1,11 @@
-buildscript {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
-        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-        jcenter()
-        mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
-        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7.32'
-    }
+plugins {
+    id 'eclipse'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '5.1.+'
+    id 'org.spongepowered.mixin' version '0.7-SNAPSHOT'
 }
-apply plugin: 'net.minecraftforge.gradle'
+
 apply plugin: 'org.spongepowered.mixin'
-// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
-apply plugin: 'eclipse'
-apply plugin: 'maven-publish'
-apply from: 'https://raw.githubusercontent.com/SizableShrimp/Forge-Class-Remapper/main/classremapper.gradle'
 
 version = project.mod_version
 group = project.maven_group // http://maven.apache.org/guides/mini/guide-naming-conventions.html
@@ -24,10 +14,11 @@ archivesBaseName = project.archives_base_name
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 mixin {
-    add sourceSets.main, "rpggods.refmap.json"
-    config "rpggods.mixins.json"
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "${mod_id}.mixins.json"
 }
 
+println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
 minecraft {
    
    mappings channel: "${project.mappings_channel}", version: "${project.mappings_version}"
@@ -82,24 +73,17 @@ repositories {
         name 'mezz'
         url 'https://dvs1.progwml6.com/files/maven'
     }
-    maven { // TOP
-        name 'mcjty'
-        url "https://maven.k-4u.nl"
-    }
 }
 
 dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
-/*
-	compileOnly fg.deobf("mcjty.theoneprobe:theoneprobe:${top_version}")
-	runtimeOnly fg.deobf("mcjty.theoneprobe:theoneprobe:${top_version}")
-*/
+
     implementation fg.deobf("curse.maven:the-one-probe-${project.top_project}:${project.top_file}")
 
-	compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}:${jei_version}")
-	runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}:${jei_version}")
+	compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+	runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
 
 
 }
@@ -142,24 +126,26 @@ jar {
                 "Implementation-Title": project.name,
                 "Implementation-Version": "${mod_version}",
                 "Implementation-Vendor" :"skyjay1",
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs": "${mod_id}.mixins.json"
         ])
     }
 }
 
 // Example configuration to allow publishing using the maven-publish task
-// we define a custom artifact that is sourced from the reobfJar output task
-// and then declare that to be published
-// Note you'll need to add a repository here
-def reobfFile = file("$buildDir/reobfJar/output.jar")
-def reobfArtifact = artifacts.add('default', reobfFile) {
-    type 'jar'
-    builtBy 'reobfJar'
+// This is the preferred method to reobfuscate your jar file
+jar.finalizedBy('reobfJar')
+// However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
+//publish.dependsOn('reobfJar')
+
+javadoc {
+    failOnError = false
 }
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifact reobfArtifact
+            artifact jar
         }
     }
     repositories {
@@ -169,22 +155,6 @@ publishing {
     }
 }
 
-javadoc {
-  failOnError = false
-}
-
-task deobfJar(type: Jar, dependsOn: 'jar') {
-    from "build/source/main"
-    classifier "deobf"
-}
-artifacts {
-    archives deobfJar
-}
-
-task javadocJar(type: Jar, dependsOn: 'javadoc') {
-    from "build/docs/javadoc"
-    classifier "javadoc"
-}
-artifacts {
-    archives javadocJar
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }

@@ -3,6 +3,7 @@ package rpggods.perk;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
@@ -42,9 +43,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
@@ -57,15 +56,13 @@ import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorChangedEvent;
-import rpggods.event.FavorEventHandler;
+import rpggods.util.FavorChangedEvent;
+import rpggods.RGEvents;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.tameable.ITameable;
 
 import java.util.Optional;
-import java.util.Random;
-import java.util.function.Supplier;
 
 public final class PerkAction {
 
@@ -114,8 +111,8 @@ public final class PerkAction {
 
     /**
      * Runs a single Perk without any of the preliminary checks or cooldown.
-     * If you want these, call {@link FavorEventHandler#runPerk(Perk, Player, IFavor)} or
-     * {@link FavorEventHandler#runPerk(Perk, Player, IFavor, Optional, Optional, Optional)} instead.
+     * If you want these, call {@link RGEvents#runPerk(Perk, Player, IFavor)} or
+     * {@link RGEvents#runPerk(Perk, Player, IFavor, Optional, Optional, Optional)} instead.
      * @param deity the Deity that is associated with the perk
      * @param player the player
      * @param favor the player's favor
@@ -127,7 +124,7 @@ public final class PerkAction {
     public boolean run(final ResourceLocation deity, final Player player, final IFavor favor,
                                         final Optional<Entity> entity, final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         switch (this.getType()) {
-            case FUNCTION: return getId().isPresent() && FavorEventHandler.runFunction(player.level, player, getId().get());
+            case FUNCTION: return getId().isPresent() && RGEvents.runFunction(player.level, player, getId().get());
             case POTION:
                 if(getTag().isPresent()) {
                     Optional<MobEffectInstance> effect = readEffectInstance(getTag().get());
@@ -360,7 +357,7 @@ public final class PerkAction {
                 final boolean waterMob = entity instanceof WaterAnimal || entity instanceof Drowned || entity instanceof Guardian
                         || (entity instanceof Mob && ((Mob)entity).getNavigation() instanceof WaterBoundPathNavigation);
                 // find a place to spawn the entity
-                Random rand = playerIn.getRandom();
+                RandomSource rand = playerIn.getRandom();
                 BlockPos spawnPos;
                 for(int range = 1 + Math.round(distance), attempts = Math.min(32, range * 3); attempts > 0; attempts--) {
                     if(range > 1) {
@@ -405,7 +402,7 @@ public final class PerkAction {
                 BlockStateProperties.AGE_1, BlockStateProperties.AGE_15, BlockStateProperties.AGE_2,
                 BlockStateProperties.AGE_3, BlockStateProperties.AGE_5, BlockStateProperties.AGE_7
         };
-        final Random rand = player.level.getRandom();
+        final RandomSource rand = player.level.getRandom();
         final int maxAttempts = 10;
         final int variationY = 1;
         final int radius = 5;
@@ -513,20 +510,20 @@ public final class PerkAction {
                     Optional<MobEffectInstance> effect = readEffectInstance(tag.get());
                     if(effect.isPresent()) {
                         String potencyKey = "potion.potency." + effect.get().getAmplifier();
-                        return new TranslatableComponent(effect.get().getDescriptionId())
+                        return Component.translatable(effect.get().getDescriptionId())
                                 .append(" ")
-                                .append(new TranslatableComponent(potencyKey));
+                                .append(Component.translatable(potencyKey));
                     }
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case SUMMON:
                 if(tag.isPresent()) {
                     // format entity ID as name
                     String entity = tag.get().getString("id");
                     Optional<EntityType<?>> type = EntityType.byString(entity);
-                    return type.isPresent() ? type.get().getDescription() : new TextComponent(entity);
+                    return type.isPresent() ? type.get().getDescription() : Component.literal(entity);
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case ITEM:
                 return getItem().orElse(ItemStack.EMPTY).getHoverName();
             case FAVOR:
@@ -534,14 +531,14 @@ public final class PerkAction {
                     // format favor as discrete amount
                     // EX: multiplier of -1.1 becomes -1, 0.6 becomes +1, 1.2 becomes +1, etc.
                     String prefix = (favor.get() > 0) ? "+" : "";
-                    return new TextComponent(prefix + Math.round(getFavor().get()));
+                    return Component.literal(prefix + Math.round(getFavor().get()));
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case AFFINITY:
                 if(getAffinity().isPresent()) {
                     return getAffinity().get().getDisplayDescription();
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case ARROW_COUNT:
             case SPECIAL_PRICE:
             case CROP_GROWTH:
@@ -549,19 +546,19 @@ public final class PerkAction {
                     // format multiplier as discrete bonus
                     // EX: multiplier of 0.0 becomes +0, 0.6 becomes +1, 1.2 becomes +1, etc.
                     String prefix = (getMultiplier().get() > 0) ? "+" : "";
-                    return new TextComponent(prefix + Math.round(getMultiplier().get()));
+                    return Component.literal(prefix + Math.round(getMultiplier().get()));
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case DURABILITY:
                 if(getMultiplier().isPresent() && getString().isPresent()) {
                     // format multiplier as percentage
                     // EX: multiplier of -0.9 becomes -90%, 0.0 becomes +0%, 0.5 becomes +50%, 1.2 becomes +120%, etc.
                     String prefix = getMultiplier().get() >= 0.0F ? "+" : "";
-                    Component durability = new TextComponent(prefix + Math.round((getMultiplier().get()) * 100.0F) + "%");
-                    Component slot = new TranslatableComponent("equipment.type." + getString().get());
-                    return new TranslatableComponent("favor.perk.type.durability.description.full", durability, slot);
+                    Component durability = Component.literal(prefix + Math.round((getMultiplier().get()) * 100.0F) + "%");
+                    Component slot = Component.translatable("equipment.type." + getString().get());
+                    return Component.translatable("favor.perk.type.durability.description.full", durability, slot);
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case DAMAGE:
             case ARROW_DAMAGE:
             case CROP_HARVEST:
@@ -571,34 +568,34 @@ public final class PerkAction {
                     // format multiplier as adjusted percentage
                     // EX: multiplier of 0.0 becomes -100%, 0.5 becomes -50%, 1.2 becomes +120%, etc.
                     String prefix = getMultiplier().get() >= 1.0F ? "+" : "";
-                    return new TextComponent(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
+                    return Component.literal(prefix + Math.round((getMultiplier().get() - 1.0F) * 100.0F) + "%");
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case PATRON:
                 if(getPatron().isPresent()) {
                     if (getPatron().get().getDeity().isPresent()) {
                         Component deityName = DeityHelper.getName(getPatron().get().getDeity().get());
-                        return new TranslatableComponent("favor.perk.type.patron.description.add", deityName);
+                        return Component.translatable("favor.perk.type.patron.description.add", deityName);
                     }
-                    return new TranslatableComponent("favor.perk.type.patron.description.remove");
+                    return Component.translatable("favor.perk.type.patron.description.remove");
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case UNLOCK:
                 if(getId().isPresent()) {
                     ResourceLocation deityId = getId().get();
                     Component deityName = DeityHelper.getName(deityId);
                     Altar altar = RPGGods.ALTAR.get(deityId).orElse(Altar.EMPTY);
                     String suffix = altar.isFemale() ? "female" : "male";
-                    return new TranslatableComponent("favor.perk.type.unlock.description." + suffix, deityName);
+                    return Component.translatable("favor.perk.type.unlock.description." + suffix, deityName);
                 }
-                return TextComponent.EMPTY;
+                return Component.empty();
             case FUNCTION:
                 if(getString().isPresent()) {
-                    return new TranslatableComponent(getString().get());
+                    return Component.translatable(getString().get());
                 }
-                return new TranslatableComponent("favor.perk.type.function.description.default");
+                return Component.translatable("favor.perk.type.function.description.default");
             case AUTOSMELT: case UNSMELT: default:
-                return TextComponent.EMPTY;
+                return Component.empty();
         }
     }
 
@@ -646,14 +643,14 @@ public final class PerkAction {
          * @return Translation key for the description of this perk type, using the provided data
          */
         public Component getDisplayDescription(final Component data) {
-            return new TranslatableComponent("favor.perk.type." + getSerializedName() + ".description", data);
+            return Component.translatable("favor.perk.type." + getSerializedName() + ".description", data);
         }
 
         /**
          * @return Translation key for the name of this perk type
          */
         public MutableComponent getDisplayName() {
-            return new TranslatableComponent("favor.perk.type." + getSerializedName());
+            return Component.translatable("favor.perk.type." + getSerializedName());
         }
 
         @Override

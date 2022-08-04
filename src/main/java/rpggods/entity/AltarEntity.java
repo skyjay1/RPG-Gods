@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
@@ -46,26 +45,24 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
-import rpggods.block.GlowBlock;
+import rpggods.block.AltarLightBlock;
 import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorEventHandler;
+import rpggods.RGEvents;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
-import rpggods.gui.AltarContainer;
-import rpggods.gui.FavorContainer;
 import rpggods.item.AltarItem;
+import rpggods.menu.AltarContainer;
+import rpggods.menu.FavorContainer;
 import rpggods.network.SUpdateAltarPacket;
 import rpggods.perk.PerkCondition;
 
@@ -306,7 +303,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 DeityHelper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityHelper::new);
                 if(!helper.perkByConditionMap.getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of()).isEmpty()) {
                     // onPerformRitual
-                    FavorEventHandler.performRitual(this, getDeity().get());
+                    RGEvents.performRitual(this, getDeity().get());
                 }
             }
             // attempt to place light block
@@ -325,8 +322,8 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                         // create light block
                         BlockState lightBlock = RGRegistry.LIGHT_BLOCK.get()
                                 .defaultBlockState()
-                                .setValue(GlowBlock.LIGHT_LEVEL, lightLevel)
-                                .setValue(GlowBlock.WATERLOGGED, waterlogged);
+                                .setValue(AltarLightBlock.LEVEL, lightLevel)
+                                .setValue(AltarLightBlock.WATERLOGGED, waterlogged);
                         // place light block
                         level.setBlock(posIn, lightBlock, Block.UPDATE_ALL);
                     }
@@ -408,24 +405,24 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     boolean enabled = ifavor.getFavor(deity).isEnabled();
                     if(!enabled) {
                         // send feedback about disabled deity
-                        Component message = new TranslatableComponent("favor.locked");
+                        Component message = Component.translatable("favor.locked");
                         player.displayClientMessage(message, true);
                         return InteractionResult.PASS;
                     }
                     // detect item in mainhand
                     ItemStack heldItem = player.getItemInHand(hand);
                     // attempt to process held item as offering
-                    Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
+                    Optional<ItemStack> offeringResult = RGEvents.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
                     // if item changed, update player inventory
                     if (offeringResult.isPresent()) {
                         player.setItemInHand(hand, offeringResult.get());
                         return InteractionResult.CONSUME;
                     }
                     // no offering result, open favor GUI
-                    NetworkHooks.openGui((ServerPlayer) player,
+                    NetworkHooks.openScreen((ServerPlayer) player,
                             new SimpleMenuProvider((id, inventory, p) ->
                                     new FavorContainer(id, inventory, ifavor, deity),
-                                    TextComponent.EMPTY),
+                                    Component.empty()),
                             buf -> {
                                 buf.writeNbt(ifavor.serializeNBT());
                                 buf.writeBoolean(true);
@@ -436,10 +433,10 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 }
             } else if (!(isArmorLocked() && isHandsLocked() && isBlockLocked() && isAltarPoseLocked())) {
                 // open altar GUI
-                NetworkHooks.openGui((ServerPlayer) player,
+                NetworkHooks.openScreen((ServerPlayer) player,
                         new SimpleMenuProvider((id, inv, p) ->
                                 new AltarContainer(id, inv, this.inventory, this),
-                                TextComponent.EMPTY),
+                                Component.empty()),
                         buf -> {
                             buf.writeInt(this.getId());
                         }
@@ -583,7 +580,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         if (altar.getDeity().isPresent()) {
             setCustomName(DeityHelper.getName(altarId));
         } else if (altar.getName().isPresent()) {
-            setCustomName(new TextComponent(altar.getName().get()));
+            setCustomName(Component.literal(altar.getName().get()));
         }
         // save altar id
         setAltar(altarId);
@@ -662,7 +659,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 getItemBySlot(EquipmentSlot.FEET),
                 getItemBySlot(EquipmentSlot.MAINHAND),
                 getItemBySlot(EquipmentSlot.OFFHAND),
-                ForgeRegistries.BLOCKS.getValue(getBlockBySlot().getItem().getRegistryName()),
+                Block.byItem(getBlockBySlot().getItem()),
                 isArmorLocked(), isHandsLocked(), isBlockLocked());
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
@@ -772,7 +769,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         super.setCustomName(name);
         // attempt to use custom name to set texture
         if (name != null) {
-            String sName = name.getContents();
+            String sName = name.getString();
             if (sName.length() > 0 && sName.length() <= 16 && !sName.contains(":")) {
                 final CompoundTag profileNBT = new CompoundTag();
                 profileNBT.putString("Name", sName);
