@@ -34,6 +34,8 @@ public class ScrollButton<T extends Screen> extends Button {
     private final int uWidth;
     private final int vHeight;
 
+    private boolean dragging;
+
     public ScrollButton(final T gui, final int x, final int y,
                         final int width, final int height, final int uX, final int vY,
                         final ResourceLocation textureIn, final boolean isVertical, final Predicate<T> isEnabled,
@@ -83,16 +85,18 @@ public class ScrollButton<T extends Screen> extends Button {
     @Override
     public void onDrag(final double mouseX, final double mouseY, final double dragX, final double dragY) {
         if (enabled.test(screen)) {
+            dragging = true;
             updateScrollAmount(mouseX, mouseY);
         }
     }
 
     @Override
     public void onRelease(final double mouseX, final double mouseY) {
-        if (enabled.test(screen)) {
+        if (enabled.test(screen) && dragging) {
             updateScrollAmount(mouseX, mouseY);
             scrollEndHandler.accept(this);
         }
+        dragging = false;
     }
 
     @Override

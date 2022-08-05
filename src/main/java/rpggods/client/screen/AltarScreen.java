@@ -135,8 +135,8 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
                 AltarScreen.this.updateSliders();
             }) {
                 @Override
-                public boolean isFocused() {
-                    return super.isFocused() || (p == AltarScreen.this.selectedPart);
+                public boolean isHoveredOrFocused() {
+                    return super.isHoveredOrFocused() || (p == AltarScreen.this.selectedPart);
                 }
             });
         }

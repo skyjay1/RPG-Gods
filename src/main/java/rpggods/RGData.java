@@ -35,7 +35,7 @@ public final class RGData {
      **/
     @SubscribeEvent
     public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
-        Player player = event.getPlayer();
+        Player player = event.getEntity();
         if (player instanceof ServerPlayer) {
             RPGGods.DEITY.syncOnReload();
             RPGGods.ALTAR.syncOnReload();
@@ -82,7 +82,7 @@ public final class RGData {
     @SubscribeEvent
     public static void onPlayerClone(final PlayerEvent.Clone event) {
         LazyOptional<IFavor> original = event.getOriginal().getCapability(RPGGods.FAVOR);
-        LazyOptional<IFavor> copy = event.getPlayer().getCapability(RPGGods.FAVOR);
+        LazyOptional<IFavor> copy = event.getEntity().getCapability(RPGGods.FAVOR);
         if(original.isPresent() && copy.isPresent()) {
             copy.ifPresent(f -> f.deserializeNBT(original.orElse(Favor.EMPTY).serializeNBT()));
         }
@@ -96,7 +96,7 @@ public final class RGData {
      */
     @SubscribeEvent
     public static void onStartTracking(final PlayerEvent.StartTracking event) {
-        if(event.getPlayer().isAlive() && !event.getPlayer().level.isClientSide) {
+        if(event.getEntity().isAlive() && !event.getEntity().level.isClientSide) {
             // sync altar entity
             if(event.getTarget() instanceof AltarEntity) {
                 int entityId = event.getTarget().getId();

@@ -100,7 +100,7 @@ public final class Perk {
     @Override
     public String toString() {
         return "Perk{" +
-                "icon=" + icon.getItem().getItem().getRegistryName() +
+                "icon=" + icon.getItem().getItem().toString() +
                 ", conditions=" + conditions +
                 ", range=" + range +
                 ", actions=" + actions +

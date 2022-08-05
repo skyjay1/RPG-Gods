@@ -281,7 +281,7 @@ public final class PerkCondition {
                 // read data as either biome name or biome dictionary type
                 return d.contains(":")
                     ? Component.translatable("biome." + rl.getNamespace() + "." + rl.getPath())
-                    : new TextComponent(d);
+                    : Component.literal(d);
             case PLAYER_INTERACT_BLOCK:
                 if(!d.startsWith("#")) {
                     Block block = ForgeRegistries.BLOCKS.getValue(rl);
@@ -289,13 +289,13 @@ public final class PerkCondition {
                         return block.getName();
                     }
                 }
-                return new TextComponent(d);
+                return Component.literal(d);
             case EFFECT_START:
                 MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(rl);
                 if(effect != null) {
                     return effect.getDisplayName();
                 }
-                return new TextComponent(d);
+                return Component.literal(d);
             case DIMENSION: return Component.translatable("dimension." + rl.getNamespace() + "." + rl.getPath());
             case STRUCTURE: return Component.translatable("structure." + rl.getNamespace() + "." + rl.getPath());
             case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
@@ -304,9 +304,9 @@ public final class PerkCondition {
                 Optional<EntityType<?>> entityType = EntityType.byString(d);
                 return entityType.isPresent()
                         ? Component.translatable(entityType.get().getDescriptionId())
-                        : new TextComponent("<ERR>");
+                        : Component.literal("<ERR>");
             case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: case PLAYER_CROUCHING: default:
-                return TextComponent.EMPTY;
+                return Component.empty();
         }
     }
 

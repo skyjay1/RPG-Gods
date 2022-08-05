@@ -80,7 +80,7 @@ public class AltarItems {
         final StringBuilder b = new StringBuilder("AltarItems:");
         b.append(" hands[").append(handItems.toString()).append("]");
         b.append(" armor[").append(armorItems.toString()).append("]");
-        b.append(" block[").append(block.getRegistryName().toString()).append("]");
+        b.append(" block[").append(block.toString()).append("]");
         b.append(" armor_locked[").append(armorLocked).append("]");
         b.append(" hands_locked[").append(handsLocked).append("]");
         b.append(" block_locked[").append(blockLocked).append("]");

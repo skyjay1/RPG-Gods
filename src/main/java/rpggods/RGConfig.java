@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -92,19 +93,19 @@ public class RGConfig {
         SITTING_MOBS = builder
                 .comment("List of mobs that appear to sit (used client-side)")
                 .defineList("sitting_mobs", Lists.newArrayList(
-                        EntityType.ZOMBIE.getRegistryName().toString(),
-                        EntityType.HUSK.getRegistryName().toString(),
-                        EntityType.DROWNED.getRegistryName().toString(),
-                        EntityType.SKELETON.getRegistryName().toString(),
-                        EntityType.STRAY.getRegistryName().toString(),
-                        EntityType.WITHER_SKELETON.getRegistryName().toString(),
-                        EntityType.VINDICATOR.getRegistryName().toString(),
-                        EntityType.PILLAGER.getRegistryName().toString(),
-                        EntityType.EVOKER.getRegistryName().toString(),
-                        EntityType.ILLUSIONER.getRegistryName().toString(),
-                        EntityType.PIGLIN.getRegistryName().toString(),
-                        EntityType.ZOMBIFIED_PIGLIN.getRegistryName().toString(),
-                        EntityType.ENDERMAN.getRegistryName().toString()
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.ZOMBIE).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.HUSK).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.DROWNED).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.SKELETON).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.STRAY).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.WITHER_SKELETON).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.VINDICATOR).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.PILLAGER).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.EVOKER).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.ILLUSIONER).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.PIGLIN).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.ZOMBIFIED_PIGLIN).toString(),
+                        ForgeRegistries.ENTITY_TYPES.getKey(EntityType.ENDERMAN).toString()
                 ), o -> o instanceof String && ((String)o).contains(":"));
         builder.pop();
     }

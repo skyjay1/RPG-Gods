@@ -429,14 +429,17 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         return this.scrollButton.mouseScrolled(mouseX, mouseY, scrollAmount * multiplier);
     }
 
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if(this.page == Page.PERKS && mouseX > leftPos + PERK_BOUNDS_X && mouseX < leftPos + PERK_BOUNDS_X + PERK_BOUNDS_WIDTH
                 && mouseY > topPos + PERK_BOUNDS_Y && mouseY < topPos + SCREEN_HEIGHT) {
             isDraggingPerks = true;
+            return true;
         }
-        return !isDraggingPerks && super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         boolean wasDragging = isDraggingPerks;
         isDraggingPerks = false;
@@ -450,8 +453,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             int moveX = (int)Math.round(dragX);
             int moveY = (int)Math.round(dragY);
             updateMove(moveX, moveY);
+            return true;
         }
-
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -719,7 +722,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 break;
             case SACRIFICES:
                 // scroll index is some discrete between 0 and sacrificeCount
-                scrollIndex = (int) Math.floor(amount * sacrificeCount);
+                scrollIndex = (int) Math.floor(amount * (sacrificeCount));
                 // update all buttons with the calculated scroll index
                 for(int i = 0; i < SACRIFICE_COUNT; i++) {
                     sacrificeButtons[i].updateSacrifice(deity, scrollIndex);
@@ -1310,7 +1313,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
         public void updateSacrifice(final ResourceLocation deity, final int startIndex) {
             final int sacrificeId = startIndex * 2 + id;
-            final List<ImmutablePair<ResourceLocation, Sacrifice>> sacrifices = FavorScreen.this.sacrificeMap.getOrDefault(deity, ImmutableList.of());
+            final List<ImmutablePair<ResourceLocation, Sacrifice>> sacrifices = FavorScreen.sacrificeMap.getOrDefault(deity, ImmutableList.of());
             if(sacrificeId < sacrifices.size()) {
                 this.visible = true;
                 ImmutablePair<ResourceLocation, Sacrifice> tuple = sacrifices.get(sacrificeId);
@@ -1325,7 +1328,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             this.cooldown = FavorScreen.this.getMenu().getFavor().getSacrificeCooldown(sacrificeId).getCooldown();
             this.conditionsTooltip.clear();
             // determine entity text
-            EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(sacrifice.getEntity());
+            EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(sacrifice.getEntity());
             if(entityType != null) {
                 this.entityText = Component.translatable(entityType.getDescriptionId()).withStyle(ChatFormatting.BLACK);
             }
