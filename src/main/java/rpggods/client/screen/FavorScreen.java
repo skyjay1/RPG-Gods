@@ -1267,6 +1267,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected long cooldown;
         protected Component entityText;
         protected Component favorText;
+        protected Component conditionsText;
         protected List<Component> conditionsTooltip;
         protected Set<PerkCondition.Type> perkConditionBlacklist = Set.of(PerkCondition.Type.RANDOM_TICK, PerkCondition.Type.RITUAL,
                 PerkCondition.Type.EFFECT_START, PerkCondition.Type.ENTITY_HURT_PLAYER,
@@ -1289,6 +1290,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             this.conditionsTooltip = new ArrayList<>();
             this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
             this.functionTooltip = TextComponent.EMPTY;
+            this.conditionsText = new TranslatableComponent("?")
+                    .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_BLUE);
         }
 
         @Override
@@ -1298,9 +1301,13 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 FavorScreen.this.font.draw(matrixStack, entityText, this.x, this.y, 0xFFFFFF);
                 // draw favor text
                 FavorScreen.this.font.draw(matrixStack, favorText, this.x + 18 * 7, this.y, 0xFFFFFF);
+                // draw conditions icon
+                if(!conditionsTooltip.isEmpty()) {
+                    FavorScreen.this.font.draw(matrixStack, conditionsText, this.x + 18 * 8, this.y, 0xFFFFFF);
+                }
                 // draw function text
                 if(sacrifice != null && sacrifice.getFunction().isPresent()) {
-                    FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 8, this.y, 0xFFFFFF);
+                    FavorScreen.this.font.draw(matrixStack, functionText, this.x + 18 * 9, this.y, 0xFFFFFF);
                 }
                 // draw strikethrough
                 long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
@@ -1356,7 +1363,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         }
 
         protected List<Component> getTooltip(final int mouseX, final int mouseY) {
-            if(sacrifice != null && sacrifice.getFunction().isPresent() && mouseX > (this.x + 18 * 8)) {
+            if(sacrifice != null && sacrifice.getFunction().isPresent() && mouseX > (this.x + 18 * 9)) {
                 // display sacrifice tooltip
                 return List.of(functionTooltip);
             }
