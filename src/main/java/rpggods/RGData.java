@@ -81,6 +81,8 @@ public final class RGData {
      */
     @SubscribeEvent
     public static void onPlayerClone(final PlayerEvent.Clone event) {
+        // revive capabilities in order to copy to the clone
+        event.getOriginal().reviveCaps();
         LazyOptional<IFavor> original = event.getOriginal().getCapability(RPGGods.FAVOR);
         LazyOptional<IFavor> copy = event.getEntity().getCapability(RPGGods.FAVOR);
         if(original.isPresent() && copy.isPresent()) {
