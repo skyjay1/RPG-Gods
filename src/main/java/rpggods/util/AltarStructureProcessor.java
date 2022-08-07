@@ -14,6 +14,7 @@ import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.entity.AltarEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -48,14 +49,14 @@ public class AltarStructureProcessor extends StructureProcessor {
             Random random = new Random(seed);
             // choose random deity
             ResourceLocation altarId = new ResourceLocation("empty");
-            List<ResourceLocation> altarIds = List.copyOf(RPGGods.ALTAR.getKeys());
+            List<ResourceLocation> altarIds = new ArrayList<>(RPGGods.ALTAR.getKeys());
             if (!altarIds.isEmpty()) {
                 // sort list, then choose random element
                 altarIds.sort(ResourceLocation::compareNamespaced);
                 altarId = altarIds.get(random.nextInt(altarIds.size()));
             }
             // write deity to altar
-            CompoundTag modified = AltarEntity.writeAltarProperties(altarId);
+            CompoundTag modified = AltarEntity.writeAltarProperties(altarId, placementSettings.getRotation());
             tag.merge(modified);
             // create modified entity info
             return new StructureTemplate.StructureEntityInfo(entityInfo.pos, entityInfo.blockPos, tag);

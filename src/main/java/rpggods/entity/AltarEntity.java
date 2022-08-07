@@ -4,8 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.nbt.FloatTag;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Material;
@@ -592,9 +594,10 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     /**
      * Directly writes properties from an Altar to a Compound NBT Tag
      * @param altarId the Altar ID
+     * @param rotation the altar rotation
      * @return a CompoundTag that represents the Altar applied to an AltarEntity
      */
-    public static CompoundTag writeAltarProperties(final ResourceLocation altarId) {
+    public static CompoundTag writeAltarProperties(final ResourceLocation altarId, final Rotation rotation) {
         // query altar by id
         rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
         // create compound tag
@@ -647,7 +650,31 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         compoundTag.putByte(KEY_LOCKED, locked);
         // write pose
         compoundTag.put(KEY_POSE, altar.getPose().serializeNBT());
+        // write rotation
+        compoundTag.put("Rotation", getRotationTag(rotation));
         return compoundTag;
+    }
+
+    private static ListTag getRotationTag(final Rotation rotation) {
+        ListTag rotationTag = new ListTag();
+        float yRot = 0;
+        switch(rotation) {
+            case NONE:
+                yRot = 90;
+                break;
+            case CLOCKWISE_90:
+                yRot = 180;
+                break;
+            case CLOCKWISE_180:
+                yRot = -90;
+                break;
+            case COUNTERCLOCKWISE_90:
+                yRot = 0;
+                break;
+        }
+        rotationTag.add(FloatTag.valueOf(yRot));
+        rotationTag.add(FloatTag.valueOf(0));
+        return rotationTag;
     }
 
     /**
