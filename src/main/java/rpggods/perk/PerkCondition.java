@@ -28,14 +28,18 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.level.levelgen.feature.StructureFeature;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
+import rpggods.entity.AltarEntity;
 import rpggods.event.FavorEventHandler;
 import rpggods.favor.IFavor;
 
@@ -147,8 +151,22 @@ public final class PerkCondition {
                     }
                 }
                 return false;
-                //return world.structureFeatureManager().getStructureAt(pos, structure).isValid();
             }
+        }
+        return false;
+    }
+
+    /**
+     * @param level the level
+     * @param origin the position of the event
+     * @param distance the maximum distance to the altar
+     * @return true if the origin is within the given distance to an altar to the given deity
+     */
+    public boolean isNearAltar(final Level level, final Vec3 origin, final double distance) {
+        if(type == PerkCondition.Type.NEAR_ALTAR && id.isPresent()) {
+            AABB aabb = new AABB(new BlockPos(origin)).inflate(distance, distance / 2.0D, distance);
+            List<AltarEntity> altars = level.getEntities(EntityTypeTest.forClass(AltarEntity.class), aabb, a -> a.getDeity().isPresent() && id.get().equals(a.getDeity().get()));
+            return !altars.isEmpty();
         }
         return false;
     }
@@ -233,6 +251,8 @@ public final class PerkCondition {
             case RITUAL:
             case EFFECT_START:
                 return getId().isPresent() && data.isPresent() && getId().get().equals(data.get());
+            // match data and altar in range (hardcoded to 8 blocks)
+            case NEAR_ALTAR: return getId().isPresent() && isNearAltar(player.level, player.position(), 8.0D);
             // match data and NBT tag
             case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER:
@@ -252,7 +272,7 @@ public final class PerkCondition {
     private Component dataToDisplay(final String d) {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
-            case PATRON: case UNLOCKED:
+            case PATRON: case UNLOCKED: case NEAR_ALTAR:
                 return new TranslatableComponent(Altar.createTranslationKey(rl));
             case MAINHAND_ITEM: case RITUAL:
                 // display name of item tag
@@ -351,7 +371,8 @@ public final class PerkCondition {
         PLAYER_CROUCHING("player_crouching"),
         RITUAL("ritual"),
         UNLOCKED("unlocked"),
-        ENTER_COMBAT("enter_combat");
+        ENTER_COMBAT("enter_combat"),
+        NEAR_ALTAR("near_altar");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();
         private final String name;

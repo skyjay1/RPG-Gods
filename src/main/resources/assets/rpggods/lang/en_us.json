@@ -101,6 +101,7 @@
   "favor.perk.condition.single": "When %1$s",
   "favor.perk.condition.multiple": "and %1$s",
   "favor.perk.condition.patron": "%1$s is patron",
+  "favor.perk.condition.near_altar": "near Altar to %1$s",
   "favor.perk.condition.biome": "in %1$s",
   "favor.perk.condition.day": "daytime",
   "favor.perk.condition.night": "nighttime",
