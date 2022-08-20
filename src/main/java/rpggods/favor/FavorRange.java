@@ -55,8 +55,8 @@ public class FavorRange {
      * @return true if this is a server world and the player matches this favor range
      */
     public boolean isInRange(final Player player) {
-        if (!player.level.isClientSide && player.isEffectiveAi() && player.getCapability(RPGGods.FAVOR).isPresent() && this != FavorRange.EMPTY) {
-            return isInRange(player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY));
+        if (!player.level.isClientSide && player.isEffectiveAi() && this != FavorRange.EMPTY) {
+            return isInRange(RPGGods.getFavor(player).orElse(Favor.EMPTY));
         }
         return false;
     }

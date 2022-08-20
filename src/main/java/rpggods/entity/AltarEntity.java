@@ -403,7 +403,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
             // check if altar is deity
             if (getDeity().isPresent()) {
                 // attempt to process favor capability
-                LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
+                LazyOptional<IFavor> favor = RPGGods.getFavor(player);
                 if (favor.isPresent()) {
                     ResourceLocation deity = getDeity().get();
                     IFavor ifavor = favor.orElse(Favor.EMPTY);
@@ -416,12 +416,14 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     }
                     // detect item in mainhand
                     ItemStack heldItem = player.getItemInHand(hand);
-                    // attempt to process held item as offering
-                    Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem);
-                    // if item changed, update player inventory
-                    if (offeringResult.isPresent()) {
-                        player.setItemInHand(hand, offeringResult.get());
-                        return InteractionResult.CONSUME;
+                    if(!heldItem.isEmpty()) {
+                        // attempt to process held item as offering
+                        Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem, false);
+                        // if offering succeeded, update player inventory
+                        if (offeringResult.isPresent()) {
+                            player.setItemInHand(hand, offeringResult.get());
+                            return InteractionResult.CONSUME;
+                        }
                     }
                     // no offering result, open favor GUI
                     NetworkHooks.openGui((ServerPlayer) player,

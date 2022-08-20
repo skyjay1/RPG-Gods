@@ -2,12 +2,16 @@ package rpggods;
 
 import com.google.common.collect.Lists;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -150,5 +154,12 @@ public class RPGGods {
 
     public static void reloadConfig(final ModConfigEvent.Reloading event) {
         CONFIG.bake();
+    }
+
+    public static LazyOptional<IFavor> getFavor(final Entity entity) {
+        if(CONFIG.useGlobalFavor() && entity instanceof Player && entity.getServer() != null) {
+            return LazyOptional.of(() -> RGSavedData.get(entity.getServer()).getFavor());
+        }
+        return entity.getCapability(FAVOR);
     }
 }

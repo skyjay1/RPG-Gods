@@ -74,7 +74,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         if (entity instanceof Player && !entity.isSpectator() && !((Player) entity).isCreative()
                 && (!autosmelt.isEmpty() || !unsmelt.isEmpty())) {
             final Player player = (Player) entity;
-            final LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
+            final LazyOptional<IFavor> favor = RPGGods.getFavor(player);
             // determine results using player favor
             if(favor.isPresent() && favor.orElse(null).isEnabled()) {
                 IFavor f = favor.orElse(null);

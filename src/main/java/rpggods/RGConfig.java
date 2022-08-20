@@ -13,6 +13,7 @@ public class RGConfig {
 
     // Favor
     private final ForgeConfigSpec.BooleanValue FAVOR_ENABLED;
+    private final ForgeConfigSpec.BooleanValue USE_GLOBAL_FAVOR;
     private final ForgeConfigSpec.DoubleValue RANDOM_PERK_CHANCE;
     private final ForgeConfigSpec.DoubleValue FAVOR_DECAY_RATE;
     private final ForgeConfigSpec.IntValue FAVOR_DECAY_AMOUNT;
@@ -29,6 +30,7 @@ public class RGConfig {
     private final ForgeConfigSpec.ConfigValue<List<? extends String>> SITTING_MOBS;
 
     private boolean favorEnabled;
+    private boolean useGlobalFavor;
     private double randomPerkChance;
     private double favorDecayRate;
     private int favorDecayAmount;
@@ -48,6 +50,9 @@ public class RGConfig {
         FAVOR_ENABLED = builder
                 .comment("Set to false to disable favor, offerings, sacrifices, and perks")
                 .define("favor_enabled", true);
+        USE_GLOBAL_FAVOR = builder
+                .comment("Set to true to apply the same favor to every player")
+                .define("use_global_favor", true);
         FAVOR_UPDATE_RATE = builder
                 .comment("Number of ticks between favor calculations.",
                         "Increase to reduce the frequency of favor updates.",
@@ -112,6 +117,7 @@ public class RGConfig {
 
     public void bake() {
         favorEnabled = FAVOR_ENABLED.get();
+        useGlobalFavor = USE_GLOBAL_FAVOR.get();
         randomPerkChance = RANDOM_PERK_CHANCE.get();
         favorDecayRate = FAVOR_DECAY_RATE.get();
         favorDecayAmount = FAVOR_DECAY_AMOUNT.get();
@@ -132,6 +138,7 @@ public class RGConfig {
     }
 
     public boolean isFavorEnabled() { return favorEnabled; }
+    public boolean useGlobalFavor() { return useGlobalFavor; }
     public double getRandomPerkChance() { return randomPerkChance; }
     public double getFavorDecayRate() { return favorDecayRate; }
     public int getFavorDecayAmount() { return favorDecayAmount; }

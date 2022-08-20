@@ -2,7 +2,6 @@ package rpggods.client.screen;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.math.Quaternion;
@@ -126,8 +125,11 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     // Data
     private static final List<ResourceLocation> deityList = new ArrayList<>();
     private static final Map<ResourceLocation, AltarEntity> entityMap = new HashMap<>();
+    // Key: deity ID; Value: map of Offering ID and Offering
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> offeringMap = new HashMap();
+    // Key: deity ID; Value: map of Offering ID and Trade
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> tradeMap = new HashMap();
+    // Key: deity ID; Value: map of Sacrifice ID and Sacrifice
     private static final Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Sacrifice>>> sacrificeMap = new HashMap();
     // Key: deity ID; Value: Map of perk level to list of available perks
     private static final Map<ResourceLocation, Map<Integer, List<Perk>>> perkMap = new HashMap();
@@ -201,14 +203,14 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // add deity to list
             deityList.add(deityHelper.id);
             // add entries to all lists for this deity
-            offeringMap.put(d.getId(), Lists.newArrayList());
-            tradeMap.put(d.getId(), Lists.newArrayList());
-            sacrificeMap.put(d.getId(), Lists.newArrayList());
+            offeringMap.put(d.getId(), new ArrayList<>());
+            tradeMap.put(d.getId(), new ArrayList<>());
+            sacrificeMap.put(d.getId(), new ArrayList<>());
             // add entries to perk map based on favor level min and max
             FavorLevel favorLevel = favor.getFavor(d.getId());
             Map<Integer, List<Perk>> perkSubMap = new HashMap<>();
             for(int i = favorLevel.getMin(), j = favorLevel.getMax(); i <= j; i++) {
-                perkSubMap.put(i, Lists.newArrayList());
+                perkSubMap.put(i, new ArrayList<>());
             }
             perkMap.put(deityHelper.id, perkSubMap);
             // add all offerings to map using deity helper (so we can skip offerings that were invalid)
@@ -219,7 +221,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                         // determine which map to use (offering or trade)
                         Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
                         // add the offering to the map
-                        map.get(d.getId()).add(ImmutablePair.of(deityHelper.id, offering));
+                        map.get(d.getId()).add(ImmutablePair.of(offeringId, offering));
                     });
                 }
             }
@@ -229,7 +231,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                     Optional<Sacrifice> optional = RPGGods.SACRIFICE.get(sacrificeId);
                     optional.ifPresent(sacrifice -> {
                         // add the sacrifice to the map
-                        sacrificeMap.get(d.getId()).add(ImmutablePair.of(deityHelper.id, sacrifice));
+                        sacrificeMap.get(d.getId()).add(ImmutablePair.of(sacrificeId, sacrifice));
                     });
                 }
             }
@@ -344,7 +346,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // each entry is (favorLevel, perksAtLevel)
             for(Map.Entry<Integer, List<Perk>> perksAtLevel : entry.getValue().entrySet()) {
                 // determine which button list to use
-                List<PerkButton> perkButtonList = perkButtonMap.computeIfAbsent(entry.getKey(), id -> Lists.newArrayList());
+                List<PerkButton> perkButtonList = perkButtonMap.computeIfAbsent(entry.getKey(), id -> new ArrayList<>());
                 // determine how many buttons are already in this list
                 int perkCount = 0;
                 // add each perk to the list using perkCount to determine y-position
@@ -1147,30 +1149,43 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // determine item tooltip
             if(offering.getTrade().isPresent()) {
                 this.unlockText = new TextComponent("" + offering.getTradeMinLevel()).withStyle(ChatFormatting.DARK_PURPLE);
-                this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.tooltip", offering.getTradeMinLevel());
+                if(offering.getTradeMinLevel() > Integer.MIN_VALUE && offering.getTradeMaxLevel() < Integer.MAX_VALUE) {
+                    this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.multiple.tooltip", offering.getTradeMinLevel(), offering.getTradeMaxLevel());
+                } else {
+                    this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.single.tooltip", offering.getTradeMinLevel());
+                }
             }
         }
 
         @Override
         protected List<Component> getTooltip(final int mouseX, final int mouseY) {
             if(offering != null) {
+                // function tooltip
                 if(offering.getFunction().isPresent() && mouseX >= (this.x + 18 * 3 + ARROW_WIDTH - 4)) {
-                    return Lists.newArrayList(functionTooltip);
+                    return new ArrayList<>(List.of(functionTooltip));
                 }
+                // unlock trade tooltip
                 if(mouseX >= (this.x + 18 * 2 + ARROW_WIDTH) && mouseX <= (this.x + 18 * 3 + ARROW_WIDTH - 4)) {
-                    return Lists.newArrayList(unlockTooltip);
+                    return new ArrayList<>(List.of(unlockTooltip));
                 }
+                // trade result or function tooltips
                 if(offering.getTrade().isPresent() && mouseX >= (this.x + 18 + ARROW_WIDTH) && mouseX <= (this.x + 18 * 2 + ARROW_WIDTH)) {
                     if(offering.getTrade().get().isEmpty() && offering.getFunction().isPresent()) {
-                        return Lists.newArrayList(functionTooltip);
+                        return new ArrayList<>(List.of(functionTooltip));
                     }
                     return FavorScreen.this.getTooltipFromItem(offering.getTrade().get());
                 }
+                // item tooltip
                 if(mouseX <= (this.x + 18)) {
-                    return FavorScreen.this.getTooltipFromItem(offering.getAccept());
+                    List<Component> tooltip = new ArrayList<>(FavorScreen.this.getTooltipFromItem(offering.getAccept()));
+                    // attempt to add unlock range
+                    if(offering.hasLevelRange()) {
+                        tooltip.add(unlockTooltip.copy().withStyle(ChatFormatting.GRAY));
+                    }
+                    return tooltip;
                 }
             }
-            return Lists.newArrayList();
+            return new ArrayList<>();
         }
     }
 
@@ -1182,6 +1197,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected Component favorText;
         protected final Component functionText;
         protected Component functionTooltip;
+        protected Component unlockTooltip;
 
         public OfferingButton(final FavorScreen gui, final int index, final int x, final int y) {
             this(gui, index, x, y, OFFERING_WIDTH, OFFERING_HEIGHT);
@@ -1194,6 +1210,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             this.favorText = TextComponent.EMPTY;
             this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
             this.functionTooltip = TextComponent.EMPTY;
+            this.unlockTooltip = TextComponent.EMPTY;
         }
 
         @Override
@@ -1248,16 +1265,35 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             } else {
                 this.functionTooltip = new TranslatableComponent("gui.favor.offering.function.tooltip");
             }
+            // determine item tooltip
+            if(offering.hasLevelRange()) {
+                if(offering.getTradeMinLevel() > Integer.MIN_VALUE && offering.getTradeMaxLevel() < Integer.MAX_VALUE) {
+                    this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.multiple.tooltip", offering.getTradeMinLevel(), offering.getTradeMaxLevel());
+                } else {
+                    this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.single.tooltip", offering.getTradeMinLevel());
+                }
+            } else {
+                this.unlockTooltip = TextComponent.EMPTY;
+            }
         }
 
         protected List<Component> getTooltip(final int mouseX, final int mouseY) {
-            if(offering != null && offering.getFunction().isPresent() && mouseX >= (this.x + 18 * 2 - 2)) {
-                return Lists.newArrayList(functionTooltip);
+            List<Component> list = new ArrayList<>();
+            if(null == offering) {
+                return list;
+            }
+            if(offering.getFunction().isPresent() && mouseX >= (this.x + 18 * 2 - 2)) {
+                list.add(functionTooltip);
+                return list;
             }
             if(mouseX <= (this.x + 18)) {
-                return FavorScreen.this.getTooltipFromItem(this.offering.getAccept());
+                list.addAll(FavorScreen.this.getTooltipFromItem(this.offering.getAccept()));
+                if(offering.hasLevelRange()) {
+                    list.add(unlockTooltip.copy().withStyle(ChatFormatting.GRAY));
+                }
+                return list;
             }
-            return Lists.newArrayList();
+            return list;
         }
     }
 

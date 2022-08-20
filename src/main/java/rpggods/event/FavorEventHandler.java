@@ -94,9 +94,10 @@ public class FavorEventHandler {
      * @param player the player
      * @param favor the player's favor
      * @param item the item being offered
+     * @param silent true if the player should not receive any feedback
      * @return the ItemStack to replace the one provided, if any
      */
-    public static Optional<ItemStack> onOffering(final Optional<AltarEntity> entity, final ResourceLocation deity, final Player player, final IFavor favor, final ItemStack item) {
+    public static Optional<ItemStack> onOffering(final Optional<AltarEntity> entity, final ResourceLocation deity, final Player player, final IFavor favor, final ItemStack item, boolean silent) {
         boolean deityEnabled = favor.getFavor(deity).isEnabled();
         if(favor.isEnabled() && deityEnabled && !item.isEmpty()) {
             // find first matching offering for the given deity
@@ -115,16 +116,20 @@ public class FavorEventHandler {
                 // ensure offering can be accepted
                 if(!favor.getOfferingCooldown(offeringId).canUse()) {
                     // send message to player informing them of maxed offering
-                    Component message = new TranslatableComponent("favor.offering.cooldown");
-                    player.displayClientMessage(message, true);
-                    return Optional.of(item);
+                    if(!silent) {
+                        Component message = new TranslatableComponent("favor.offering.cooldown");
+                        player.displayClientMessage(message, true);
+                    }
+                    return Optional.empty();
                 }
                 // ensure player meets trade level, if any
                 if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() < offering.getTradeMinLevel()) {
                     // Send message to player informing them of trade level minimum
-                    Component message = new TranslatableComponent("favor.offering.trade.failure", offering.getTradeMinLevel());
-                    player.displayClientMessage(message, true);
-                    return Optional.of(item);
+                    if(!silent) {
+                        Component message = new TranslatableComponent("favor.offering.trade.failure", offering.getTradeMinLevel());
+                        player.displayClientMessage(message, true);
+                    }
+                    return Optional.empty();
                 }
                 // add favor and run function, if any
                 favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
@@ -149,7 +154,9 @@ public class FavorEventHandler {
                     ((ServerLevel)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
                 }
                 // send player message
-                favor.getFavor(deity).sendStatusMessage(player, deity);
+                if(!silent) {
+                    favor.getFavor(deity).sendStatusMessage(player, deity);
+                }
                 return Optional.of(item);
             }
         }
@@ -428,7 +435,7 @@ public class FavorEventHandler {
         }
         // load favor
         boolean success = false;
-        LazyOptional<IFavor> ifavor = player.getCapability(RPGGods.FAVOR);
+        LazyOptional<IFavor> ifavor = RPGGods.getFavor(player);
         if(ifavor.isPresent()) {
             IFavor favor = ifavor.orElse(Favor.EMPTY);
             // attempt to run the perks
@@ -477,7 +484,7 @@ public class FavorEventHandler {
                     final Entity source = event.getSource().getEntity();
                     // onEntityKillPlayer
                     if (source instanceof LivingEntity && !player.isSpectator() && !player.isCreative()) {
-                        player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                        RPGGods.getFavor(player).ifPresent(f -> {
                             triggerCondition(PerkCondition.Type.ENTITY_KILLED_PLAYER, player, f, Optional.of(source),
                                     Optional.ofNullable(source.getType().getRegistryName()), Optional.empty());
                         });
@@ -485,7 +492,7 @@ public class FavorEventHandler {
                 } else if (event.getSource().getEntity() instanceof Player) {
                     final Player player = (Player) event.getSource().getEntity();
                     // onPlayerKillEntity
-                    player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                    RPGGods.getFavor(player).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.PLAYER_KILLED_ENTITY, player, f, Optional.of(event.getEntityLiving()),
                                 Optional.ofNullable(event.getEntityLiving().getType().getRegistryName()), Optional.empty());
                         onSacrifice(player, f, event.getEntityLiving());
@@ -512,7 +519,7 @@ public class FavorEventHandler {
                     Entity source = event.getSource().getDirectEntity();
                     if (!player.isSpectator() && !player.isCreative()) {
                         // onEntityHurtPlayer
-                        player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                        RPGGods.getFavor(player).ifPresent(f -> {
                             triggerCondition(PerkCondition.Type.ENTITY_HURT_PLAYER, player, f, Optional.of(source),
                                     Optional.ofNullable(source.getType().getRegistryName()), Optional.of(event));
                         });
@@ -521,7 +528,7 @@ public class FavorEventHandler {
                     Player player = (Player) event.getSource().getDirectEntity();
                     LivingEntity target = event.getEntityLiving();
                     // onPlayerHurtEntity
-                    player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                    RPGGods.getFavor(player).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.PLAYER_HURT_ENTITY, player, f, Optional.of(target),
                                 Optional.ofNullable(target.getType().getRegistryName()), Optional.of(event));
                         // onEnterCombat
@@ -539,7 +546,7 @@ public class FavorEventHandler {
         public static void onEntityInteract(final PlayerInteractEvent.EntityInteract event) {
             if (!event.getPlayer().level.isClientSide && event.getHand() == InteractionHand.MAIN_HAND) {
                 // onPlayerInteractEntity
-                event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                RPGGods.getFavor(event.getPlayer()).ifPresent(f -> {
                     final ResourceLocation id = event.getTarget().getType().getRegistryName();
                     if (triggerCondition(PerkCondition.Type.PLAYER_INTERACT_ENTITY, event.getPlayer(), f, Optional.of(event.getTarget()), Optional.ofNullable(id), Optional.empty())) {
                         event.setCancellationResult(InteractionResult.SUCCESS);
@@ -570,7 +577,7 @@ public class FavorEventHandler {
                 ResourceLocation blockId = state.getBlock().getRegistryName();
                 if (blockId != null) {
                     // onPlayerInteractBlock
-                    event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                    RPGGods.getFavor(event.getPlayer()).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.PLAYER_INTERACT_BLOCK, event.getPlayer(), f, Optional.empty(),
                                 Optional.of(blockId), Optional.empty());
                     });
@@ -582,7 +589,7 @@ public class FavorEventHandler {
         public static void onChangeFavor(FavorChangedEvent.Post event) {
             if (!event.getPlayer().level.isClientSide && event.isLevelChange()) {
                 // onFavorChanged
-                event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                RPGGods.getFavor(event.getPlayer()).ifPresent(f -> {
                     triggerPerks(PerkAction.Type.UNLOCK, event.getPlayer(), f, Optional.empty());
                 });
             }
@@ -597,12 +604,12 @@ public class FavorEventHandler {
             if (!event.getEntity().level.isClientSide && (event.getEntity() instanceof Arrow || event.getEntity() instanceof SpectralArrow)) {
                 final AbstractArrow arrow = (AbstractArrow) event.getEntity();
                 final Entity thrower = arrow.getOwner();
-                if (thrower instanceof Player) {
+                if (thrower instanceof Player player) {
                     // onArrowDamage, onArrowEffect, onArrowCount
-                    thrower.getCapability(RPGGods.FAVOR).ifPresent(f -> {
-                        triggerPerks(PerkAction.Type.ARROW_DAMAGE, (Player) thrower, f, Optional.of(arrow));
-                        triggerPerks(PerkAction.Type.ARROW_EFFECT, (Player) thrower, f, Optional.of(arrow));
-                        triggerPerks(PerkAction.Type.ARROW_COUNT, (Player) thrower, f, Optional.of(arrow));
+                    RPGGods.getFavor(player).ifPresent(f -> {
+                        triggerPerks(PerkAction.Type.ARROW_DAMAGE, player, f, Optional.of(arrow));
+                        triggerPerks(PerkAction.Type.ARROW_EFFECT, player, f, Optional.of(arrow));
+                        triggerPerks(PerkAction.Type.ARROW_COUNT, player, f, Optional.of(arrow));
                     });
                 }
             }
@@ -667,7 +674,7 @@ public class FavorEventHandler {
                 Player player = (Player) event.getEntityLiving();
                 if (!player.isSpectator() && !player.isCreative()) {
                     // onEffectStart
-                    player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                    RPGGods.getFavor(player).ifPresent(f -> {
                         triggerCondition(PerkCondition.Type.EFFECT_START, player, f, Optional.empty(),
                                 Optional.ofNullable(event.getPotionEffect().getEffect().getRegistryName()), Optional.empty());
                     });
@@ -693,7 +700,7 @@ public class FavorEventHandler {
             if (!event.isCanceled() && event.getParentA().isEffectiveAi() && event.getCausedByPlayer() != null
                     && !event.getCausedByPlayer().isCreative() && !event.getCausedByPlayer().isSpectator()
                     && event.getParentA() instanceof Animal && event.getParentB() instanceof Animal) {
-                event.getCausedByPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                RPGGods.getFavor(event.getCausedByPlayer()).ifPresent(f -> {
                     triggerPerks(PerkAction.Type.OFFSPRING, event.getCausedByPlayer(), f, Optional.of(event.getParentA()), Optional.empty(), Optional.of(event));
                 });
             }
@@ -702,7 +709,7 @@ public class FavorEventHandler {
         @SubscribeEvent
         public static void onPlayerPickupXp(final PlayerXpEvent.PickupXp event) {
             if (event.getPlayer().isEffectiveAi() && !event.getPlayer().level.isClientSide()) {
-                event.getPlayer().getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                RPGGods.getFavor(event.getPlayer()).ifPresent(f -> {
                     triggerPerks(PerkAction.Type.XP, event.getPlayer(), f, Optional.of(event.getOrb()));
                 });
             }
@@ -712,7 +719,7 @@ public class FavorEventHandler {
         public static void onPlayerTick(final TickEvent.PlayerTickEvent event) {
             if (!event.isCanceled() && !event.player.level.isClientSide() && event.player.isEffectiveAi()
                     && event.player.isAlive() && canTickFavor(event.player)) {
-                event.player.getCapability(RPGGods.FAVOR).ifPresent(f -> {
+                RPGGods.getFavor(event.player).ifPresent(f -> {
                     // trigger perks
                     if (Math.random() < RPGGods.CONFIG.getRandomPerkChance()) {
                         // onRandomTick
