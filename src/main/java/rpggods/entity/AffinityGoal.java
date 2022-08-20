@@ -44,20 +44,20 @@ import java.util.stream.Collectors;
 public class AffinityGoal {
 
     private static boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-        if (!(target instanceof Creeper) && !(target instanceof Ghast)) {
-            if (target instanceof Mob) {
-                ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
-                return !t.isTamed() || !t.getOwnerId().isPresent() || !t.getOwnerId().get().equals(owner.getUUID());
-            } else if (target instanceof Player && owner instanceof Player && !((Player)owner).canHarmPlayer((Player)target)) {
-                return false;
-            } else if (target instanceof AbstractHorse && ((AbstractHorse)target).isTamed()) {
-                return false;
-            } else {
-                return !(target instanceof TamableAnimal) || !((TamableAnimal)target).isTame();
-            }
-        } else {
+        if (target instanceof Ghast) {
             return false;
+        } else if (target instanceof Player && owner instanceof Player && !((Player)owner).canHarmPlayer((Player)target)) {
+            return false;
+        } else if (target instanceof AbstractHorse && ((AbstractHorse)target).isTamed()) {
+            return false;
+        } else if(target instanceof TamableAnimal && ((TamableAnimal)target).isTame()) {
+            return false;
+        } else if (target instanceof Mob) {
+            ITameable t = target.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
+            return !t.isTamed() || !t.getOwnerId().isPresent() || !t.getOwnerId().get().equals(owner.getUUID());
         }
+
+        return false;
     }
 
     /**

@@ -55,9 +55,12 @@ import net.minecraftforge.event.entity.living.PotionEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import rpggods.RGSavedData;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
@@ -65,6 +68,7 @@ import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.entity.AffinityGoal;
 import rpggods.favor.Favor;
+import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Perk;
@@ -122,11 +126,17 @@ public class FavorEventHandler {
                     }
                     return Optional.empty();
                 }
-                // ensure player meets trade level, if any
-                if(offering.getTrade().isPresent() && favor.getFavor(deity).getLevel() < offering.getTradeMinLevel()) {
-                    // Send message to player informing them of trade level minimum
+                // ensure player meets level requirement, if any
+                int level = favor.getFavor(deity).getLevel();
+                if(offering.hasLevelRange() && (level < offering.getTradeMinLevel() || level > offering.getTradeMaxLevel())) {
+                    // Send message to player informing them of level requirements
                     if(!silent) {
-                        Component message = new TranslatableComponent("favor.offering.trade.failure", offering.getTradeMinLevel());
+                        Component message;
+                        if(offering.hasMinLevel() && offering.hasMaxLevel()) {
+                            message = new TranslatableComponent("favor.offering.deny.level.multiple", offering.getTradeMinLevel(), offering.getTradeMaxLevel());
+                        } else {
+                            message = new TranslatableComponent("favor.offering.deny.level.single", offering.getTradeMinLevel());
+                        }
                         player.displayClientMessage(message, true);
                     }
                     return Optional.empty();
@@ -372,7 +382,7 @@ public class FavorEventHandler {
             }
             if(success) {
                 // send feedback
-                sendPerkFeedback(perk.getDeity(), player, favor);
+                sendPerkFeedback(perk.getDeity(), player, favor, perk.isPositive());
                 // apply cooldown
                 long cooldown = (long) Math.floor(perk.getCooldown() * (1.0D + Math.random() * 0.25D));
                 favor.setPerkCooldown(perk.getCategory(), cooldown);
@@ -383,12 +393,11 @@ public class FavorEventHandler {
         return false;
     }
 
-    public static void sendPerkFeedback(ResourceLocation deity, Player player, IFavor favor) {
+    public static void sendPerkFeedback(ResourceLocation deity, Player player, IFavor favor, boolean isPositive) {
         if(RPGGods.CONFIG.canGiveFeedback()) {
             final Component deityName = DeityHelper.getName(deity);
-            final boolean positive = favor.getFavor(deity).getLevel() >= 0;
             final Component message;
-            if(positive) {
+            if(isPositive) {
                 message = new TranslatableComponent("favor.perk.feedback.positive", deityName).withStyle(ChatFormatting.GREEN);
             } else {
                 message = new TranslatableComponent("favor.perk.feedback.negative", deityName).withStyle(ChatFormatting.RED);
@@ -585,12 +594,21 @@ public class FavorEventHandler {
             }
         }
 
-        @SubscribeEvent
+        @SubscribeEvent(priority = EventPriority.LOWEST)
         public static void onChangeFavor(FavorChangedEvent.Post event) {
-            if (!event.getPlayer().level.isClientSide && event.isLevelChange()) {
-                // onFavorChanged
+            if(event.isLevelChange()) {
                 RPGGods.getFavor(event.getPlayer()).ifPresent(f -> {
+                    // onUnlock
                     triggerPerks(PerkAction.Type.UNLOCK, event.getPlayer(), f, Optional.empty());
+                    final int oldLevel = event.getOldLevel();
+                    final int newLevel = event.getNewLevel();
+                    if(oldLevel < newLevel) {
+                        // onFavorLevelUp
+                        triggerCondition(PerkCondition.Type.LEVEL_UP, event.getPlayer(), f, Optional.empty(), Optional.of(event.getDeity()), Optional.empty());
+                    } else {
+                        // onFavorLevelDown
+                        triggerCondition(PerkCondition.Type.LEVEL_DOWN, event.getPlayer(), f, Optional.empty(), Optional.of(event.getDeity()), Optional.empty());
+                    }
                 });
             }
         }
@@ -718,7 +736,7 @@ public class FavorEventHandler {
         @SubscribeEvent
         public static void onPlayerTick(final TickEvent.PlayerTickEvent event) {
             if (!event.isCanceled() && !event.player.level.isClientSide() && event.player.isEffectiveAi()
-                    && event.player.isAlive() && canTickFavor(event.player)) {
+                    && event.phase == TickEvent.Phase.END && event.player.isAlive() && canTickFavor(event.player)) {
                 RPGGods.getFavor(event.player).ifPresent(f -> {
                     // trigger perks
                     if (Math.random() < RPGGods.CONFIG.getRandomPerkChance()) {
@@ -726,18 +744,46 @@ public class FavorEventHandler {
                         triggerCondition(PerkCondition.Type.RANDOM_TICK, event.player, f, Optional.empty(),
                                 Optional.empty(), Optional.empty());
                     }
-                    // reduce cooldown
-                    f.tickCooldown(event.player.level.getGameTime());
+                    // non-global tick
+                    if(!(RPGGods.CONFIG.useGlobalFavor() && RPGGods.CONFIG.useGlobalCooldown())) {
+                        // reduce cooldown
+                        f.tickCooldown(event.player.level.getGameTime());
+                    }
                     // deplete favor
-                    if (Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
+                    if (!RPGGods.CONFIG.useGlobalFavor() && Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
                         f.depleteFavor(event.player);
                     }
                 });
             }
         }
 
+        @SubscribeEvent
+        public static void onServerTick(final TickEvent.ServerTickEvent event) {
+            if(event.phase == TickEvent.Phase.END && RPGGods.CONFIG.useGlobalFavor()) {
+                // locate the current server
+                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+                int tickCount = server.getTickCount();
+                // global favor tick
+                if(canTickFavor(tickCount) && !server.getPlayerList().getPlayers().isEmpty()) {
+                    IFavor favor = RGSavedData.get(server).getFavor();
+                    // reduce global cooldown
+                    if(RPGGods.CONFIG.useGlobalCooldown()) {
+                        favor.tickCooldown(server.getLevel(Level.OVERWORLD).getGameTime());
+                    }
+                    // decay global favor
+                    if(Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
+                        favor.depleteFavor(null);
+                    }
+                }
+            }
+        }
+
         public static boolean canTickFavor(final LivingEntity entity) {
-            return RPGGods.CONFIG.isFavorEnabled() && (entity.tickCount + entity.getId()) % RPGGods.CONFIG.getFavorUpdateRate() == 0;
+            return canTickFavor(entity.tickCount + entity.getId());
+        }
+
+        public static boolean canTickFavor(final int tickCount) {
+            return RPGGods.CONFIG.isFavorEnabled() && tickCount % RPGGods.CONFIG.getFavorUpdateRate() == 0;
         }
     }
 

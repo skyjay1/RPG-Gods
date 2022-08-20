@@ -10,6 +10,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -32,6 +33,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
@@ -42,12 +44,14 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 import rpggods.RGRegistry;
+import rpggods.RPGGods;
 import rpggods.blockentity.BrazierBlockEntity;
 
 import java.util.Random;
 
 public class BrazierBlock extends Block implements EntityBlock, SimpleWaterloggedBlock {
 
+    public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
@@ -60,12 +64,14 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
     public BrazierBlock(final Properties properties) {
         super(properties);
         this.registerDefaultState(this.getStateDefinition().any()
+                .setValue(LIT, true)
+                .setValue(POWERED, false)
                 .setValue(WATERLOGGED, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(LIT, WATERLOGGED);
+        builder.add(LIT, WATERLOGGED, POWERED);
     }
 
     @Override
@@ -87,11 +93,18 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
     }
 
     @Override
-    public BlockState updateShape(BlockState stateIn, Direction facing, BlockState facingState, LevelAccessor worldIn,
+    public void onPlace(BlockState blockState, Level level, BlockPos blockPos, BlockState oldState, boolean isMoving) {
+        if (!oldState.is(blockState.getBlock())) {
+            this.checkPoweredState(level, blockPos, blockState);
+        }
+    }
+
+    @Override
+    public BlockState updateShape(BlockState stateIn, Direction facing, BlockState facingState, LevelAccessor level,
                                   BlockPos currentPos, BlockPos facingPos) {
         boolean lit = stateIn.getValue(LIT);
         if (stateIn.getValue(WATERLOGGED)) {
-            worldIn.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(worldIn));
+            level.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
             lit = false;
         }
         return stateIn.setValue(LIT, lit);
@@ -139,6 +152,26 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
                 brazierBlockEntity.dropAllItems();
                 level.updateNeighbourForOutputSignal(pos, this);
             }
+            super.onRemove(state, level, pos, newState, isMoving);
+        }
+    }
+
+    @Override
+    public boolean placeLiquid(LevelAccessor level, BlockPos blockPos, BlockState blockState, FluidState fluidState) {
+        if (!blockState.getValue(BlockStateProperties.WATERLOGGED) && fluidState.is(FluidTags.WATER)) {
+            boolean flag = blockState.getValue(LIT);
+            if (flag) {
+                if (!level.isClientSide()) {
+                    level.playSound(null, blockPos, SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                }
+                level.gameEvent(null, GameEvent.BLOCK_CHANGE, blockPos);
+            }
+
+            level.setBlock(blockPos, blockState.setValue(WATERLOGGED, Boolean.TRUE).setValue(LIT, Boolean.FALSE), 3);
+            level.scheduleTick(blockPos, fluidState.getType(), fluidState.getType().getTickDelay(level));
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -160,7 +193,7 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
-        if(blockEntityType == RGRegistry.BRAZIER_TYPE.get()) {
+        if(blockEntityType == RGRegistry.BRAZIER_TYPE.get() && RPGGods.CONFIG.isBrazierEnabled()) {
             return BrazierBlockEntity::tick;
         }
         return null;
@@ -168,7 +201,7 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
 
     @Override
     public void animateTick(BlockState blockState, Level level, BlockPos blockPos, Random random) {
-        if(random.nextInt(3) == 0) {
+        if(blockState.getValue(LIT) && random.nextInt(3) == 0) {
             Vec3 vec = Vec3.atCenterOf(blockPos);
             level.addParticle(ParticleTypes.SMOKE,
                     vec.x + 0.8D * (random.nextDouble() - 0.5D),
@@ -178,7 +211,19 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
         }
     }
 
-    // Comparator methods
+    // Redstone methods
+
+    @Override
+    public void neighborChanged(BlockState blockState, Level level, BlockPos blockPos, Block neighborBlock, BlockPos neighborPos, boolean b) {
+        this.checkPoweredState(level, blockPos, blockState);
+    }
+
+    private void checkPoweredState(Level level, BlockPos blockPos, BlockState blockState) {
+        boolean powered = level.hasNeighborSignal(blockPos);
+        if (powered != blockState.getValue(POWERED)) {
+            level.setBlock(blockPos, blockState.setValue(POWERED, powered), Block.UPDATE_INVISIBLE);
+        }
+    }
 
     @Override
     public boolean hasAnalogOutputSignal(BlockState state) {

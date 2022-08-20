@@ -302,6 +302,15 @@ public final class PerkAction {
                     return favor.setPatron(player, getPatron().get());
                 }
                 return false;
+            case ADD_DECAY:
+                if(getId().isPresent() && getMultiplier().isPresent()) {
+                    FavorLevel level = favor.getFavor(getId().get());
+                    if(!level.isEnabled() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
+                        level.setDecayRate(level.getDecayRate() + getMultiplier().get());
+                        return true;
+                    }
+                }
+                return false;
             case UNLOCK:
                 if(getId().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
@@ -313,7 +322,8 @@ public final class PerkAction {
                         // play sound
                         player.level.playSound(player, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
                         return false; // hacky solution to prevent feedback, since we don't need cooldown anyway
-                    }}
+                    }
+                }
                 return false;
             case XP:
                 if(entity.isPresent() && getMultiplier().isPresent() && entity.get() instanceof ExperienceOrb) {
@@ -552,6 +562,13 @@ public final class PerkAction {
                     return new TextComponent(prefix + Math.round(getMultiplier().get()));
                 }
                 return TextComponent.EMPTY;
+            case ADD_DECAY:
+                if(getMultiplier().isPresent() && getId().isPresent()) {
+                    // format multiplier as signed bonus
+                    String prefix = (getMultiplier().get() > 0) ? "+" : "";
+                    return new TranslatableComponent("favor.perk.type.add_decay.description.full", prefix + getMultiplier().get(), DeityHelper.getName(getId().get()));
+                }
+                return TextComponent.EMPTY;
             case DURABILITY:
                 if(getMultiplier().isPresent() && getString().isPresent()) {
                     // format multiplier as percentage
@@ -622,6 +639,7 @@ public final class PerkAction {
         DAMAGE("damage"),
         PATRON("patron"),
         UNLOCK("unlock"),
+        ADD_DECAY("add_decay"),
         XP("xp");
 
         private static final Codec<PerkAction.Type> CODEC = Codec.STRING.comapFlatMap(PerkAction.Type::fromString, PerkAction.Type::getSerializedName).stable();

@@ -33,7 +33,6 @@ import net.minecraftforge.items.wrapper.InvWrapper;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
 import rpggods.block.BrazierBlock;
-import rpggods.deity.Deity;
 import rpggods.entity.AltarEntity;
 import rpggods.event.FavorEventHandler;
 
@@ -49,7 +48,6 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
     private final NonNullList<ItemStack> inventory = NonNullList.withSize(1, ItemStack.EMPTY);
     private LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> createUnSidedHandler());
 
-    protected static final int MAX_COOLDOWN = 6;
     protected int cooldownTime = -1;
     protected long tickedGameTime;
     protected UUID owner;
@@ -62,7 +60,7 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
     // TICK AND COOLDOWN
 
     public static <T extends BlockEntity> void tick(Level level, BlockPos blockPos, BlockState blockState, T blockEntity) {
-        if(blockEntity instanceof BrazierBlockEntity brazier && level instanceof ServerLevel) {
+        if(blockEntity instanceof BrazierBlockEntity brazier && level instanceof ServerLevel && RPGGods.CONFIG.isBrazierEnabled()) {
             --brazier.cooldownTime;
             brazier.tickedGameTime = level.getGameTime();
             if (!brazier.isOnCooldown()) {
@@ -73,8 +71,10 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
     }
 
     public void tryBurnOffering(ServerLevel level, BlockPos blockPos, BlockState blockState) {
-        // do not burn offering when block is not lit
-        if(blockState.getValue(BrazierBlock.WATERLOGGED) || !blockState.getValue(BrazierBlock.LIT)) {
+        // update cooldown
+        setCooldown(RPGGods.CONFIG.getBrazierCooldown());
+        // do not burn offering when block is powered or not lit
+        if(blockState.getValue(BrazierBlock.POWERED) || blockState.getValue(BrazierBlock.WATERLOGGED) || !blockState.getValue(BrazierBlock.LIT)) {
             return;
         }
         // do not burn offering when inventory is empty
@@ -86,10 +86,8 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         if(null == player) {
             return;
         }
-        // update cooldown
-        setCooldown(MAX_COOLDOWN);
         // locate the nearest altar
-        final AABB aabb = new AABB(blockPos).inflate(1.0D);
+        final AABB aabb = new AABB(blockPos).inflate(RPGGods.CONFIG.getBrazierRange());
         final Vec3 vec = Vec3.atCenterOf(blockPos);
         final AltarEntity altar = level.getNearestEntity(AltarEntity.class, TargetingConditions.forNonCombat(), null, vec.x, vec.y, vec.z, aabb);
         // do not burn offering when no deity altar is found

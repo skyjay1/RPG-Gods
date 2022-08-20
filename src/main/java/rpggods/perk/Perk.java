@@ -11,12 +11,13 @@ import rpggods.favor.FavorRange;
 import rpggods.favor.IFavor;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 public final class Perk {
 
     public static final Perk EMPTY = new Perk(PerkIcon.EMPTY, Lists.newArrayList(),
-            FavorRange.EMPTY, Lists.newArrayList(), 0.0F, "null", 1000L);
+            FavorRange.EMPTY, Lists.newArrayList(), 0.0F, "null", 1000L, Optional.empty());
 
     public static final Codec<Perk> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             PerkIcon.CODEC.optionalFieldOf("icon", PerkIcon.EMPTY).forGetter(Perk::getIcon),
@@ -31,7 +32,8 @@ public final class Perk {
                     .optionalFieldOf("action", Lists.newArrayList()).forGetter(Perk::getActions),
             Codec.FLOAT.optionalFieldOf("chance", 1.0F).forGetter(Perk::getChance),
             Codec.STRING.optionalFieldOf("cooldown_category", "").forGetter(Perk::getCategory),
-            Codec.LONG.optionalFieldOf("cooldown", 600L).forGetter(Perk::getCooldown)
+            Codec.LONG.optionalFieldOf("cooldown", 600L).forGetter(Perk::getCooldown),
+            Codec.BOOL.optionalFieldOf("positive").forGetter(Perk::getPositiveFlag)
     ).apply(instance, Perk::new));
 
     private final PerkIcon icon;
@@ -41,15 +43,20 @@ public final class Perk {
     private final float chance;
     private final String category;
     private final long cooldown;
+    private Optional<Boolean> positiveFlag;
+    private boolean isPositive;
 
     public Perk(PerkIcon icon, List<PerkCondition> conditions, FavorRange range,
-                List<PerkAction> actions, float chance, String category, long cooldown) {
+                List<PerkAction> actions, float chance, String category, long cooldown,
+                Optional<Boolean> positiveFlag) {
         this.icon = icon;
         this.conditions = conditions;
         this.range = range;
         this.actions = actions;
         this.chance = chance;
         this.cooldown = cooldown;
+        this.positiveFlag = positiveFlag;
+        this.isPositive = positiveFlag.orElse(range.getMinLevel() >= 0);
         // determine category if not provided
         if(null == category || category.isEmpty()) {
             category = actions.isEmpty() ? "wtf u broke it" : actions.get(0).getType().getSerializedName();
@@ -91,6 +98,14 @@ public final class Perk {
 
     public List<PerkAction> getActions() {
         return actions;
+    }
+
+    public Optional<Boolean> getPositiveFlag() {
+        return positiveFlag;
+    }
+
+    public boolean isPositive() {
+        return isPositive;
     }
 
     public ResourceLocation getDeity() {

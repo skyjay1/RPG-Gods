@@ -2,7 +2,8 @@
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
     { "item": "minecraft:cauldron" },
-    { "item": "minecraft:campfire" }
+    { "item": "minecraft:campfire" },
+    { "item": "minecraft:hopper" }
   ],
   "result": {
     "item": "rpggods:brazier"

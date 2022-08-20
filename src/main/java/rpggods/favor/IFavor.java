@@ -13,6 +13,7 @@ import rpggods.event.FavorChangedEvent;
 import rpggods.deity.Cooldown;
 import rpggods.perk.Patron;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -221,7 +222,11 @@ public interface IFavor extends INBTSerializable<CompoundTag> {
         }
     }
 
-    default void depleteFavor(final Player player) {
+    /**
+     * Triggers favor decay for each deity
+     * @param player the player whose favor is decayed, or null for global favor
+     */
+    default void depleteFavor(@Nullable final Player player) {
         final int amount = RPGGods.CONFIG.getFavorDecayAmount();
         for(Entry<ResourceLocation, FavorLevel> entry : getAllFavor().entrySet()) {
             entry.getValue().depleteFavor(player, entry.getKey(), amount, FavorChangedEvent.Source.DECAY, false);

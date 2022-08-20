@@ -23,6 +23,7 @@ import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import rpggods.deity.Altar;
@@ -48,6 +49,7 @@ import rpggods.tameable.ITameable;
 import rpggods.tameable.Tameable;
 import rpggods.util.GenericJsonReloadListener;
 
+import javax.annotation.Nullable;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -156,9 +158,12 @@ public class RPGGods {
         CONFIG.bake();
     }
 
-    public static LazyOptional<IFavor> getFavor(final Entity entity) {
-        if(CONFIG.useGlobalFavor() && entity instanceof Player && entity.getServer() != null) {
-            return LazyOptional.of(() -> RGSavedData.get(entity.getServer()).getFavor());
+    public static LazyOptional<IFavor> getFavor(@Nullable final Entity entity) {
+        if(CONFIG.useGlobalFavor()) {
+            return LazyOptional.of(() -> RGSavedData.get(ServerLifecycleHooks.getCurrentServer()).getFavor());
+        }
+        if(null == entity) {
+            return LazyOptional.empty();
         }
         return entity.getCapability(FAVOR);
     }

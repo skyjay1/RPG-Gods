@@ -1193,6 +1193,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected final int textY = 5;
         protected int id;
         protected Offering offering;
+        protected boolean levelRange;
         protected long cooldown;
         protected Component favorText;
         protected final Component functionText;
@@ -1227,7 +1228,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 }
                 // draw strikethrough
                 long timeElapsed = inventory.player.level.getGameTime() - openTimestamp;
-                if(this.cooldown - timeElapsed > 1) {
+                if(!levelRange || this.cooldown - timeElapsed > 1) {
                     FavorScreen.this.renderStrikethrough(matrixStack, this.x, this.y + this.height / 2, this.width - 4);
                 }
             }
@@ -1248,6 +1249,9 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         protected void updateOffering(final ResourceLocation offeringId, final Offering offering) {
             this.offering = offering;
             this.cooldown = FavorScreen.this.getMenu().getFavor().getOfferingCooldown(offeringId).getCooldown();
+            ResourceLocation deity = Offering.getDeity(offeringId);
+            int level = FavorScreen.this.getMenu().getFavor().getFavor(deity).getLevel();
+            this.levelRange = !offering.hasLevelRange() || (level >= offering.getTradeMinLevel() && level <= offering.getTradeMaxLevel());
             // determine favor text
             int favorAmount = offering.getFavor();
             String favorString;

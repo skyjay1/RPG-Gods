@@ -277,6 +277,14 @@ public class Offering {
     }
 
     public boolean hasLevelRange() {
-        return minLevel > Integer.MIN_VALUE || maxLevel < Integer.MAX_VALUE;
+        return hasMinLevel() || hasMaxLevel();
+    }
+
+    public boolean hasMinLevel() {
+        return minLevel > Integer.MIN_VALUE;
+    }
+
+    public boolean hasMaxLevel() {
+        return maxLevel < Integer.MAX_VALUE;
     }
 }

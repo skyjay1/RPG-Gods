@@ -202,6 +202,8 @@ public final class PerkCondition {
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < FavorEventHandler.COMBAT_TIMER;
             case PLAYER_CROUCHING: return player.isCrouching();
             case UNLOCKED: return getId().isPresent() && favor.getFavor(getId().get()).isEnabled();
+            case LEVEL_UP: case LEVEL_DOWN:
+                return getId().isPresent() && deity.equals(getId().get());
             case MAINHAND_ITEM:
                 // match item registry name
                 ItemStack heldItem = player.getMainHandItem();
@@ -217,9 +219,6 @@ public final class PerkCondition {
                 tagMatch = true;
                 if(idMatch && tag.isPresent()) {
                     tagMatch = NbtUtils.compareNbt(tag.get(), heldItem.getTag(), true);
-                    //if(!tagMatch) {
-                    //    RPGGods.LOGGER.debug("PerkCondition: Item NBT tags do not match: main=" + tag.get().getAsString() + " and item=" + heldItem.getTag().getAsString());
-                    //}
                 }
                 return idMatch && tagMatch;
             case PLAYER_INTERACT_BLOCK:
@@ -272,7 +271,7 @@ public final class PerkCondition {
     private Component dataToDisplay(final String d) {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
-            case PATRON: case UNLOCKED: case NEAR_ALTAR:
+            case PATRON: case UNLOCKED: case NEAR_ALTAR: case LEVEL_UP: case LEVEL_DOWN:
                 return new TranslatableComponent(Altar.createTranslationKey(rl));
             case MAINHAND_ITEM: case RITUAL:
                 // display name of item tag
@@ -372,7 +371,9 @@ public final class PerkCondition {
         RITUAL("ritual"),
         UNLOCKED("unlocked"),
         ENTER_COMBAT("enter_combat"),
-        NEAR_ALTAR("near_altar");
+        NEAR_ALTAR("near_altar"),
+        LEVEL_UP("level_up"),
+        LEVEL_DOWN("level_down");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();
         private final String name;

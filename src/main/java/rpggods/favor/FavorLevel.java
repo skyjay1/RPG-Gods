@@ -10,6 +10,8 @@ import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.deity.DeityHelper;
 import rpggods.event.FavorChangedEvent;
 
+import javax.annotation.Nullable;
+
 public class FavorLevel implements INBTSerializable<CompoundTag> {
 
     public static final int MAX_FAVOR_LEVEL = 10;
@@ -44,7 +46,7 @@ public class FavorLevel implements INBTSerializable<CompoundTag> {
      * Directly modifies the favor, with some bounds-checking
      * to keep it within the min and max range. If possible,
      * use the context-aware method
-     * {@link #setFavor(PlayerEntity, ResourceLocation, long, FavorChangedEvent.Source)}
+     * {@link #setFavor(Player, ResourceLocation, long, FavorChangedEvent.Source)}
      *
      * @param favorIn the new favor value
      */
@@ -98,13 +100,13 @@ public class FavorLevel implements INBTSerializable<CompoundTag> {
      * Context-aware method to add favor that also posts an event for any listeners.
      * If you don't want this, call {@link #setFavor(long)} directly.
      *
-     * @param playerIn the player whose favor is being modified
+     * @param playerIn the player whose favor is being modified, or null for global favor
      * @param deityIn  the deity for which the favor is being modified
      * @param newFavor the new favor amount
      * @param source   the cause for the change in favor
      * @return the updated favor value
      */
-    public long setFavor(final Player playerIn, final ResourceLocation deityIn, final long newFavor, final FavorChangedEvent.Source source) {
+    public long setFavor(@Nullable final Player playerIn, final ResourceLocation deityIn, final long newFavor, final FavorChangedEvent.Source source) {
         // Post a context-aware event to allow other modifiers
         final FavorChangedEvent.Pre eventPre = new FavorChangedEvent.Pre(playerIn, deityIn, favor, newFavor, source);
         MinecraftForge.EVENT_BUS.post(eventPre);
@@ -120,13 +122,13 @@ public class FavorLevel implements INBTSerializable<CompoundTag> {
      * Context-aware method to add favor that also posts an event for any listeners.
      * If you don't want this, call {@link #setFavor(long)} directly.
      *
-     * @param playerIn the player whose favor is being modified
+     * @param playerIn the player whose favor is being modified, or null for global favor
      * @param deityIn  the deity for which the favor is being modified
      * @param toAdd    the amount of favor to add or subtract
      * @param source   the cause for the change in favor
      * @return the updated favor value
      */
-    public long addFavor(final Player playerIn, final ResourceLocation deityIn, final long toAdd, final FavorChangedEvent.Source source) {
+    public long addFavor(@Nullable final Player playerIn, final ResourceLocation deityIn, final long toAdd, final FavorChangedEvent.Source source) {
         // Post a context-aware event to allow other modifiers
         if(toAdd != 0) {
             return setFavor(playerIn, deityIn, favor + toAdd, source);

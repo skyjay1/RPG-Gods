@@ -1,8 +1,20 @@
 {
-  "variants": {
-	"lit=true,waterlogged=true": { "model": "rpggods:block/unlit_brazier" },
-    "lit=false,waterlogged=true": { "model": "rpggods:block/unlit_brazier" },
-    "lit=true,waterlogged=false": { "model": "rpggods:block/lit_brazier" },
-    "lit=false,waterlogged=false": { "model": "rpggods:block/unlit_brazier" }
-  }
+  "multipart": [
+    {
+      "when": {
+        "lit": "true"
+      },
+      "apply": {
+        "model": "rpggods:block/lit_brazier"
+      }
+    },
+    {
+      "when": {
+        "lit": "false"
+      },
+      "apply": {
+        "model": "rpggods:block/unlit_brazier"
+      }
+    }
+  ]
 }

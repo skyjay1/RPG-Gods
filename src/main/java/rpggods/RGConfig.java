@@ -14,12 +14,18 @@ public class RGConfig {
     // Favor
     private final ForgeConfigSpec.BooleanValue FAVOR_ENABLED;
     private final ForgeConfigSpec.BooleanValue USE_GLOBAL_FAVOR;
+    private final ForgeConfigSpec.BooleanValue USE_GLOBAL_COOLDOWN;
     private final ForgeConfigSpec.DoubleValue RANDOM_PERK_CHANCE;
     private final ForgeConfigSpec.DoubleValue FAVOR_DECAY_RATE;
     private final ForgeConfigSpec.IntValue FAVOR_DECAY_AMOUNT;
     private final ForgeConfigSpec.IntValue FAVOR_UPDATE_RATE;
     private final ForgeConfigSpec.BooleanValue PERK_FEEDBACK;
     private final ForgeConfigSpec.BooleanValue PERK_FEEDBACK_CHAT;
+
+    // Brazier
+    private final ForgeConfigSpec.BooleanValue BRAZIER_ENABLED;
+    private final ForgeConfigSpec.IntValue BRAZIER_COOLDOWN;
+    private final ForgeConfigSpec.IntValue BRAZIER_RANGE;
 
     // Affinity
     private final ForgeConfigSpec.BooleanValue FLEE_ENABLED;
@@ -31,12 +37,17 @@ public class RGConfig {
 
     private boolean favorEnabled;
     private boolean useGlobalFavor;
+    private boolean useGlobalCooldown;
     private double randomPerkChance;
     private double favorDecayRate;
     private int favorDecayAmount;
     private int favorUpdateRate;
     private boolean perkFeedback;
     private boolean perkFeedbackChat;
+
+    private boolean brazierEnabled;
+    private int brazierCooldown;
+    private int brazierRange;
 
     private boolean fleeEnabled;
     private boolean hostileEnabled;
@@ -52,7 +63,11 @@ public class RGConfig {
                 .define("favor_enabled", true);
         USE_GLOBAL_FAVOR = builder
                 .comment("Set to true to apply the same favor to every player")
-                .define("use_global_favor", true);
+                .define("use_global_favor", false);
+        USE_GLOBAL_COOLDOWN = builder
+                .comment("Set to false to make cooldown faster when there are more players",
+                        "Ignored when use_global_favor is false")
+                .define("use_global_cooldown", true);
         FAVOR_UPDATE_RATE = builder
                 .comment("Number of ticks between favor calculations.",
                         "Increase to reduce the frequency of favor updates.",
@@ -74,6 +89,17 @@ public class RGConfig {
         PERK_FEEDBACK_CHAT = builder
                 .comment("True to send feedback through chat instead of status bar", "Only if perk_feedback is True")
                 .define("perk_feedback_chat", false);
+        builder.pop();
+        builder.push("brazier");
+        BRAZIER_ENABLED = builder
+                .comment("True to enable automatic offerings using the brazier")
+                .define("brazier_enabled", true);
+        BRAZIER_COOLDOWN = builder
+                .comment("The number of ticks required to burn an offering")
+                .defineInRange("brazier_cooldown", 8, 0, 12000);
+        BRAZIER_RANGE = builder
+                .comment("The number of blocks to search for an altar")
+                .defineInRange("brazier_range", 2, 1, 8);
         builder.pop();
         builder.push("affinity");
         FLEE_ENABLED = builder
@@ -118,12 +144,17 @@ public class RGConfig {
     public void bake() {
         favorEnabled = FAVOR_ENABLED.get();
         useGlobalFavor = USE_GLOBAL_FAVOR.get();
+        useGlobalCooldown = USE_GLOBAL_COOLDOWN.get();
         randomPerkChance = RANDOM_PERK_CHANCE.get();
         favorDecayRate = FAVOR_DECAY_RATE.get();
         favorDecayAmount = FAVOR_DECAY_AMOUNT.get();
         favorUpdateRate = FAVOR_UPDATE_RATE.get();
         perkFeedback = PERK_FEEDBACK.get();
         perkFeedbackChat = PERK_FEEDBACK_CHAT.get();
+
+        brazierEnabled = BRAZIER_ENABLED.get();
+        brazierCooldown = BRAZIER_COOLDOWN.get();
+        brazierRange = BRAZIER_RANGE.get();
 
         fleeEnabled = FLEE_ENABLED.get();
         hostileEnabled = HOSTILE_ENABLED.get();
@@ -139,12 +170,17 @@ public class RGConfig {
 
     public boolean isFavorEnabled() { return favorEnabled; }
     public boolean useGlobalFavor() { return useGlobalFavor; }
+    public boolean useGlobalCooldown() { return useGlobalCooldown; }
     public double getRandomPerkChance() { return randomPerkChance; }
     public double getFavorDecayRate() { return favorDecayRate; }
     public int getFavorDecayAmount() { return favorDecayAmount; }
     public int getFavorUpdateRate() { return favorUpdateRate; }
     public boolean canGiveFeedback() { return perkFeedback; }
     public boolean isFeedbackChat() { return perkFeedbackChat; }
+
+    public boolean isBrazierEnabled() { return brazierEnabled; }
+    public int getBrazierCooldown() { return brazierCooldown; }
+    public int getBrazierRange() { return brazierRange; }
 
     public boolean isFleeEnabled() { return fleeEnabled; }
     public boolean isHostileEnabled() { return hostileEnabled; }
