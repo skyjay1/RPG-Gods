@@ -59,6 +59,14 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
 
     // TICK AND COOLDOWN
 
+    /**
+     * Called from the block getTicker method
+     * @param level the level
+     * @param blockPos the block position
+     * @param blockState the block state
+     * @param blockEntity the block entity
+     * @param <T> the block entity subclass
+     */
     public static <T extends BlockEntity> void tick(Level level, BlockPos blockPos, BlockState blockState, T blockEntity) {
         if(blockEntity instanceof BrazierBlockEntity brazier && level instanceof ServerLevel && RPGGods.CONFIG.isBrazierEnabled()) {
             --brazier.cooldownTime;
@@ -70,6 +78,14 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         }
     }
 
+    /**
+     * Attempts to find a nearby altar and offer the contained item.
+     * If the block is powered, waterlogged, or unlit, nothing happens.
+     * If an altar is found but the offering is rejected, the item is ejected.
+     * @param level the level
+     * @param blockPos the block position
+     * @param blockState the block state
+     */
     public void tryBurnOffering(ServerLevel level, BlockPos blockPos, BlockState blockState) {
         // update cooldown
         setCooldown(RPGGods.CONFIG.getBrazierCooldown());
@@ -109,32 +125,18 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         setChanged();
     }
 
+    /**
+     * @param cooldown the new cooldown amount
+     */
     public void setCooldown(int cooldown) {
         this.cooldownTime = cooldown;
     }
 
+    /**
+     * @return true if the cooldown amount is greater than zero
+     */
     public boolean isOnCooldown() {
         return this.cooldownTime > 0;
-    }
-
-    // OWNER
-
-    public void setOwner(@Nullable final UUID owner) {
-        this.owner = owner;
-        this.setChanged();
-    }
-
-    @Nullable
-    public UUID getOwner() {
-        return this.owner;
-    }
-
-    @Nullable
-    public Player getOwnerPlayer(final Level level) {
-        if(null == this.owner) {
-            return null;
-        }
-        return level.getPlayerByUUID(this.owner);
     }
 
     // CLIENT-SERVER SYNC
@@ -157,6 +159,39 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         super.handleUpdateTag(tag);
         ContainerHelper.loadAllItems(tag, inventory);
         inventoryChanged();
+    }
+
+    /**
+     * Called to update changes when #setChanged is called from the server
+     * @return the update packet that contains the block entity NBT which will be passed to #load
+     */
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    // NBT AND SAVING
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        this.cooldownTime = tag.getInt(KEY_COOLDOWN);
+        if(tag.contains(KEY_OWNER)) {
+            setOwner(tag.getUUID(KEY_OWNER));
+        }
+        this.inventory.clear();
+        ContainerHelper.loadAllItems(tag, this.inventory);
+        this.inventoryChanged();
+    }
+
+    @Override
+    public void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.putInt(KEY_COOLDOWN, this.cooldownTime);
+        if(this.owner != null) {
+            tag.putUUID(KEY_OWNER, this.owner);
+        }
+        ContainerHelper.saveAllItems(tag, this.inventory, true);
     }
 
     // INVENTORY //
@@ -204,12 +239,12 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        return isEmpty() || getItem(0).getCount() < getMaxStackSize();
+        return isEmpty()  || this.inventory.get(0).isEmpty() || getItem(0).getCount() < getMaxStackSize();
     }
 
     @Override
     public boolean isEmpty() {
-        return this.inventory.get(0).isEmpty();
+        return this.inventory.isEmpty();
     }
 
     /**
@@ -248,6 +283,10 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         }
     }
 
+    /**
+     * @param player the player
+     * @return true if the player can interact with the block entity
+     */
     @Override
     public boolean stillValid(Player player) {
         if (this.level.getBlockEntity(this.worldPosition) != this) {
@@ -258,33 +297,24 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         }
     }
 
-    // NBT AND SAVING
+    // OWNER
 
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        this.cooldownTime = tag.getInt(KEY_COOLDOWN);
-        if(tag.contains(KEY_OWNER)) {
-            setOwner(tag.getUUID(KEY_OWNER));
-        }
-        this.inventory.clear();
-        ContainerHelper.loadAllItems(tag, this.inventory);
-        this.inventoryChanged();
+    public void setOwner(@Nullable final UUID owner) {
+        this.owner = owner;
+        this.setChanged();
     }
 
-    @Override
-    public void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.putInt(KEY_COOLDOWN, this.cooldownTime);
-        if(this.owner != null) {
-            tag.putUUID(KEY_OWNER, this.owner);
-        }
-        ContainerHelper.saveAllItems(tag, this.inventory, true);
+    @Nullable
+    public UUID getOwner() {
+        return this.owner;
     }
 
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
+    @Nullable
+    public Player getOwnerPlayer(final Level level) {
+        if(null == this.owner) {
+            return null;
+        }
+        return level.getPlayerByUUID(this.owner);
     }
 
     // NAMEABLE
@@ -310,6 +340,7 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         return new InvWrapper(this);
     }
 
+    @Override
     public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
         if (!this.remove && cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY ) {
             return itemHandler.cast();

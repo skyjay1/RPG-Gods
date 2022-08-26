@@ -1,6 +1,7 @@
 package rpggods.event;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.commands.CommandSourceStack;
@@ -744,33 +745,49 @@ public class FavorEventHandler {
                         triggerCondition(PerkCondition.Type.RANDOM_TICK, event.player, f, Optional.empty(),
                                 Optional.empty(), Optional.empty());
                     }
-                    // non-global tick
-                    if(!(RPGGods.CONFIG.useGlobalFavor() && RPGGods.CONFIG.useGlobalCooldown())) {
+                    // player tick
+                    if(RPGGods.CONFIG.usePlayerFavor()) {
                         // reduce cooldown
                         f.tickCooldown(event.player.level.getGameTime());
-                    }
-                    // deplete favor
-                    if (!RPGGods.CONFIG.useGlobalFavor() && Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
-                        f.depleteFavor(event.player);
+                        // deplete favor
+                        if (Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
+                            f.depleteFavor(event.player);
+                        }
                     }
                 });
             }
         }
 
+        /**
+         * Used to tick global and team favor
+         * @param event the server tick event
+         */
         @SubscribeEvent
         public static void onServerTick(final TickEvent.ServerTickEvent event) {
-            if(event.phase == TickEvent.Phase.END && RPGGods.CONFIG.useGlobalFavor()) {
-                // locate the current server
-                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-                int tickCount = server.getTickCount();
-                // global favor tick
-                if(canTickFavor(tickCount) && !server.getPlayerList().getPlayers().isEmpty()) {
-                    IFavor favor = RGSavedData.get(server).getFavor();
-                    // reduce global cooldown
-                    if(RPGGods.CONFIG.useGlobalCooldown()) {
-                        favor.tickCooldown(server.getLevel(Level.OVERWORLD).getGameTime());
-                    }
-                    // decay global favor
+            // locate the current server
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            int tickCount = server.getTickCount();
+            // attempt to tick non-player favor
+            if(event.phase == TickEvent.Phase.END && !RPGGods.CONFIG.usePlayerFavor()
+                    && canTickFavor(tickCount) && !server.getPlayerList().getPlayers().isEmpty()) {
+                // load RGSavedData
+                RGSavedData data = RGSavedData.get(server);
+                // create set of favor to tick
+                Set<IFavor> favorSet;
+                if(RPGGods.CONFIG.useGlobalFavor()) {
+                    // add global favor
+                    favorSet = ImmutableSet.of(data.getFavor());
+                } else /*if(RPGGods.CONFIG.useTeamFavor())*/ {
+                    // add team favor
+                    favorSet = ImmutableSet.copyOf(data.getTeamFavor());
+                }
+                // load game time
+                long gameTime = server.getLevel(Level.OVERWORLD).getGameTime();
+                // favor tick
+                for(IFavor favor : favorSet) {
+                    // reduce cooldown
+                    favor.tickCooldown(gameTime);
+                    // decay favor
                     if(Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
                         favor.depleteFavor(null);
                     }
@@ -778,10 +795,19 @@ public class FavorEventHandler {
             }
         }
 
+        /**
+         * @param entity the entity
+         * @return true if the favor is enabled and the correct number of ticks have elapsed
+         * @see #canTickFavor(int)
+         */
         public static boolean canTickFavor(final LivingEntity entity) {
             return canTickFavor(entity.tickCount + entity.getId());
         }
 
+        /**
+         * @param tickCount the current tick count
+         * @return true if the favor is enabled and the correct number of ticks have elapsed
+         */
         public static boolean canTickFavor(final int tickCount) {
             return RPGGods.CONFIG.isFavorEnabled() && tickCount % RPGGods.CONFIG.getFavorUpdateRate() == 0;
         }

@@ -3,8 +3,6 @@ package rpggods;
 import com.google.common.collect.Lists;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
@@ -32,7 +30,6 @@ import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.event.FavorEventHandler;
-import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.network.CUpdateAltarPacket;
 import rpggods.network.SAltarPacket;
@@ -46,7 +43,6 @@ import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
-import rpggods.tameable.Tameable;
 import rpggods.util.GenericJsonReloadListener;
 
 import javax.annotation.Nullable;
@@ -158,13 +154,21 @@ public class RPGGods {
         CONFIG.bake();
     }
 
+    /**
+     * Determines the favor to use for the given entity
+     * @param entity the entity, or null for global favor
+     * @return a lazy optional containing the favor, or empty
+     */
     public static LazyOptional<IFavor> getFavor(@Nullable final Entity entity) {
         if(CONFIG.useGlobalFavor()) {
             return LazyOptional.of(() -> RGSavedData.get(ServerLifecycleHooks.getCurrentServer()).getFavor());
         }
-        if(null == entity) {
-            return LazyOptional.empty();
+        if(CONFIG.useTeamFavor() && entity != null && entity.getTeam() != null ) {
+            return LazyOptional.of(() -> RGSavedData.get(ServerLifecycleHooks.getCurrentServer()).getTeamFavor(entity.getTeam().getName()));
         }
-        return entity.getCapability(FAVOR);
+        if(entity != null) {
+            return entity.getCapability(FAVOR);
+        }
+        return LazyOptional.empty();
     }
 }

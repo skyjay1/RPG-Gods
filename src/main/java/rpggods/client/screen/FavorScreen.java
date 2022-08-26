@@ -1095,7 +1095,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
 
         public TradeButton(FavorScreen gui, int index, int x, int y) {
             super(gui, index, x, y, TRADE_WIDTH, OFFERING_HEIGHT);
-            tradeFunctionText = new TranslatableComponent("?")
+            tradeFunctionText = new TextComponent("?")
                     .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_BLUE);
         }
 
@@ -1147,7 +1147,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             super.updateOffering(offeringId, offering);
             this.hasTrade = offering.getTrade().isPresent() && !offering.getTrade().get().isEmpty();
             // determine item tooltip
-            if(offering.getTrade().isPresent()) {
+            if(offering.hasLevelRange() || offering.getTrade().isPresent()) {
                 this.unlockText = new TextComponent("" + offering.getTradeMinLevel()).withStyle(ChatFormatting.DARK_PURPLE);
                 if(offering.getTradeMinLevel() > Integer.MIN_VALUE && offering.getTradeMaxLevel() < Integer.MAX_VALUE) {
                     this.unlockTooltip = new TranslatableComponent("gui.favor.offering.unlock.multiple.tooltip", offering.getTradeMinLevel(), offering.getTradeMaxLevel());
@@ -1330,7 +1330,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             this.conditionsTooltip = new ArrayList<>();
             this.functionText = new TextComponent(" \u2605 ").withStyle(ChatFormatting.BLUE);
             this.functionTooltip = TextComponent.EMPTY;
-            this.conditionsText = new TranslatableComponent("?")
+            this.conditionsText = new TextComponent("?")
                     .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_BLUE);
         }
 

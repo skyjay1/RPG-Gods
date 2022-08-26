@@ -1,20 +1,20 @@
 package rpggods;
 
+import com.electronwill.nightconfig.core.EnumGetMethod;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class RGConfig {
 
     // Favor
     private final ForgeConfigSpec.BooleanValue FAVOR_ENABLED;
-    private final ForgeConfigSpec.BooleanValue USE_GLOBAL_FAVOR;
-    private final ForgeConfigSpec.BooleanValue USE_GLOBAL_COOLDOWN;
+    private final ForgeConfigSpec.EnumValue<FavorMode> FAVOR_MODE;
     private final ForgeConfigSpec.DoubleValue RANDOM_PERK_CHANCE;
     private final ForgeConfigSpec.DoubleValue FAVOR_DECAY_RATE;
     private final ForgeConfigSpec.IntValue FAVOR_DECAY_AMOUNT;
@@ -36,8 +36,7 @@ public class RGConfig {
     private final ForgeConfigSpec.ConfigValue<List<? extends String>> SITTING_MOBS;
 
     private boolean favorEnabled;
-    private boolean useGlobalFavor;
-    private boolean useGlobalCooldown;
+    private FavorMode favorMode;
     private double randomPerkChance;
     private double favorDecayRate;
     private int favorDecayAmount;
@@ -61,13 +60,9 @@ public class RGConfig {
         FAVOR_ENABLED = builder
                 .comment("Set to false to disable favor, offerings, sacrifices, and perks")
                 .define("favor_enabled", true);
-        USE_GLOBAL_FAVOR = builder
-                .comment("Set to true to apply the same favor to every player")
-                .define("use_global_favor", false);
-        USE_GLOBAL_COOLDOWN = builder
-                .comment("Set to false to make cooldown faster when there are more players",
-                        "Ignored when use_global_favor is false")
-                .define("use_global_cooldown", true);
+        FAVOR_MODE = builder
+                .comment("Determines how favor and cooldown is handled")
+                .defineEnum("favor_mode", FavorMode.PLAYER, EnumGetMethod.NAME_IGNORECASE);
         FAVOR_UPDATE_RATE = builder
                 .comment("Number of ticks between favor calculations.",
                         "Increase to reduce the frequency of favor updates.",
@@ -121,7 +116,8 @@ public class RGConfig {
         builder.pop();
         builder.push("sitting");
         SITTING_MOBS = builder
-                .comment("List of mobs that appear to sit (used client-side)")
+                .comment("Mobs that have a sitting pose, used for tameable mobs.",
+                        "Used client-side only.")
                 .defineList("sitting_mobs", Lists.newArrayList(
                         EntityType.ZOMBIE.getRegistryName().toString(),
                         EntityType.HUSK.getRegistryName().toString(),
@@ -143,8 +139,7 @@ public class RGConfig {
 
     public void bake() {
         favorEnabled = FAVOR_ENABLED.get();
-        useGlobalFavor = USE_GLOBAL_FAVOR.get();
-        useGlobalCooldown = USE_GLOBAL_COOLDOWN.get();
+        favorMode = FAVOR_MODE.get();
         randomPerkChance = RANDOM_PERK_CHANCE.get();
         favorDecayRate = FAVOR_DECAY_RATE.get();
         favorDecayAmount = FAVOR_DECAY_AMOUNT.get();
@@ -163,14 +158,18 @@ public class RGConfig {
 
         ImmutableList.Builder<ResourceLocation> builder = ImmutableList.builder();
         for(String s : SITTING_MOBS.get()) {
-            builder.add(ResourceLocation.tryParse(s));
+            ResourceLocation r = ResourceLocation.tryParse(s);
+            if(r != null) {
+                builder.add(r);
+            }
         }
         sittingMobs = builder.build();
     }
 
     public boolean isFavorEnabled() { return favorEnabled; }
-    public boolean useGlobalFavor() { return useGlobalFavor; }
-    public boolean useGlobalCooldown() { return useGlobalCooldown; }
+    public boolean useGlobalFavor() { return favorMode == FavorMode.GLOBAL; }
+    public boolean useTeamFavor() { return favorMode == FavorMode.TEAM; }
+    public boolean usePlayerFavor() { return favorMode == FavorMode.PLAYER; }
     public double getRandomPerkChance() { return randomPerkChance; }
     public double getFavorDecayRate() { return favorDecayRate; }
     public int getFavorDecayAmount() { return favorDecayAmount; }
@@ -188,4 +187,30 @@ public class RGConfig {
     public boolean isTameableEnabled() { return tameableEnabled; }
 
     public boolean isSittingMob(final ResourceLocation id) { return sittingMobs.contains(id); }
+
+    public static enum FavorMode implements StringRepresentable {
+        PLAYER("player"),
+        TEAM("team"),
+        GLOBAL("global");
+
+        private String name;
+
+        private FavorMode(final String name) {
+            this.name = name;
+        }
+
+        public static FavorMode getByName(final String name) {
+            for(FavorMode mode : values()) {
+                if(mode.getSerializedName().equals(name)) {
+                    return mode;
+                }
+            }
+            return PLAYER;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return name;
+        }
+    }
 }
