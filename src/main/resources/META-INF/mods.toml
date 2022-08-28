@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[42,)"
+loaderVersion="[43,)"
 # The license for your mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
 license="GNU GPLv3"
 # A URL to refer people to when problems occur with this mod
@@ -7,7 +7,7 @@ issueTrackerURL="https://github.com/skyjay1/RPG-Gods/issues"
 
 [[mods]]
     modId="rpggods"
-    version="19.1.2"
+    version="19.2.0"
     displayName="RPG Gods"
     credits=""
     authors="skyjay1"
@@ -15,6 +15,6 @@ issueTrackerURL="https://github.com/skyjay1/RPG-Gods/issues"
 [[dependencies.rpggods]]
     modId="forge"
     mandatory=true
-    versionRange="[42,)"
+    versionRange="[43.1,)"
     ordering="NONE"
     side="BOTH"
