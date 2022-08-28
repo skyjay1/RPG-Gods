@@ -69,8 +69,8 @@ public class Cooldown implements INBTSerializable<CompoundTag> {
      */
     public boolean addUse() {
         if(++uses >= maxUses) {
-            applyCooldown();
             restock();
+            applyCooldown();
             return false;
         }
         return true;

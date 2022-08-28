@@ -150,7 +150,7 @@ public class FavorCommand {
     }
 
     private static int queryFavor(CommandSourceStack source, ServerPlayer player, ResourceLocation deity, Type type) throws CommandSyntaxException {
-        final IFavor favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+        final IFavor favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
         }
@@ -163,7 +163,7 @@ public class FavorCommand {
         // set favor for each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -183,7 +183,7 @@ public class FavorCommand {
         // add favor to each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -200,7 +200,7 @@ public class FavorCommand {
     }
 
     private static int queryEnabled(CommandSourceStack source, ServerPlayer player) {
-        final boolean enabled = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY).isEnabled();
+        final boolean enabled = RPGGods.getFavor(player).orElse(Favor.EMPTY).isEnabled();
         // send command feedback
         source.sendSuccess(Component.translatable("commands.favor.enabled." + (enabled ? "enabled" : "disabled"), player.getDisplayName()), true);
         return enabled ? 1 : 0;
@@ -208,7 +208,7 @@ public class FavorCommand {
 
     private static int setEnabled(CommandSourceStack source, Collection<? extends ServerPlayer> players, boolean enabled) {
         for (final ServerPlayer player : players) {
-            player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY).setEnabled(enabled);
+            RPGGods.getFavor(player).orElse(Favor.EMPTY).setEnabled(enabled);
         }
         // send command feedback
         final String sub = (enabled ? "enabled" : "disabled");
@@ -221,7 +221,7 @@ public class FavorCommand {
     }
 
     private static int queryUnlocked(CommandSourceStack source, ServerPlayer player, ResourceLocation deity) {
-        final boolean enabled = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY).getFavor(deity).isEnabled();
+        final boolean enabled = RPGGods.getFavor(player).orElse(Favor.EMPTY).getFavor(deity).isEnabled();
         // send command feedback
         final String sub = (enabled ? "enabled" : "disabled");
         source.sendSuccess(Component.translatable("commands.favor.deity.enabled." + sub, DeityHelper.getName(deity), player.getDisplayName()), true);
@@ -231,7 +231,7 @@ public class FavorCommand {
     private static int setUnlocked(CommandSourceStack source, Collection<ServerPlayer> players, ResourceLocation deity, boolean enabled) throws CommandSyntaxException {
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -249,7 +249,7 @@ public class FavorCommand {
     }
 
     private static int queryDecay(CommandSourceStack source, ServerPlayer target, ResourceLocation deity) throws CommandSyntaxException {
-        IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+        IFavor favor = RPGGods.getFavor(target).orElse(Favor.EMPTY);
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
         }
@@ -265,7 +265,7 @@ public class FavorCommand {
         IFavor favor;
         float fDecay = decay / 100.0F;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -285,7 +285,7 @@ public class FavorCommand {
         IFavor favor;
         float fDecay = decay / 100.0F;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -302,7 +302,7 @@ public class FavorCommand {
     }
 
     private static int queryPerkBonus(CommandSourceStack source, ServerPlayer target, ResourceLocation deity) throws CommandSyntaxException {
-        IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+        IFavor favor = RPGGods.getFavor(target).orElse(Favor.EMPTY);
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
         }
@@ -318,7 +318,7 @@ public class FavorCommand {
         IFavor favor;
         float fPerkBonus = bonus / 100.0F;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -338,7 +338,7 @@ public class FavorCommand {
         IFavor favor;
         float fPerkBonus = bonus / 100.0F;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -355,7 +355,7 @@ public class FavorCommand {
     }
 
     private static int queryPatron(CommandSourceStack source, ServerPlayer target) throws CommandSyntaxException {
-        IFavor favor = target.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+        IFavor favor = RPGGods.getFavor(target).orElse(Favor.EMPTY);
         if (!favor.isEnabled()) {
             throw FAVOR_DISABLED_EXCEPTION.create(target.getDisplayName());
         }
@@ -374,7 +374,7 @@ public class FavorCommand {
         // set decay rate to each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -394,7 +394,7 @@ public class FavorCommand {
         // reset favor for each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             favor.reset();
         }
         // send command feedback
@@ -411,7 +411,7 @@ public class FavorCommand {
         // reset favor for a single deity for each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -431,7 +431,7 @@ public class FavorCommand {
         // add favor to each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -451,7 +451,7 @@ public class FavorCommand {
         // add favor to each player in the collection
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }
@@ -473,7 +473,7 @@ public class FavorCommand {
         int actualMax = Math.max(min, max);
         IFavor favor;
         for (final ServerPlayer player : players) {
-            favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+            favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
             if (!favor.isEnabled()) {
                 throw FAVOR_DISABLED_EXCEPTION.create(player.getDisplayName());
             }

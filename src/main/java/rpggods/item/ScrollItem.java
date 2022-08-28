@@ -32,7 +32,7 @@ public class ScrollItem extends Item {
         // begin using item (to enable texture change) and open GUI
         player.startUsingItem(hand);
         if(player instanceof ServerPlayer) {
-            LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
+            LazyOptional<IFavor> favor = RPGGods.getFavor(player);
             if(favor.isPresent()) {
                 IFavor ifavor = favor.orElse(null);
                 // prevent use when favor is disabled

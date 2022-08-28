@@ -12,7 +12,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 
 import java.util.Optional;
@@ -20,10 +19,10 @@ import java.util.function.Function;
 
 public class Offering {
     public static final Offering EMPTY = new Offering(ItemStack.EMPTY, Optional.empty(), 0, 0, 0, 0,
-            Optional.empty(), Optional.empty(), 0, Optional.empty(), Optional.empty());
+            Optional.empty(), Optional.empty(), 0, 0, Optional.empty(), Optional.empty());
 
     // Codec that accepts Item or ItemStack
-    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(ForgeRegistries.ITEMS.getCodec(), ItemStack.CODEC)
+    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(Registry.ITEM.byNameCodec(), ItemStack.CODEC)
             .xmap(either -> either.map(ItemStack::new, Function.identity()),
                     stack -> stack.getCount() == 1 && !stack.hasTag()
                             ? Either.left(stack.getItem())
@@ -38,7 +37,8 @@ public class Offering {
             Codec.INT.optionalFieldOf("cooldown", 12000).forGetter(Offering::getCooldown),
             ITEM_OR_STACK_CODEC.optionalFieldOf("trade").forGetter(Offering::getTrade),
             Codec.STRING.optionalFieldOf("trade_tag").forGetter(Offering::getTradeTagString),
-            Codec.INT.optionalFieldOf("minlevel", 0).forGetter(Offering::getTradeMinLevel),
+            Codec.INT.optionalFieldOf("minlevel", Integer.MIN_VALUE).forGetter(Offering::getTradeMinLevel),
+            Codec.INT.optionalFieldOf("maxlevel", Integer.MAX_VALUE).forGetter(Offering::getTradeMaxLevel),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Offering::getFunction),
             Codec.STRING.optionalFieldOf("function_text").forGetter(Offering::getFunctionText)
     ).apply(instance, Offering::new));
@@ -50,7 +50,8 @@ public class Offering {
     private final Optional<ItemStack> trade;
     private final Optional<String> tradeTagString;
     private final Optional<CompoundTag> tradeTag;
-    private final int tradeMinLevel;
+    private final int minLevel;
+    private final int maxLevel;
     private final Optional<ResourceLocation> function;
     private final Optional<String> functionText;
     private final int maxUses;
@@ -58,8 +59,8 @@ public class Offering {
     private final int cooldown;
 
     public Offering(ItemStack accept, Optional<String> acceptTagString, int favor, int maxUses,
-                    int restocks, int cooldown,
-                    Optional<ItemStack> trade, Optional<String> tradeTagString, int tradeMinLevel,
+                    int restocks, int cooldown, Optional<ItemStack> trade, Optional<String> tradeTagString,
+                    int tradeMinLevel, int tradeMaxLevel,
                     Optional<ResourceLocation> function, Optional<String> functionText) {
         this.accept = accept;
         this.acceptTagString = acceptTagString;
@@ -69,7 +70,8 @@ public class Offering {
         this.cooldown = cooldown;
         this.trade = trade;
         this.tradeTagString = tradeTagString;
-        this.tradeMinLevel = tradeMinLevel;
+        this.minLevel = Math.min(tradeMinLevel, tradeMaxLevel);
+        this.maxLevel = Math.max(tradeMinLevel, tradeMaxLevel);
         this.function = function;
         this.functionText = functionText;
         // parse accept tag
@@ -255,7 +257,11 @@ public class Offering {
     }
 
     public int getTradeMinLevel() {
-        return tradeMinLevel;
+        return minLevel;
+    }
+
+    public int getTradeMaxLevel() {
+        return maxLevel;
     }
 
     public Optional<ResourceLocation> getFunction() {
@@ -268,5 +274,17 @@ public class Offering {
 
     public Cooldown createCooldown() {
         return new Cooldown(this.maxUses, this.cooldown, this.restocks);
+    }
+
+    public boolean hasLevelRange() {
+        return hasMinLevel() || hasMaxLevel();
+    }
+
+    public boolean hasMinLevel() {
+        return minLevel > Integer.MIN_VALUE;
+    }
+
+    public boolean hasMaxLevel() {
+        return maxLevel < Integer.MAX_VALUE;
     }
 }

@@ -14,6 +14,7 @@ import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -83,7 +84,7 @@ public class SPerkPacket {
                     if(action.getAffinity().isPresent()) {
                         Affinity affinity = action.getAffinity().get();
                         RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(message.perkId);
+                                .computeIfAbsent(affinity.getType(), id -> new ArrayList<>()).add(message.perkId);
                     }
                 }
             });

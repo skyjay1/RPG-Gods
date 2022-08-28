@@ -2,7 +2,6 @@ package rpggods.util;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -59,7 +58,7 @@ public class CropMultiplierModifier extends LootModifier {
             return generatedLoot;
         }
         // determine which of the mining effects can activate
-        List<ResourceLocation> cropHarvest = Lists.newArrayList();
+        List<ResourceLocation> cropHarvest = new ArrayList<>();
         for (DeityHelper deity : RPGGods.DEITY_HELPER.values()) {
             cropHarvest.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.CROP_HARVEST, ImmutableList.of()));
         }
@@ -67,11 +66,10 @@ public class CropMultiplierModifier extends LootModifier {
         if (entity instanceof Player && !entity.isSpectator() && !((Player) entity).isCreative()
                 && !cropHarvest.isEmpty()) {
             final Player player = (Player) entity;
-            final LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
+            final LazyOptional<IFavor> favor = RPGGods.getFavor(player);
             // determine results using player favor
             if (favor.isPresent() && favor.orElse(null).isEnabled()) {
                 IFavor f = favor.orElse(null);
-                ArrayList<ItemStack> replacement = new ArrayList<>();
                 // attempt to add or remove crops
                 Collections.shuffle(cropHarvest);
                 Perk perk;

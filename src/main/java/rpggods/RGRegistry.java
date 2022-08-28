@@ -3,6 +3,8 @@ package rpggods;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
@@ -32,6 +34,8 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import rpggods.block.AltarLightBlock;
+import rpggods.block.BrazierBlock;
+import rpggods.blockentity.BrazierBlockEntity;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
@@ -46,6 +50,7 @@ import rpggods.util.ShapelessAltarRecipe;
 import rpggods.tameable.ITameable;
 import rpggods.util.AltarStructureProcessor;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -55,6 +60,7 @@ public final class RGRegistry {
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, RPGGods.MODID);
     private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, RPGGods.MODID);
     private static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.MENU_TYPES, RPGGods.MODID);
+    private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, RPGGods.MODID);
     private static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, RPGGods.MODID);
     private static final DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, RPGGods.MODID);
 
@@ -63,6 +69,7 @@ public final class RGRegistry {
         BLOCKS.register(FMLJavaModLoadingContext.get().getModEventBus());
         ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
         ENTITY_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
+        BLOCK_ENTITY_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
         MENU_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
         RECIPE_SERIALIZERS.register(FMLJavaModLoadingContext.get().getModEventBus());
         LOOT_MODIFIER_SERIALIZERS.register(FMLJavaModLoadingContext.get().getModEventBus());
@@ -104,11 +111,21 @@ public final class RGRegistry {
             new AltarLightBlock(BlockBehaviour.Properties.of(Material.AIR)
                 .strength(-1F).noCollission().randomTicks()
                 .lightLevel(b -> b.getValue(AltarLightBlock.LEVEL))));
+    public static final RegistryObject<Block> BRAZIER_BLOCK = BLOCKS.register("brazier", () ->
+            new BrazierBlock(BlockBehaviour.Properties.of(Material.METAL)
+                    .strength(3.0F).sound(SoundType.METAL)
+                    .lightLevel(b -> b.getValue(BrazierBlock.LIT) ? 15 : 0)));
 
     //// ITEMS ////
     public static final RegistryObject<AltarItem> ALTAR_ITEM = ITEMS.register("altar", () -> new AltarItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC)));
     public static final RegistryObject<ScrollItem> SCROLL_ITEM = ITEMS.register("scroll", () -> new ScrollItem(new Item.Properties().tab(CreativeModeTab.TAB_MISC)));
     public static final RegistryObject<BlockItem> LIGHT_ITEM = ITEMS.register("light", () -> new BlockItem(LIGHT_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> BRAZIER_ITEM = ITEMS.register("brazier", () -> new BlockItem(BRAZIER_BLOCK.get(), new Item.Properties().tab(CreativeModeTab.TAB_MISC)));
+
+    //// BLOCK ENTITIES ////
+    public static final RegistryObject<BlockEntityType<? extends BrazierBlockEntity>> BRAZIER_TYPE = BLOCK_ENTITY_TYPES.register("brazier", () ->
+            BlockEntityType.Builder.of(BrazierBlockEntity::new, RGRegistry.BRAZIER_BLOCK.get()) .build(null)
+    );
 
     //// RECIPES ////
     public static final RegistryObject<ShapelessAltarRecipe.Serializer> SHAPELESS_ALTAR_RECIPE_SERIALIZER =
@@ -129,7 +146,7 @@ public final class RGRegistry {
         IForgeMenuType.create((windowId, inv, data) -> {
             CompoundTag nbt = data.readNbt();
             // load favor capability
-            LazyOptional<IFavor> ifavor = inv.player.getCapability(RPGGods.FAVOR);
+            LazyOptional<IFavor> ifavor = RPGGods.getFavor(inv.player);
             IFavor favor = ifavor.orElse(Favor.EMPTY);
             if(favor != Favor.EMPTY && nbt != null) {
                 favor.deserializeNBT(nbt);
@@ -171,6 +188,7 @@ public final class RGRegistry {
         @SubscribeEvent
         public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerEntityRenderer(ALTAR_TYPE.get(), rpggods.client.entity.AltarRenderer::new);
+            event.registerBlockEntityRenderer(BRAZIER_TYPE.get(), rpggods.client.blockentity.BrazierBlockEntityRenderer::new);
         }
 
         private static void registerContainerRenders() {
@@ -178,7 +196,7 @@ public final class RGRegistry {
             MenuScreens.register(RGRegistry.FAVOR_CONTAINER.get(), rpggods.client.screen.FavorScreen::new);
         }
 
-        private static List<ResourceLocation> altars = Lists.newArrayList();
+        private static List<ResourceLocation> altars = new ArrayList<>();
 
         private static void registerModelProperties() {
             // Scroll properites

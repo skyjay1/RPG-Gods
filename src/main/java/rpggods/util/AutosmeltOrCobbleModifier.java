@@ -2,7 +2,6 @@ package rpggods.util;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -33,6 +32,7 @@ import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
@@ -76,8 +76,8 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
             return generatedLoot;
         }
         // determine which of the mining effects can activate
-        List<ResourceLocation> autosmelt = Lists.newArrayList();
-        List<ResourceLocation> unsmelt = Lists.newArrayList();
+        List<ResourceLocation> autosmelt = new ArrayList<>();
+        List<ResourceLocation> unsmelt = new ArrayList<>();
         for (DeityHelper deity : RPGGods.DEITY_HELPER.values()) {
             autosmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.AUTOSMELT, ImmutableList.of()));
             unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.UNSMELT, ImmutableList.of()));
@@ -86,7 +86,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         if (entity instanceof Player && !entity.isSpectator() && !((Player) entity).isCreative()
                 && (!autosmelt.isEmpty() || !unsmelt.isEmpty())) {
             final Player player = (Player) entity;
-            final LazyOptional<IFavor> favor = player.getCapability(RPGGods.FAVOR);
+            final LazyOptional<IFavor> favor = RPGGods.getFavor(player);
             // determine results using player favor
             if(favor.isPresent() && favor.orElse(null).isEnabled()) {
                 IFavor f = favor.orElse(null);

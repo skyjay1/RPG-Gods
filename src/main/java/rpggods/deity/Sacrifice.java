@@ -26,7 +26,7 @@ public class Sacrifice {
             Codec.either(PerkCondition.CODEC, PerkCondition.CODEC.listOf())
                     .xmap(either -> either.map(ImmutableList::of, Function.identity()),
                             list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list))
-                    .optionalFieldOf("condition", Lists.newArrayList()).forGetter(Sacrifice::getConditions),
+                    .optionalFieldOf("condition", List.of()).forGetter(Sacrifice::getConditions),
             ResourceLocation.CODEC.optionalFieldOf("function").forGetter(Sacrifice::getFunction),
             Codec.STRING.optionalFieldOf("function_text").forGetter(Sacrifice::getFunctionText)
     ).apply(instance, Sacrifice::new));

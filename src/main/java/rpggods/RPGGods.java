@@ -2,12 +2,14 @@ package rpggods;
 
 import com.google.common.collect.Lists;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -19,6 +21,7 @@ import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import rpggods.deity.Altar;
@@ -41,6 +44,8 @@ import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
 import rpggods.util.GenericJsonReloadListener;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -98,7 +103,7 @@ public class RPGGods {
                         if(action.getAffinity().isPresent()) {
                             Affinity affinity = action.getAffinity().get();
                             RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                    .computeIfAbsent(affinity.getType(), id -> Lists.newArrayList()).add(e.getKey());
+                                    .computeIfAbsent(affinity.getType(), id -> new ArrayList<>()).add(e.getKey());
                         }
                     }
                 });
@@ -147,5 +152,23 @@ public class RPGGods {
 
     public static void reloadConfig(final ModConfigEvent.Reloading event) {
         CONFIG.bake();
+    }
+
+    /**
+     * Determines the favor to use for the given entity
+     * @param entity the entity, or null for global favor
+     * @return a lazy optional containing the favor, or empty
+     */
+    public static LazyOptional<IFavor> getFavor(@Nullable final Entity entity) {
+        if(CONFIG.useGlobalFavor()) {
+            return LazyOptional.of(() -> RGSavedData.get(ServerLifecycleHooks.getCurrentServer()).getFavor());
+        }
+        if(CONFIG.useTeamFavor() && entity != null && entity.getTeam() != null ) {
+            return LazyOptional.of(() -> RGSavedData.get(ServerLifecycleHooks.getCurrentServer()).getTeamFavor(entity.getTeam().getName()));
+        }
+        if(entity != null) {
+            return entity.getCapability(FAVOR);
+        }
+        return LazyOptional.empty();
     }
 }

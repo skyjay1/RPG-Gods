@@ -27,11 +27,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.RGEvents;
+import rpggods.entity.AltarEntity;
 import rpggods.favor.IFavor;
 
 import java.util.ArrayList;
@@ -163,6 +167,21 @@ public final class PerkCondition {
         return false;
     }
 
+    /**
+     * @param level the level
+     * @param origin the position of the event
+     * @param distance the maximum distance to the altar
+     * @return true if the origin is within the given distance to an altar to the given deity
+     */
+    public boolean isNearAltar(final Level level, final Vec3 origin, final double distance) {
+        if(type == PerkCondition.Type.NEAR_ALTAR && id.isPresent()) {
+            AABB aabb = new AABB(new BlockPos(origin)).inflate(distance, distance / 2.0D, distance);
+            List<AltarEntity> altars = level.getEntities(EntityTypeTest.forClass(AltarEntity.class), aabb, a -> a.getDeity().isPresent() && id.get().equals(a.getDeity().get()));
+            return !altars.isEmpty();
+        }
+        return false;
+    }
+
     @Override
     public String toString() {
         return "PerkCondition: " + " type[" + type + "]" + " data[" + data + "]";
@@ -194,6 +213,7 @@ public final class PerkCondition {
             case ENTER_COMBAT: return player.getCombatTracker().getCombatDuration() < RGEvents.COMBAT_TIMER;
             case PLAYER_CROUCHING: return player.isCrouching();
             case UNLOCKED: return getId().isPresent() && favor.getFavor(getId().get()).isEnabled();
+            case LEVEL_UP: case LEVEL_DOWN: return getId().isPresent() && deity.equals(getId().get());
             case MAINHAND_ITEM:
                 // match item registry name
                 ItemStack heldItem = player.getMainHandItem();
@@ -209,9 +229,6 @@ public final class PerkCondition {
                 tagMatch = true;
                 if(idMatch && tag.isPresent()) {
                     tagMatch = NbtUtils.compareNbt(tag.get(), heldItem.getTag(), true);
-                    //if(!tagMatch) {
-                    //    RPGGods.LOGGER.debug("PerkCondition: Item NBT tags do not match: main=" + tag.get().getAsString() + " and item=" + heldItem.getTag().getAsString());
-                    //}
                 }
                 return idMatch && tagMatch;
             case PLAYER_INTERACT_BLOCK:
@@ -243,6 +260,7 @@ public final class PerkCondition {
             case RITUAL:
             case EFFECT_START:
                 return getId().isPresent() && data.isPresent() && getId().get().equals(data.get());
+            case NEAR_ALTAR: return getId().isPresent() && isNearAltar(player.level, player.position(), 8.0D);
             // match data and NBT tag
             case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER:
@@ -262,7 +280,7 @@ public final class PerkCondition {
     private Component dataToDisplay(final String d) {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
-            case PATRON: case UNLOCKED:
+            case PATRON: case UNLOCKED: case NEAR_ALTAR: case LEVEL_UP: case LEVEL_DOWN:
                 return Component.translatable(Altar.createTranslationKey(rl));
             case MAINHAND_ITEM: case RITUAL:
                 // display name of item tag
@@ -361,7 +379,10 @@ public final class PerkCondition {
         PLAYER_CROUCHING("player_crouching"),
         RITUAL("ritual"),
         UNLOCKED("unlocked"),
-        ENTER_COMBAT("enter_combat");
+        ENTER_COMBAT("enter_combat"),
+        NEAR_ALTAR("near_altar"),
+        LEVEL_UP("level_up"),
+        LEVEL_DOWN("level_down");
 
         private static final Codec<PerkCondition.Type> CODEC = Codec.STRING.comapFlatMap(PerkCondition.Type::fromString, PerkCondition.Type::getSerializedName).stable();
         private final String name;

@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 public class AffinityGoal {
 
     private static boolean shouldAttackEntity(LivingEntity target, LivingEntity owner) {
-        if(target instanceof Creeper || target instanceof Ghast) {
+        if(target instanceof Ghast) {
             return false;
         } else if (target instanceof AbstractHorse && ((AbstractHorse)target).isTamed()) {
             return false;
@@ -75,7 +75,7 @@ public class AffinityGoal {
         }
         // passive behavior based on favor
         if(target != creature.getLastHurtByMob()) {
-            LazyOptional<IFavor> favor = target.getCapability(RPGGods.FAVOR);
+            LazyOptional<IFavor> favor = RPGGods.getFavor(target);
             if(favor.isPresent()) {
                 IFavor f = favor.orElse(null);
                 if(!f.isEnabled()) {
@@ -204,7 +204,7 @@ public class AffinityGoal {
                 if(e instanceof Player && e != creature.getLastHurtByMob() && !isOwnerOrTeam(creature, e)) {
                     List<ResourceLocation> perks = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.FLEE, ImmutableList.of());
                     if(perks.size() > 0) {
-                        IFavor favor = e.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+                        IFavor favor = RPGGods.getFavor(e).orElse(Favor.EMPTY);
                         if(favor.isEnabled()) {
                             Perk p;
                             for(ResourceLocation r : perks) {
@@ -487,7 +487,7 @@ public class AffinityGoal {
         @Override
         public boolean canUse() {
             if(this.mob.getTarget() instanceof Player player) {
-                IFavor favor = player.getCapability(RPGGods.FAVOR).orElse(Favor.EMPTY);
+                IFavor favor = RPGGods.getFavor(player).orElse(Favor.EMPTY);
                 return super.canUse() && isHostile(mob, favor);
             }
             return false;

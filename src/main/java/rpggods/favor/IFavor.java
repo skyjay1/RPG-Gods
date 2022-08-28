@@ -221,6 +221,10 @@ public interface IFavor extends INBTSerializable<CompoundTag> {
         }
     }
 
+    /**
+     * Triggers favor decay for each deity
+     * @param player the player whose favor is decayed, or null for global favor
+     */
     default void depleteFavor(final Player player) {
         final int amount = RPGGods.CONFIG.getFavorDecayAmount();
         for(Entry<ResourceLocation, FavorLevel> entry : getAllFavor().entrySet()) {
