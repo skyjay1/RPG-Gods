@@ -602,16 +602,21 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         // create compound tag
         CompoundTag compoundTag = new CompoundTag();
         // write altar properties to the tag
+        // write altar
+        compoundTag.putString(KEY_ALTAR, altarId.toString());
         // write deity
         Optional<Deity> deity = Optional.empty();
+        Component customName = Component.literal(altar.getName().get());
         if (altar.getDeity().isPresent() && !altar.getDeity().get().toString().isEmpty()) {
             // determine string to save deity name
             ResourceLocation deityId = altar.getDeity().get();
             deity = RPGGods.DEITY.get(deityId);
+            customName = DeityHelper.getName(altarId);
             compoundTag.putString(KEY_DEITY, deityId.toString());
         }
-        // write altar
-        compoundTag.putString(KEY_ALTAR, altarId.toString());
+        // write custom name
+        compoundTag.putString("CustomName", Component.Serializer.toJson(customName));
+        compoundTag.putBoolean("CustomNameVisible", true);
         // write inventory
         ListTag listNBT = new ListTag();
         // write inventory slots to NBT
@@ -650,10 +655,12 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         // write pose
         compoundTag.put(KEY_POSE, altar.getPose().serializeNBT());
         // write rotation
-        compoundTag.put("Rotation", getRotationTag(rotation));
+        // This was (probably) fixed in Forge release 41.0.58
+        // compoundTag.put("Rotation", getRotationTag(rotation));
         return compoundTag;
     }
 
+    // unused
     private static ListTag getRotationTag(final Rotation rotation) {
         ListTag rotationTag = new ListTag();
         float yRot = 0;
