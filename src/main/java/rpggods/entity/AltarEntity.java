@@ -54,8 +54,8 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.altar.AltarItems;
-import rpggods.altar.AltarPose;
+import rpggods.util.altar.AltarItems;
+import rpggods.util.altar.AltarPose;
 import rpggods.block.AltarLightBlock;
 import rpggods.deity.Altar;
 import rpggods.deity.Deity;
@@ -64,8 +64,8 @@ import rpggods.RGEvents;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
 import rpggods.item.AltarItem;
-import rpggods.menu.AltarContainer;
-import rpggods.menu.FavorContainer;
+import rpggods.menu.AltarContainerMenu;
+import rpggods.menu.FavorContainerMenu;
 import rpggods.network.SUpdateAltarPacket;
 import rpggods.perk.PerkCondition;
 
@@ -426,7 +426,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     // no offering result, open favor GUI
                     NetworkHooks.openScreen((ServerPlayer) player,
                             new SimpleMenuProvider((id, inventory, p) ->
-                                    new FavorContainer(id, inventory, ifavor, deity),
+                                    new FavorContainerMenu(id, inventory, ifavor, deity),
                                     Component.empty()),
                             buf -> {
                                 buf.writeNbt(ifavor.serializeNBT());
@@ -440,7 +440,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 // open altar GUI
                 NetworkHooks.openScreen((ServerPlayer) player,
                         new SimpleMenuProvider((id, inv, p) ->
-                                new AltarContainer(id, inv, this.inventory, this),
+                                new AltarContainerMenu(id, inv, this.inventory, this),
                                 Component.empty()),
                         buf -> {
                             buf.writeInt(this.getId());

@@ -15,7 +15,7 @@ import net.minecraftforge.network.NetworkHooks;
 import rpggods.RPGGods;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
-import rpggods.menu.FavorContainer;
+import rpggods.menu.FavorContainerMenu;
 
 public class ScrollItem extends Item {
 
@@ -53,7 +53,7 @@ public class ScrollItem extends Item {
                 // open Favor GUI
                 NetworkHooks.openScreen((ServerPlayer)player,
                         new SimpleMenuProvider((id, inventory, p) ->
-                                new FavorContainer(id, inventory, ifavor, null),
+                                new FavorContainerMenu(id, inventory, ifavor, null),
                                 Component.empty()),
                         buf -> {
                             buf.writeNbt(ifavor.serializeNBT());

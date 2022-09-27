@@ -11,16 +11,16 @@ import rpggods.favor.IFavor;
 
 import java.util.Optional;
 
-public class FavorContainer extends AbstractContainerMenu {
+public class FavorContainerMenu extends AbstractContainerMenu {
 
     private IFavor favor;
     private Optional<ResourceLocation> deity;
 
-    public FavorContainer(int id, final Inventory inventory) {
+    public FavorContainerMenu(int id, final Inventory inventory) {
         this(id, inventory, Favor.EMPTY, null);
     }
 
-    public FavorContainer(final int id, final Inventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
+    public FavorContainerMenu(final int id, final Inventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
         super(RGRegistry.FAVOR_CONTAINER.get(), id);
         favor = favorIn;
         deity = Optional.ofNullable(deityIn);

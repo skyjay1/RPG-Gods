@@ -21,16 +21,16 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import rpggods.RPGGods;
-import rpggods.altar.AltarPose;
-import rpggods.altar.HumanoidPart;
+import rpggods.util.altar.AltarPose;
+import rpggods.util.altar.HumanoidPart;
 import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
-import rpggods.menu.AltarContainer;
+import rpggods.menu.AltarContainerMenu;
 import rpggods.network.CUpdateAltarPacket;
 
 import java.util.Optional;
 
-public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
+public class AltarScreen extends AbstractContainerScreen<AltarContainerMenu> {
 
     // CONSTANTS
     private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/altar/altar.png");
@@ -98,12 +98,12 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
 
     private EditBox nameField;
 
-    public AltarScreen(final AltarContainer screenContainer, final Inventory inv, final Component title) {
+    public AltarScreen(final AltarContainerMenu screenContainer, final Inventory inv, final Component title) {
         super(screenContainer, inv, title);
         this.imageWidth = SCREEN_WIDTH;
         this.imageHeight = SCREEN_HEIGHT - TAB_HEIGHT / 2;
-        this.inventoryLabelX = this.leftPos + AltarContainer.PLAYER_INV_X;
-        this.inventoryLabelY = this.topPos + AltarContainer.PLAYER_INV_Y - 10;
+        this.inventoryLabelX = this.leftPos + AltarContainerMenu.PLAYER_INV_X;
+        this.inventoryLabelY = this.topPos + AltarContainerMenu.PLAYER_INV_Y - 10;
         Altar altar = screenContainer.getAltar();
         if(altar.getDeity().isPresent()) {
             name = Optional.empty();
@@ -223,7 +223,7 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
             for(int i = 0, l = getMenu().getAltarSlots().size(); i < l; i++) {
                 Slot slot = getMenu().getAltarSlots().get(i);
                 this.blit(matrixStack, this.leftPos + slot.x - 1, this.topPos + slot.y - 1,
-                        AltarContainer.PLAYER_INV_X - 1, AltarContainer.PLAYER_INV_Y - 1, 18, 18);
+                        AltarContainerMenu.PLAYER_INV_X - 1, AltarContainerMenu.PLAYER_INV_Y - 1, 18, 18);
                 // render slab icon on last slot
                 if(i == l - 1 && slot.getItem().isEmpty()) {
                     this.blit(matrixStack, this.leftPos + slot.x, this.topPos + slot.y,
@@ -316,8 +316,8 @@ public class AltarScreen extends AbstractContainerScreen<AltarContainer> {
         this.setFocused(tab1 ? this.nameField : null);
         // show/hide inventory
         for (Slot slot : this.getMenu().slots) {
-            if(slot instanceof AltarContainer.AltarSlot) {
-                ((AltarContainer.AltarSlot)slot).setHidden(tab0);
+            if(slot instanceof AltarContainerMenu.AltarSlot) {
+                ((AltarContainerMenu.AltarSlot)slot).setHidden(tab0);
             }
         }
     }

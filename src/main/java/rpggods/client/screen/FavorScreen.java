@@ -35,7 +35,7 @@ import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
-import rpggods.menu.FavorContainer;
+import rpggods.menu.FavorContainerMenu;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 import rpggods.perk.PerkCondition;
@@ -50,7 +50,7 @@ import java.util.Optional;
 import java.util.Set;
 
 
-public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
+public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
 
     // CONSTANTS
     private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/favor/favor.png");
@@ -177,7 +177,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     private int dy;
 
 
-    public FavorScreen(FavorContainer screenContainer, Inventory inv, Component titleIn) {
+    public FavorScreen(FavorContainerMenu screenContainer, Inventory inv, Component titleIn) {
         super(screenContainer, inv, titleIn);
         this.inventory = inv;
         this.openTimestamp = inv.player.level.getGameTime();

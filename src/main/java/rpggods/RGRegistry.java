@@ -1,6 +1,5 @@
 package rpggods;
 
-import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.SoundType;
@@ -39,8 +38,8 @@ import rpggods.blockentity.BrazierBlockEntity;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
-import rpggods.menu.AltarContainer;
-import rpggods.menu.FavorContainer;
+import rpggods.menu.AltarContainerMenu;
+import rpggods.menu.FavorContainerMenu;
 import rpggods.item.AltarItem;
 import rpggods.item.ScrollItem;
 import rpggods.util.AutosmeltOrCobbleModifier;
@@ -51,7 +50,6 @@ import rpggods.tameable.ITameable;
 import rpggods.util.AltarStructureProcessor;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public final class RGRegistry {
@@ -134,15 +132,15 @@ public final class RGRegistry {
             RECIPE_SERIALIZERS.register(ShapedAltarRecipe.NAME, () -> new ShapedAltarRecipe.Serializer());
 
     //// MENU TYPES ////
-    public static final RegistryObject<MenuType<AltarContainer>> ALTAR_CONTAINER = MENU_TYPES.register("altar_container", () ->
+    public static final RegistryObject<MenuType<AltarContainerMenu>> ALTAR_CONTAINER = MENU_TYPES.register("altar_container", () ->
         IForgeMenuType.create((windowId, inv, data) -> {
             final int entityId = data.readInt();
             Entity entity = inv.player.level.getEntity(entityId);
             AltarEntity altarEntity = (AltarEntity) entity;
-            return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity);
+            return new AltarContainerMenu(windowId, inv, altarEntity.getInventory(), altarEntity);
         })
     );
-    public static final RegistryObject<MenuType<FavorContainer>> FAVOR_CONTAINER = MENU_TYPES.register("favor_container", () ->
+    public static final RegistryObject<MenuType<FavorContainerMenu>> FAVOR_CONTAINER = MENU_TYPES.register("favor_container", () ->
         IForgeMenuType.create((windowId, inv, data) -> {
             CompoundTag nbt = data.readNbt();
             // load favor capability
@@ -157,7 +155,7 @@ public final class RGRegistry {
             if(hasDeity) {
                 deityId = data.readResourceLocation();
             }
-            return new FavorContainer(windowId, inv, favor, deityId);
+            return new FavorContainerMenu(windowId, inv, favor, deityId);
         })
     );
     //// LOOT MODIFER SERIALIZERS ////

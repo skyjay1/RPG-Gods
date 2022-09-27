@@ -6,8 +6,8 @@ import com.mojang.math.Vector3f;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import rpggods.altar.AltarPose;
-import rpggods.altar.HumanoidPart;
+import rpggods.util.altar.AltarPose;
+import rpggods.util.altar.HumanoidPart;
 import rpggods.entity.AltarEntity;
 
 public class AltarArmorModel extends HumanoidModel<AltarEntity> {

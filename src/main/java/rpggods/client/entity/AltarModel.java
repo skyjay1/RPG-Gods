@@ -13,8 +13,8 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.world.entity.HumanoidArm;
-import rpggods.altar.AltarPose;
-import rpggods.altar.HumanoidPart;
+import rpggods.util.altar.AltarPose;
+import rpggods.util.altar.HumanoidPart;
 import rpggods.entity.AltarEntity;
 
 import java.util.Collection;

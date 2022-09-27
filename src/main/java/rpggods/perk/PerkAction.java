@@ -302,7 +302,7 @@ public final class PerkAction {
             case ADD_DECAY:
                 if(getId().isPresent() && getMultiplier().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
-                    if(!level.isEnabled() && RPGGods.DEITY_MAP.getOrDefault(getId().get(), Deity.EMPTY).isEnabled()) {
+                    if(level.isEnabled() && RPGGods.DEITY_MAP.getOrDefault(getId().get(), Deity.EMPTY).isEnabled()) {
                         level.setDecayRate(level.getDecayRate() + getMultiplier().get());
                         return true;
                     }

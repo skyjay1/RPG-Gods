@@ -1,4 +1,4 @@
-package rpggods.altar;
+package rpggods.util.altar;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.nbt.CompoundTag;
