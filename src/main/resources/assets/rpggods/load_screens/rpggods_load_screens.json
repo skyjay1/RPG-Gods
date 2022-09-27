@@ -1,0 +1,16 @@
+{
+	"screens" : [
+		{
+			"class" : "rpggods.client.screen.AltarScreen",
+			"texture" : "rpggods:textures/gui/altar/altar.png",
+			"size" : [224, 202],
+			"texSize" : [256, 256]
+		},
+		{
+			"class" : "rpggods.client.screen.FavorScreen",
+			"texture" : "rpggods:textures/gui/favor/favor.png",
+			"size" : [256, 168],
+			"texSize" : [256, 256]
+		}
+	]
+}

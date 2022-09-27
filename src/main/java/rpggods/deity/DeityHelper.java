@@ -97,7 +97,7 @@ public class DeityHelper {
         // validate actions can only unlock deities that are enabled
         for(PerkAction action : perk.getActions()) {
             if(action.getType() == PerkAction.Type.UNLOCK) {
-                Deity deity = RPGGods.DEITY.get(action.getId().orElse(Deity.EMPTY.getId())).orElse(Deity.EMPTY);
+                Deity deity = RPGGods.DEITY_MAP.getOrDefault(action.getId().orElse(Deity.EMPTY.getId()), Deity.EMPTY);
                 if(!deity.isEnabled()) {
                     RPGGods.LOGGER.info("Skipping perk with ID " + id + " because it unlocks a deity that is disabled.");
                     return;
@@ -118,7 +118,7 @@ public class DeityHelper {
     }
 
     public Optional<Deity> getDeity() {
-        return RPGGods.DEITY.get(this.id);
+        return Optional.ofNullable(RPGGods.DEITY_MAP.get(this.id));
     }
 
     public static Component getName(final ResourceLocation id) {

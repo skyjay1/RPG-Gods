@@ -26,8 +26,8 @@ import net.minecraftforge.client.model.data.EmptyModelData;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
-import rpggods.altar.AltarPose;
-import rpggods.altar.HumanoidPart;
+import rpggods.util.altar.AltarPose;
+import rpggods.util.altar.HumanoidPart;
 import rpggods.client.screen.AltarScreen;
 import rpggods.entity.AltarEntity;
 

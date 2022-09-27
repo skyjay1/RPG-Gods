@@ -1,4 +1,4 @@
-package rpggods.altar;
+package rpggods.util.altar;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
@@ -8,7 +8,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Registry;
-import net.minecraft.world.level.block.state.BlockState;
 import rpggods.deity.Offering;
 
 public class AltarItems {

@@ -1,4 +1,4 @@
-package rpggods.loot;
+package rpggods.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -13,7 +13,6 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.Tag;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
@@ -21,7 +20,7 @@ import net.minecraftforge.common.loot.LootModifier;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorEventHandler;
+import rpggods.RGEvents;
 import rpggods.favor.IFavor;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
@@ -67,8 +66,8 @@ public class CropMultiplierModifier extends LootModifier {
                 Collections.shuffle(cropHarvest);
                 Perk perk;
                 for (ResourceLocation id : cropHarvest) {
-                    perk = RPGGods.PERK.get(id).orElse(null);
-                    if (FavorEventHandler.runPerk(perk, player, f)) {
+                    perk = RPGGods.PERK_MAP.get(id);
+                    if (RGEvents.runPerk(perk, player, f)) {
                         float multiplier = 0;
                         for(PerkAction action : perk.getActions()) {
                             if(action.getType() == PerkAction.Type.CROP_HARVEST && action.getMultiplier().isPresent()) {

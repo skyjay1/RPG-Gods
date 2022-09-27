@@ -30,34 +30,16 @@ public final class RGData {
     }
 
     /**
-     * Used to sync datapack data from the server to each client
-     * @param event the player login event
-     **/
-    @SubscribeEvent
-    public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
-        Player player = event.getPlayer();
-        if (player instanceof ServerPlayer) {
-            RPGGods.DEITY.syncOnReload();
-            RPGGods.ALTAR.syncOnReload();
-            RPGGods.OFFERING.syncOnReload();
-            RPGGods.SACRIFICE.syncOnReload();
-            RPGGods.PERK.syncOnReload();
-        }
-    }
-
-    /**
      * Used to sync datapack info when resources are reloaded
      * @param event the reload listener event
      **/
     @SubscribeEvent
     public static void onReloadListeners(final AddReloadListenerEvent event) {
-        RPGGods.DEITY_HELPER.forEach((id, deity) -> deity.clear());
-        RPGGods.AFFINITY.clear();
-        event.addListener(RPGGods.DEITY);
-        event.addListener(RPGGods.ALTAR);
-        event.addListener(RPGGods.OFFERING);
-        event.addListener(RPGGods.SACRIFICE);
-        event.addListener(RPGGods.PERK);
+        event.addListener(RPGGods.ALTAR_JSON_MANAGER);
+        event.addListener(RPGGods.DEITY_JSON_MANAGER);
+        event.addListener(RPGGods.OFFERING_JSON_MANAGER);
+        event.addListener(RPGGods.PERK_JSON_MANAGER);
+        event.addListener(RPGGods.SACRIFICE_JSON_MANAGER);
     }
 
     /**

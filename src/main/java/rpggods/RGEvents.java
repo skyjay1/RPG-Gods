@@ -1,4 +1,4 @@
-package rpggods.event;
+package rpggods;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -61,15 +61,13 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import rpggods.RGSavedData;
-import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
 import rpggods.deity.Offering;
 import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.entity.AffinityGoal;
+import rpggods.util.FavorChangedEvent;
 import rpggods.favor.Favor;
-import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.network.SUpdateSittingPacket;
 import rpggods.perk.Perk;
@@ -88,7 +86,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public class FavorEventHandler {
+public class RGEvents {
 
     public static final int COMBAT_TIMER = 40;
 
@@ -109,7 +107,7 @@ public class FavorEventHandler {
             ResourceLocation offeringId = null;
             Offering offering = null;
             for(ResourceLocation id : RPGGods.DEITY_HELPER.get(deity).offeringMap.getOrDefault(item.getItem().getRegistryName(), ImmutableList.of())) {
-                Offering o = RPGGods.OFFERING.get(id).orElse(null);
+                Offering o = RPGGods.OFFERING_MAP.get(id);
                 if(o != null && o.matches(item)) {
                     offeringId = id;
                     offering = o;
@@ -191,9 +189,9 @@ public class FavorEventHandler {
             ResourceLocation deityId;
             Sacrifice sacrifice;
             Cooldown cooldown;
-            for(Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
-                if(entry.getValue() != null && entry.getValue().isPresent()) {
-                    sacrifice = entry.getValue().get();
+            for(Map.Entry<ResourceLocation, Sacrifice> entry : RPGGods.SACRIFICE_MAP.entrySet()) {
+                if(entry.getValue() != null) {
+                    sacrifice = entry.getValue();
                     // check sacrifice matches entity that was killed
                     if(entityId.equals(sacrifice.getEntity())) {
                         // check sacrifice cooldown
@@ -256,7 +254,7 @@ public class FavorEventHandler {
             // run each perk
             Perk perk;
             for(ResourceLocation id : perkList) {
-                perk = RPGGods.PERK.get(id).orElse(null);
+                perk = RPGGods.PERK_MAP.get(id);
                 success |= runPerk(perk, player, favor, entity, data, object);
             }
         }
@@ -303,7 +301,7 @@ public class FavorEventHandler {
             // run each perk
             Perk perk;
             for(ResourceLocation id : perks) {
-                perk = RPGGods.PERK.get(id).orElse(null);
+                perk = RPGGods.PERK_MAP.get(id);
                 success |= runPerk(perk, player, favor, entity, data, object);
             }
         }
@@ -441,7 +439,7 @@ public class FavorEventHandler {
         // create list using perk IDs
         List<Perk> perks = new ArrayList<>();
         for(ResourceLocation perkId : perkIds) {
-            perks.add(RPGGods.PERK.get(perkId).orElse(Perk.EMPTY));
+            perks.add(RPGGods.PERK_MAP.getOrDefault(perkId, Perk.EMPTY));
         }
         // load favor
         boolean success = false;

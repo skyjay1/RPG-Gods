@@ -1,4 +1,4 @@
-package rpggods.gui;
+package rpggods.menu;
 
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.world.entity.Mob;
@@ -21,7 +21,7 @@ import rpggods.entity.AltarEntity;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AltarContainer extends AbstractContainerMenu {
+public class AltarContainerMenu extends AbstractContainerMenu {
 
     public static final int PLAYER_INV_X = 32;
     public static final int PLAYER_INV_Y = 120;
@@ -37,11 +37,11 @@ public class AltarContainer extends AbstractContainerMenu {
     private rpggods.deity.Altar altar;
     private Container altarInv;
 
-    public AltarContainer(int id, final Inventory inventory) {
+    public AltarContainerMenu(int id, final Inventory inventory) {
         this(id, inventory, new SimpleContainer(3), null);
     }
 
-    public AltarContainer(final int id, final Inventory playerInv, final Container altarInv, final AltarEntity entity) {
+    public AltarContainerMenu(final int id, final Inventory playerInv, final Container altarInv, final AltarEntity entity) {
         super(RGRegistry.ALTAR_CONTAINER.get(), id);
         this.entity = entity;
         this.altar = entity != null ? entity.createAltarProperties() : rpggods.deity.Altar.EMPTY;

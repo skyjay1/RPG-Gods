@@ -87,9 +87,9 @@ public class AffinityGoal {
                 if(isPassive && isHostile) {
                     final Map<Affinity.Type, List<ResourceLocation>> affinityMap = RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of());
                     final List<FavorRange> passivePerks = affinityMap.getOrDefault(Affinity.Type.PASSIVE, ImmutableList.of())
-                            .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());
+                            .stream().map(r -> RPGGods.PERK_MAP.getOrDefault(id, Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());
                     final List<FavorRange> hostilePerks = affinityMap.getOrDefault(Affinity.Type.HOSTILE, ImmutableList.of())
-                            .stream().map(r -> RPGGods.PERK.get(id).orElse(Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());;
+                            .stream().map(r -> RPGGods.PERK_MAP.getOrDefault(id, Perk.EMPTY)).map(Perk::getRange).collect(Collectors.toList());;
                     RPGGods.LOGGER.error("Conflicting affinity perks for " + id + " ; Hostile is " + hostilePerks + " and Passive is " + passivePerks);
                     return ImmutablePair.of(false, false);
                 }
@@ -108,7 +108,7 @@ public class AffinityGoal {
         final ResourceLocation id = creature.getType().getRegistryName();
         Perk p;
         for(ResourceLocation r : RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.PASSIVE, ImmutableList.of())) {
-            p = RPGGods.PERK.get(r).orElse(null);
+            p = RPGGods.PERK_MAP.get(r);
             if(p != null && p.getRange().isInRange(playerFavor)) {
                 return true;
             }
@@ -125,7 +125,7 @@ public class AffinityGoal {
         final ResourceLocation id = creature.getType().getRegistryName();
         Perk p;
         for(ResourceLocation r : RPGGods.AFFINITY.getOrDefault(id, ImmutableMap.of()).getOrDefault(Affinity.Type.HOSTILE, ImmutableList.of())) {
-            p = RPGGods.PERK.get(r).orElse(null);
+            p = RPGGods.PERK_MAP.get(r);
             if(p != null && p.getRange().isInRange(playerFavor)) {
                 return true;
             }
@@ -208,7 +208,7 @@ public class AffinityGoal {
                         if(favor.isEnabled()) {
                             Perk p;
                             for(ResourceLocation r : perks) {
-                                p = RPGGods.PERK.get(r).orElse(null);
+                                p = RPGGods.PERK_MAP.get(r);
                                 if(p != null && p.getRange().isInRange(favor)) {
                                     return true;
                                 }

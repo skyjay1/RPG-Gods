@@ -38,14 +38,14 @@ import rpggods.blockentity.BrazierBlockEntity;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
-import rpggods.gui.AltarContainer;
-import rpggods.gui.FavorContainer;
+import rpggods.menu.AltarContainerMenu;
+import rpggods.menu.FavorContainerMenu;
 import rpggods.item.AltarItem;
 import rpggods.item.ScrollItem;
-import rpggods.loot.AutosmeltOrCobbleModifier;
-import rpggods.loot.CropMultiplierModifier;
-import rpggods.recipe.ShapedAltarRecipe;
-import rpggods.recipe.ShapelessAltarRecipe;
+import rpggods.util.AutosmeltOrCobbleModifier;
+import rpggods.util.CropMultiplierModifier;
+import rpggods.util.ShapedAltarRecipe;
+import rpggods.util.ShapelessAltarRecipe;
 import rpggods.tameable.ITameable;
 import rpggods.util.AltarStructureProcessor;
 
@@ -132,15 +132,15 @@ public final class RGRegistry {
             RECIPE_SERIALIZERS.register(ShapedAltarRecipe.NAME, () -> new ShapedAltarRecipe.Serializer());
 
     //// MENU TYPES ////
-    public static final RegistryObject<MenuType<AltarContainer>> ALTAR_CONTAINER = MENU_TYPES.register("altar_container", () ->
+    public static final RegistryObject<MenuType<AltarContainerMenu>> ALTAR_CONTAINER = MENU_TYPES.register("altar_container", () ->
         IForgeMenuType.create((windowId, inv, data) -> {
             final int entityId = data.readInt();
             Entity entity = inv.player.level.getEntity(entityId);
             AltarEntity altarEntity = (AltarEntity) entity;
-            return new AltarContainer(windowId, inv, altarEntity.getInventory(), altarEntity);
+            return new AltarContainerMenu(windowId, inv, altarEntity.getInventory(), altarEntity);
         })
     );
-    public static final RegistryObject<MenuType<FavorContainer>> FAVOR_CONTAINER = MENU_TYPES.register("favor_container", () ->
+    public static final RegistryObject<MenuType<FavorContainerMenu>> FAVOR_CONTAINER = MENU_TYPES.register("favor_container", () ->
         IForgeMenuType.create((windowId, inv, data) -> {
             CompoundTag nbt = data.readNbt();
             // load favor capability
@@ -155,7 +155,7 @@ public final class RGRegistry {
             if(hasDeity) {
                 deityId = data.readResourceLocation();
             }
-            return new FavorContainer(windowId, inv, favor, deityId);
+            return new FavorContainerMenu(windowId, inv, favor, deityId);
         })
     );
 
@@ -211,7 +211,7 @@ public final class RGRegistry {
             ItemProperties.register(ALTAR_ITEM.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
                 if(altars.isEmpty() || (world != null && world.getGameTime() % 100 == 0)) {
-                    altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());
+                    altars = Lists.newArrayList(RPGGods.ALTAR_MAP.keySet());
                     Collections.sort(altars, ResourceLocation::compareNamespaced);
                 }
                 ResourceLocation deity = ResourceLocation.tryParse(item.getOrCreateTag().getString(AltarItem.KEY_ALTAR));

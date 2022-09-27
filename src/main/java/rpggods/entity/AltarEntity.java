@@ -57,16 +57,17 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.altar.AltarItems;
-import rpggods.altar.AltarPose;
+import rpggods.deity.Altar;
+import rpggods.util.altar.AltarItems;
+import rpggods.util.altar.AltarPose;
 import rpggods.block.GlowBlock;
 import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorEventHandler;
+import rpggods.RGEvents;
 import rpggods.favor.Favor;
 import rpggods.favor.IFavor;
-import rpggods.gui.AltarContainer;
-import rpggods.gui.FavorContainer;
+import rpggods.menu.AltarContainerMenu;
+import rpggods.menu.FavorContainerMenu;
 import rpggods.item.AltarItem;
 import rpggods.network.SUpdateAltarPacket;
 import rpggods.perk.PerkCondition;
@@ -308,12 +309,12 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 DeityHelper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityHelper::new);
                 if(!helper.perkByConditionMap.getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of()).isEmpty()) {
                     // onPerformRitual
-                    FavorEventHandler.performRitual(this, getDeity().get());
+                    RGEvents.performRitual(this, getDeity().get());
                 }
             }
             // attempt to place light block
             if(tickCount % 4 == 1) {
-                rpggods.deity.Altar altar = RPGGods.ALTAR.get(getAltar()).orElse(rpggods.deity.Altar.EMPTY);
+                Altar altar = RPGGods.ALTAR_MAP.getOrDefault(getAltar(), Altar.EMPTY);
                 int lightLevel = altar.getLightLevel();
                 // check light level
                 if(lightLevel > 0) {
@@ -418,7 +419,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     ItemStack heldItem = player.getItemInHand(hand);
                     if(!heldItem.isEmpty()) {
                         // attempt to process held item as offering
-                        Optional<ItemStack> offeringResult = FavorEventHandler.onOffering(Optional.of(this), deity, player, ifavor, heldItem, false);
+                        Optional<ItemStack> offeringResult = RGEvents.onOffering(Optional.of(this), deity, player, ifavor, heldItem, false);
                         // if offering succeeded, update player inventory
                         if (offeringResult.isPresent()) {
                             player.setItemInHand(hand, offeringResult.get());
@@ -428,7 +429,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     // no offering result, open favor GUI
                     NetworkHooks.openGui((ServerPlayer) player,
                             new SimpleMenuProvider((id, inventory, p) ->
-                                    new FavorContainer(id, inventory, ifavor, deity),
+                                    new FavorContainerMenu(id, inventory, ifavor, deity),
                                     TextComponent.EMPTY),
                             buf -> {
                                 buf.writeNbt(ifavor.serializeNBT());
@@ -442,7 +443,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 // open altar GUI
                 NetworkHooks.openGui((ServerPlayer) player,
                         new SimpleMenuProvider((id, inv, p) ->
-                                new AltarContainer(id, inv, this.inventory, this),
+                                new AltarContainerMenu(id, inv, this.inventory, this),
                                 TextComponent.EMPTY),
                         buf -> {
                             buf.writeInt(this.getId());
@@ -569,7 +570,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
      */
     public void applyAltarProperties(final ResourceLocation altarId) {
         // query altar by id
-        rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
+        Altar altar = RPGGods.ALTAR_MAP.getOrDefault(altarId, Altar.EMPTY);
         // apply properties
         setDeity(altar.getDeity());
         setFemale(altar.isFemale());
@@ -601,7 +602,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
      */
     public static CompoundTag writeAltarProperties(final ResourceLocation altarId, final Rotation rotation) {
         // query altar by id
-        rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
+        Altar altar = RPGGods.ALTAR_MAP.getOrDefault(altarId, Altar.EMPTY);
         // create compound tag
         CompoundTag compoundTag = new CompoundTag();
         // write altar properties to the tag
@@ -610,7 +611,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         if (altar.getDeity().isPresent() && !altar.getDeity().get().toString().isEmpty()) {
             // determine string to save deity name
             ResourceLocation deityId = altar.getDeity().get();
-            deity = RPGGods.DEITY.get(deityId);
+            deity = Optional.ofNullable(RPGGods.DEITY_MAP.get(deityId));
             compoundTag.putString(KEY_DEITY, deityId.toString());
         }
         // write altar

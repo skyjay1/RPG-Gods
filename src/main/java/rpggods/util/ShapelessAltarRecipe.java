@@ -1,11 +1,11 @@
-package rpggods.recipe;
+package rpggods.util;
 
 import com.google.gson.JsonObject;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.core.NonNullList;
@@ -16,16 +16,16 @@ import rpggods.item.AltarItem;
 
 import java.util.Optional;
 
-public class ShapedAltarRecipe extends ShapedRecipe {
+public class ShapelessAltarRecipe extends ShapelessRecipe {
 
     public static final String CATEGORY = "altar";
-    public static final String NAME = CATEGORY + "_shaped";
+    public static final String NAME = CATEGORY + "_shapeless";
 
     private final Optional<ResourceLocation> altarId;
 
-    public ShapedAltarRecipe(ResourceLocation recipeId, final ItemStack outputItem, final Optional<ResourceLocation> altarId,
-                             final int width, final int height, final NonNullList<Ingredient> recipeItemsIn) {
-        super(recipeId, CATEGORY, width, height, recipeItemsIn, resultWithTag(outputItem, altarId));
+    public ShapelessAltarRecipe(ResourceLocation recipeId, final ItemStack outputItem, final Optional<ResourceLocation> altarId,
+                                final NonNullList<Ingredient> recipeItemsIn) {
+        super(recipeId, CATEGORY, resultWithTag(outputItem, altarId), recipeItemsIn);
         this.altarId = altarId;
     }
 
@@ -50,49 +50,46 @@ public class ShapedAltarRecipe extends ShapedRecipe {
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return RGRegistry.SHAPED_ALTAR_RECIPE_SERIALIZER.get();
+        return RGRegistry.SHAPELESS_ALTAR_RECIPE_SERIALIZER.get();
     }
 
     public Optional<ResourceLocation> getAltarId() {
         return altarId;
     }
 
-    public static class Serializer extends ShapedRecipe.Serializer {
+    public static class Serializer extends ShapelessRecipe.Serializer {
 
         @Override
-        public ShapedRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
+        public ShapelessRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
             // read the recipe from shapeless recipe serializer
-            final ShapedRecipe recipe = super.fromJson(recipeId, json);
+            final ShapelessRecipe recipe = super.fromJson(recipeId, json);
             final String sAltarId = GsonHelper.getAsString(json, AltarItem.KEY_ALTAR, "");
             if(sAltarId.isEmpty()) {
-                return new ShapedAltarRecipe(recipeId, recipe.getResultItem(), Optional.empty(),
-                        recipe.getWidth(), recipe.getHeight(), recipe.getIngredients());
+                return new ShapelessAltarRecipe(recipeId, recipe.getResultItem(), Optional.empty(), recipe.getIngredients());
             }
             // attempt to read resource location
             ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             if (null == altarId) {
                 RPGGods.LOGGER.error("Failed to parse altar ID \"" + sAltarId + "\" in recipe with id " + recipeId);
             }
-            return new ShapedAltarRecipe(recipeId, recipe.getResultItem(), Optional.ofNullable(altarId),
-                    recipe.getWidth(), recipe.getHeight(), recipe.getIngredients());
+            return new ShapelessAltarRecipe(recipeId, recipe.getResultItem(), Optional.ofNullable(altarId), recipe.getIngredients());
         }
 
         @Override
-        public ShapedRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
-            final ShapedRecipe recipe = super.fromNetwork(recipeId, buffer);
+        public ShapelessRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
+            final ShapelessRecipe recipe = super.fromNetwork(recipeId, buffer);
             final boolean hasAltar = buffer.readBoolean();
             ResourceLocation altarId = null;
             if(hasAltar) {
                 altarId = buffer.readResourceLocation();
             }
-            return new ShapedAltarRecipe(recipeId, recipe.getResultItem(), Optional.ofNullable(altarId),
-                    recipe.getWidth(), recipe.getHeight(), recipe.getIngredients());
+            return new ShapelessAltarRecipe(recipeId, recipe.getResultItem(), Optional.ofNullable(altarId), recipe.getIngredients());
         }
 
         @Override
-        public void toNetwork(FriendlyByteBuf buffer, ShapedRecipe recipeIn) {
+        public void toNetwork(FriendlyByteBuf buffer, ShapelessRecipe recipeIn) {
             super.toNetwork(buffer, recipeIn);
-            final ShapedAltarRecipe recipe = (ShapedAltarRecipe) recipeIn;
+            final ShapelessAltarRecipe recipe = (ShapelessAltarRecipe) recipeIn;
             final boolean hasAltar = recipe.getAltarId().isPresent();
             buffer.writeBoolean(hasAltar);
             if(hasAltar) {

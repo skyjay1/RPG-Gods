@@ -36,7 +36,7 @@ import rpggods.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
-import rpggods.gui.FavorContainer;
+import rpggods.menu.FavorContainerMenu;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkAction;
@@ -50,7 +50,7 @@ import java.util.Optional;
 import java.util.Set;
 
 
-public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
+public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
 
     // CONSTANTS
     private static final ResourceLocation SCREEN_TEXTURE = new ResourceLocation(RPGGods.MODID, "textures/gui/favor/favor.png");
@@ -177,7 +177,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
     private int dy;
 
 
-    public FavorScreen(FavorContainer screenContainer, Inventory inv, Component titleIn) {
+    public FavorScreen(FavorContainerMenu screenContainer, Inventory inv, Component titleIn) {
         super(screenContainer, inv, titleIn);
         this.inventory = inv;
         this.imageWidth = SCREEN_WIDTH;
@@ -216,7 +216,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // add all offerings to map using deity helper (so we can skip offerings that were invalid)
             for(List<ResourceLocation> entry : deityHelper.offeringMap.values()) {
                 for(ResourceLocation offeringId : entry) {
-                    Optional<Offering> optional = RPGGods.OFFERING.get(offeringId);
+                    Optional<Offering> optional = Optional.ofNullable(RPGGods.OFFERING_MAP.get(offeringId));
                     optional.ifPresent(offering -> {
                         // determine which map to use (offering or trade)
                         Map<ResourceLocation, List<ImmutablePair<ResourceLocation, Offering>>> map = offering.getTrade().isPresent() ? tradeMap : offeringMap;
@@ -228,7 +228,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // add all sacrifices to map using deity helper (so we can skip sacrifices that were invalid)
             for(List<ResourceLocation> entry : deityHelper.sacrificeMap.values()) {
                 for(ResourceLocation sacrificeId : entry) {
-                    Optional<Sacrifice> optional = RPGGods.SACRIFICE.get(sacrificeId);
+                    Optional<Sacrifice> optional = Optional.ofNullable(RPGGods.SACRIFICE_MAP.get(sacrificeId));
                     optional.ifPresent(sacrifice -> {
                         // add the sacrifice to the map
                         sacrificeMap.get(d.getId()).add(ImmutablePair.of(sacrificeId, sacrifice));
@@ -238,9 +238,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             // add all non-hidden perks to map using deity helper (so we can skip perks that were invalid)
             Perk perk;
             for(ResourceLocation entry : deityHelper.perkList) {
-                Optional<Perk> optional = RPGGods.PERK.get(entry);
-                if(optional.isPresent()) {
-                    perk = optional.get();
+                perk = RPGGods.PERK_MAP.get(entry);
+                if(perk != null) {
                     // skip hidden perks
                     if(perk.getIcon().isHidden()) {
                         continue;
@@ -277,8 +276,8 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
         if(deityList.size() > 0) {
             deity = screenContainer.getDeity().orElse(deityList.get(0));
             // ensure deity is unlocked
-            Deity d = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY);
-            if(!favor.getFavor(deity).isEnabled()) {
+            Deity d = RPGGods.DEITY_MAP.getOrDefault(deity, Deity.EMPTY);
+            if(!d.isEnabled() || !favor.getFavor(deity).isEnabled()) {
                 deity = deityList.get(0);
             }
         }
@@ -969,8 +968,10 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
             if(perk != null) {
                 // add all perk action titles
                 for(PerkAction data : perk.getActions()) {
-                    perkActions.add(data.getDisplayName().copy().withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE));
-                    perkActions.add(data.getDisplayDescription().copy().withStyle(ChatFormatting.BLUE));
+                    if(!data.isHidden()) {
+                        perkActions.add(data.getDisplayName().copy().withStyle(ChatFormatting.BLACK, ChatFormatting.UNDERLINE));
+                        perkActions.add(data.getDisplayDescription().copy().withStyle(ChatFormatting.BLUE));
+                    }
                 }
                 // add perk condition texts
                 for(PerkCondition condition : perk.getConditions()) {
@@ -1480,7 +1481,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainer> {
                 this.visible = true;
                 this.deity = FavorScreen.this.deityList.get(deityId);
                 this.setMessage(new TranslatableComponent(rpggods.deity.Altar.createTranslationKey(deity)));
-                this.item = RPGGods.DEITY.get(deity).orElse(Deity.EMPTY).getIcon();
+                this.item = RPGGods.DEITY_MAP.getOrDefault(deity, Deity.EMPTY).getIcon();
             } else {
                 this.visible = false;
                 this.deity = null;

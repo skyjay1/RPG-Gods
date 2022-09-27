@@ -8,7 +8,7 @@ import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorChangedEvent;
+import rpggods.util.FavorChangedEvent;
 
 import javax.annotation.Nullable;
 

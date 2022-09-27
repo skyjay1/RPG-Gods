@@ -57,15 +57,14 @@ import rpggods.RPGGods;
 import rpggods.deity.Altar;
 import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
-import rpggods.event.FavorChangedEvent;
-import rpggods.event.FavorEventHandler;
+import rpggods.util.FavorChangedEvent;
+import rpggods.RGEvents;
 import rpggods.favor.FavorLevel;
 import rpggods.favor.IFavor;
 import rpggods.tameable.ITameable;
 
 import java.util.Optional;
 import java.util.Random;
-import java.util.function.Supplier;
 
 public final class PerkAction {
 
@@ -114,8 +113,8 @@ public final class PerkAction {
 
     /**
      * Runs a single Perk without any of the preliminary checks or cooldown.
-     * If you want these, call {@link FavorEventHandler#runPerk(Perk, Player, IFavor)} or
-     * {@link FavorEventHandler#runPerk(Perk, Player, IFavor, Optional, Optional, Optional)} instead.
+     * If you want these, call {@link RGEvents#runPerk(Perk, Player, IFavor)} or
+     * {@link RGEvents#runPerk(Perk, Player, IFavor, Optional, Optional, Optional)} instead.
      * @param deity the Deity that is associated with the perk
      * @param player the player
      * @param favor the player's favor
@@ -127,7 +126,7 @@ public final class PerkAction {
     public boolean run(final ResourceLocation deity, final Player player, final IFavor favor,
                                         final Optional<Entity> entity, final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         switch (this.getType()) {
-            case FUNCTION: return getId().isPresent() && FavorEventHandler.runFunction(player.level, player, getId().get());
+            case FUNCTION: return getId().isPresent() && RGEvents.runFunction(player.level, player, getId().get());
             case POTION:
                 if(getTag().isPresent()) {
                     Optional<MobEffectInstance> effect = readEffectInstance(getTag().get());
@@ -305,7 +304,7 @@ public final class PerkAction {
             case ADD_DECAY:
                 if(getId().isPresent() && getMultiplier().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
-                    if(!level.isEnabled() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
+                    if(level.isEnabled() && RPGGods.DEITY_MAP.getOrDefault(getId().get(), Deity.EMPTY).isEnabled()) {
                         level.setDecayRate(level.getDecayRate() + getMultiplier().get());
                         return true;
                     }
@@ -314,7 +313,7 @@ public final class PerkAction {
             case UNLOCK:
                 if(getId().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
-                    if(!level.isEnabled() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
+                    if(!level.isEnabled() && RPGGods.DEITY_MAP.getOrDefault(getId().get(), Deity.EMPTY).isEnabled()) {
                         favor.getFavor(getId().get()).setEnabled(true);
                         // send player feedback
                         Component message = getDisplayDescription();
@@ -604,7 +603,7 @@ public final class PerkAction {
                 if(getId().isPresent()) {
                     ResourceLocation deityId = getId().get();
                     Component deityName = DeityHelper.getName(deityId);
-                    Altar altar = RPGGods.ALTAR.get(deityId).orElse(Altar.EMPTY);
+                    Altar altar = RPGGods.ALTAR_MAP.getOrDefault(deityId, Altar.EMPTY);
                     String suffix = altar.isFemale() ? "female" : "male";
                     return new TranslatableComponent("favor.perk.type.unlock.description." + suffix, deityName);
                 }

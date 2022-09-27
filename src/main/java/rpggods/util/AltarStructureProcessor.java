@@ -49,7 +49,7 @@ public class AltarStructureProcessor extends StructureProcessor {
             Random random = new Random(seed);
             // choose random deity
             ResourceLocation altarId = new ResourceLocation("empty");
-            List<ResourceLocation> altarIds = new ArrayList<>(RPGGods.ALTAR.getKeys());
+            List<ResourceLocation> altarIds = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());
             if (!altarIds.isEmpty()) {
                 // sort list, then choose random element
                 altarIds.sort(ResourceLocation::compareNamespaced);
