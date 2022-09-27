@@ -1,37 +1,39 @@
 package rpggods.network;
 
-import com.mojang.serialization.DataResult;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import com.mojang.serialization.Codec;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.LogicalSide;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
-import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 
-import java.util.Optional;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
  * Called when datapacks are (re)loaded.
- * Sent from the server to the client with a single ResourceLocation ID
- * and the corresponding Altar as it was read from JSON.
+ * Sent from the server to the client with a map of
+ * ResourceLocation IDs and Altars
  **/
 public class SAltarPacket {
 
-    protected ResourceLocation altarId;
-    protected Altar altar;
+    protected static final Codec<Map<ResourceLocation, Altar>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, Altar.CODEC);
+
+    protected Map<ResourceLocation, Altar> data;
 
     /**
-     * @param altarNameIn the ResourceLocation ID of the Deity
-     * @param altarIn     the Altar
+     * @param data the data map
      **/
-    public SAltarPacket(final ResourceLocation altarNameIn, final Altar altarIn) {
-        this.altarId = altarNameIn;
-        this.altar = altarIn;
+    public SAltarPacket(final Map<ResourceLocation, Altar> data) {
+        this.data = data;
+        if (FMLEnvironment.dist != Dist.CLIENT) {
+            // update server-side map
+            updateAltars(data);
+        }
     }
 
     /**
@@ -41,11 +43,8 @@ public class SAltarPacket {
      * @return a new instance of a SAltarPacket based on the PacketBuffer
      */
     public static SAltarPacket fromBytes(final FriendlyByteBuf buf) {
-        final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundTag sNBT = buf.readNbt();
-        final Optional<Altar> sEffect = RPGGods.ALTAR.readObject(sNBT)
-                .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Altar from NBT for packet\n" + error));
-        return new SAltarPacket(sName, sEffect.orElse(Altar.EMPTY));
+        final Map<ResourceLocation, Altar> data = buf.readWithCodec(CODEC);
+        return new SAltarPacket(data);
     }
 
     /**
@@ -55,10 +54,7 @@ public class SAltarPacket {
      * @param buf the PacketBuffer
      */
     public static void toBytes(final SAltarPacket msg, final FriendlyByteBuf buf) {
-        DataResult<Tag> nbtResult = RPGGods.ALTAR.writeObject(msg.altar);
-        Tag tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Altar to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.altarId);
-        buf.writeNbt((CompoundTag) tag);
+        buf.writeWithCodec(CODEC, msg.data);
     }
 
     /**
@@ -71,11 +67,25 @@ public class SAltarPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                RPGGods.ALTAR.put(message.altarId, message.altar);
-                ResourceLocation deityId = message.altar.getDeity().orElse(Deity.EMPTY.getId());
-                RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new).add(message.altarId, message.altar);
+                updateAltars(message.data);
             });
         }
         context.setPacketHandled(true);
+    }
+
+    private static void updateAltars(final Map<ResourceLocation, Altar> data) {
+        // update maps
+        RPGGods.ALTAR_MAP.clear();
+        RPGGods.ALTAR_MAP.putAll(data);
+        // clear all deity helper altars
+        for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+            helper.altarList.clear();
+        }
+        // add altars to deity helper
+        for(Map.Entry<ResourceLocation, Altar> entry : RPGGods.ALTAR_MAP.entrySet()) {
+            entry.getValue().getDeity().ifPresent(deity ->
+                    RPGGods.DEITY_HELPER.computeIfAbsent(deity, DeityHelper::new).add(entry.getKey(), entry.getValue())
+            );
+        }
     }
 }

@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 import rpggods.favor.FavorRange;
+import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkCondition;
 import rpggods.perk.PerkAction;
@@ -19,7 +20,7 @@ import java.util.Optional;
 
 /**
  * Centralizes all offerings, sacrifices, and perks
- * for quicker and easier lookup
+ * to reduce expensive searches and sorts after data has been loaded.
  */
 public class DeityHelper {
     public static final DeityHelper EMPTY = new DeityHelper(new ResourceLocation("null"));
@@ -39,22 +40,18 @@ public class DeityHelper {
     /** List of all Perks **/
     public final List<ResourceLocation> perkList = new ArrayList<>();
 
+    /**
+     * @param id the ID of the associated Deity
+     */
     public DeityHelper(ResourceLocation id) {
         this.id = id;
     }
 
     /**
-     * Removes all Offerings, Sacrifices, and Perks from this deity
+     * Add an Altar to this deity
+     * @param id the altar ID
+     * @param altar the Altar to add
      */
-    public void clear() {
-        altarList.clear();
-        offeringMap.clear();
-        sacrificeMap.clear();
-        perkByConditionMap.clear();
-        perkByTypeMap.clear();
-        perkList.clear();
-    }
-
     public void add(final ResourceLocation id, final Altar altar) {
         altarList.add(id);
     }
@@ -98,7 +95,7 @@ public class DeityHelper {
         // validate actions can only unlock deities that are enabled
         for(PerkAction action : perk.getActions()) {
             if(action.getType() == PerkAction.Type.UNLOCK) {
-                Deity deity = RPGGods.DEITY.get(action.getId().orElse(Deity.EMPTY.getId())).orElse(Deity.EMPTY);
+                Deity deity = RPGGods.DEITY_MAP.getOrDefault(action.getId().orElse(Deity.EMPTY.getId()), Deity.EMPTY);
                 if(!deity.isEnabled()) {
                     RPGGods.LOGGER.info("Skipping perk with ID " + id + " because it unlocks a deity that is disabled.");
                     return;
@@ -111,15 +108,20 @@ public class DeityHelper {
         for(PerkCondition condition : perk.getConditions()) {
             perkByConditionMap.computeIfAbsent(condition.getType(), r -> new ArrayList<>()).add(id);
         }
-        // add to perkByType map
+        // add to perkByType map and affinity map
         for(final PerkAction action : perk.getActions()) {
             PerkAction.Type type = action.getType();
             perkByTypeMap.computeIfAbsent(type, r -> new ArrayList<>()).add(id);
+            // add to affinity map if applicable
+            action.getAffinity().ifPresent(affinity -> {
+                RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), entityId -> new EnumMap<>(Affinity.Type.class))
+                        .computeIfAbsent(affinity.getType(), affinityType -> new ArrayList<>()).add(id);
+            });
         }
     }
 
     public Optional<Deity> getDeity() {
-        return RPGGods.DEITY.get(this.id);
+        return Optional.ofNullable(RPGGods.DEITY_MAP.get(this.id));
     }
 
     public static MutableComponent getName(final ResourceLocation id) {
@@ -136,7 +138,7 @@ public class DeityHelper {
         for(List<ResourceLocation> s : sacrificeMap.values()) {
             sacrifices += s.size();
         }
-        final StringBuilder sb = new StringBuilder("Deity:");
+        final StringBuilder sb = new StringBuilder("DeityHelper:");
         sb.append(" id[").append(id).append("]");
         sb.append(" altars[").append(altarList.size()).append("]");
         sb.append(" offerings[").append(offerings).append("]");

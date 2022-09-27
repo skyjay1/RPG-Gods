@@ -74,7 +74,7 @@ public class CropMultiplierModifier extends LootModifier {
                 Collections.shuffle(cropHarvest);
                 Perk perk;
                 for (ResourceLocation id : cropHarvest) {
-                    perk = RPGGods.PERK.get(id).orElse(null);
+                    perk = RPGGods.PERK_MAP.get(id);
                     if (RGEvents.runPerk(perk, player, f)) {
                         float multiplier = 0;
                         for(PerkAction action : perk.getActions()) {

@@ -22,9 +22,11 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
+import rpggods.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,7 +45,7 @@ public class AltarItem extends Item {
         if(sAltarId != null && !sAltarId.isEmpty()) {
             ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             // determine if altar is a deity
-            Optional<rpggods.deity.Altar> altar = RPGGods.ALTAR.get(altarId);
+            Optional<Altar> altar = Optional.ofNullable(RPGGods.ALTAR_MAP.get(altarId));
             if(altar.isPresent() && altar.get().getDeity().isPresent()) {
                 return Component.translatable("item.rpggods.altar_x",
                         Component.translatable(rpggods.deity.Altar.createTranslationKey(altarId)));
@@ -60,7 +62,7 @@ public class AltarItem extends Item {
         if(!sAltarId.isEmpty()) {
             ResourceLocation altarId = ResourceLocation.tryParse(sAltarId);
             // determine if altar is not a deity but has a name
-            Optional<rpggods.deity.Altar> altar = RPGGods.ALTAR.get(altarId);
+            Optional<Altar> altar = Optional.ofNullable(RPGGods.ALTAR_MAP.get(altarId));
             if(altar.isPresent() && !altar.get().getDeity().isPresent() && altar.get().getName().isPresent()) {
                 tooltip.add(Component.literal(altar.get().getName().get()));
             }
@@ -69,22 +71,12 @@ public class AltarItem extends Item {
 
     public static void addAltarItems(List<ItemStack> items) {
         // add altar item stacks for each registered altar
-        for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
+        List<ResourceLocation> altarList = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());
+        altarList.sort(ResourceLocation::compareNamespaced);
+        for(ResourceLocation altarId : altarList) {
             ItemStack itemStack = new ItemStack(RGRegistry.ALTAR_ITEM.get());
             itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
             items.add(itemStack);
-        }
-    }
-
-    // unused
-    public static void addStatueItemsOnly(List<ItemStack> items) {
-        // add altar item stacks for each registered altar that does not have a deity
-        for(ResourceLocation altarId : RPGGods.ALTAR.getKeys()) {
-            if(!RPGGods.ALTAR.get(altarId).get().getDeity().isPresent()) {
-                ItemStack itemStack = new ItemStack(RGRegistry.ALTAR_ITEM.get());
-                itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
-                items.add(itemStack);
-            }
         }
     }
 

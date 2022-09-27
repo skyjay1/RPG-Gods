@@ -206,8 +206,8 @@ public final class RGRegistry {
             ItemProperties.register(ALTAR_ITEM.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
                 // determine index of altar in list
                 if(altars.isEmpty() || (world != null && world.getGameTime() % 100 == 0)) {
-                    altars = Lists.newArrayList(RPGGods.ALTAR.getKeys());
-                    Collections.sort(altars, ResourceLocation::compareNamespaced);
+                    altars = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());
+                    altars.sort(ResourceLocation::compareNamespaced);
                 }
                 ResourceLocation deity = ResourceLocation.tryParse(item.getOrCreateTag().getString(AltarItem.KEY_ALTAR));
                 int index = 0;

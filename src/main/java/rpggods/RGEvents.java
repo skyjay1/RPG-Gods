@@ -106,7 +106,7 @@ public class RGEvents {
             ResourceLocation offeringId = null;
             Offering offering = null;
             for(ResourceLocation id : RPGGods.DEITY_HELPER.get(deity).offeringMap.getOrDefault(ForgeRegistries.ITEMS.getKey(item.getItem()), ImmutableList.of())) {
-                Offering o = RPGGods.OFFERING.get(id).orElse(null);
+                Offering o = RPGGods.OFFERING_MAP.get(id);
                 if(o != null && o.matches(item)) {
                     offeringId = id;
                     offering = o;
@@ -189,9 +189,9 @@ public class RGEvents {
             ResourceLocation deityId;
             Sacrifice sacrifice;
             Cooldown cooldown;
-            for (Map.Entry<ResourceLocation, Optional<Sacrifice>> entry : RPGGods.SACRIFICE.getEntries()) {
-                if (entry.getValue() != null && entry.getValue().isPresent()) {
-                    sacrifice = entry.getValue().get();
+            for (Map.Entry<ResourceLocation, Sacrifice> entry : RPGGods.SACRIFICE_MAP.entrySet()) {
+                if (entry.getValue() != null) {
+                    sacrifice = entry.getValue();
                     // check sacrifice matches entity that was killed
                     if (entityId.equals(sacrifice.getEntity())) {
                         // check sacrifice cooldown
@@ -255,7 +255,7 @@ public class RGEvents {
             // run each perk
             Perk perk;
             for (ResourceLocation id : perkList) {
-                perk = RPGGods.PERK.get(id).orElse(null);
+                perk = RPGGods.PERK_MAP.get(id);
                 success |= runPerk(perk, player, favor, entity, data, object);
             }
         }
@@ -304,7 +304,7 @@ public class RGEvents {
             // run each perk
             Perk perk;
             for (ResourceLocation id : perks) {
-                perk = RPGGods.PERK.get(id).orElse(null);
+                perk = RPGGods.PERK_MAP.get(id);
                 success |= runPerk(perk, player, favor, entity, data, object);
             }
         }
@@ -445,7 +445,7 @@ public class RGEvents {
         // create list using perk IDs
         List<Perk> perks = new ArrayList<>();
         for (ResourceLocation perkId : perkIds) {
-            perks.add(RPGGods.PERK.get(perkId).orElse(Perk.EMPTY));
+            perks.add(RPGGods.PERK_MAP.getOrDefault(perkId, Perk.EMPTY));
         }
         // load favor
         boolean success = false;
@@ -458,22 +458,22 @@ public class RGEvents {
                     success |= runPerk(perk, player, favor, Optional.of(altar), Optional.of(itemId), Optional.empty());
                 }
             }
-        }
-        // send feedback
-        if (success) {
-            // summon visual lightning bolt
-            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
-            bolt.setVisualOnly(true);
-            Vec3 position = Vec3.atBottomCenterOf(pos.below());
-            bolt.setPos(position.x, position.y, position.z);
-            altar.level.addFreshEntity(bolt);
-            // send message
-            Component message = Component.translatable("favor.perk.type.patron.description.add", DeityHelper.getName(deityId))
-                    .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
-            player.displayClientMessage(message, true);
+            // send feedback
+            if (success) {
+                // summon visual lightning bolt
+                LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
+                bolt.setVisualOnly(true);
+                Vec3 position = Vec3.atBottomCenterOf(pos.below());
+                bolt.setPos(position.x, position.y, position.z);
+                altar.level.addFreshEntity(bolt);
+                // send message
+                Component message = Component.translatable("favor.perk.type.patron.description.add", DeityHelper.getName(favor.getPatron().get()))
+                        .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+                player.displayClientMessage(message, true);
+            }
         }
 
-        return false;
+        return success;
     }
 
     public static class ModEvents {

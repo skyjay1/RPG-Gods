@@ -1,36 +1,39 @@
 package rpggods.network;
 
-import com.mojang.serialization.DataResult;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import com.mojang.serialization.Codec;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.LogicalSide;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
 import rpggods.deity.Sacrifice;
 
-import java.util.Optional;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
  * Called when datapacks are (re)loaded.
- * Sent from the server to the client with a single ResourceLocation ID
- * and the corresponding Sacrifice as it was read from JSON.
+ * Sent from the server to the client with a map of
+ * ResourceLocation IDs and Sacrifices
  **/
 public class SSacrificePacket {
 
-    protected ResourceLocation sacrificeId;
-    protected Sacrifice sacrifice;
+    protected static final Codec<Map<ResourceLocation, Sacrifice>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, Sacrifice.CODEC);
+
+    protected Map<ResourceLocation, Sacrifice> data;
 
     /**
-     * @param sacrificeId the ResourceLocation ID of the Sacrifice
-     * @param sacrificeIn     the Sacrifice
+     * @param data the data map
      **/
-    public SSacrificePacket(final ResourceLocation sacrificeId, final Sacrifice sacrificeIn) {
-        this.sacrificeId = sacrificeId;
-        this.sacrifice = sacrificeIn;
+    public SSacrificePacket(final Map<ResourceLocation, Sacrifice> data) {
+        this.data = data;
+        if (FMLEnvironment.dist != Dist.CLIENT) {
+            // update server-side map
+            updateSacrifices(data);
+        }
     }
 
     /**
@@ -40,11 +43,8 @@ public class SSacrificePacket {
      * @return a new instance of a SSacrificePacket based on the PacketBuffer
      */
     public static SSacrificePacket fromBytes(final FriendlyByteBuf buf) {
-        final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundTag sNBT = buf.readNbt();
-        final Optional<Sacrifice> sEffect = RPGGods.SACRIFICE.readObject(sNBT)
-                .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Sacrifice from NBT for packet\n" + error));
-        return new SSacrificePacket(sName, sEffect.orElse(Sacrifice.EMPTY));
+        final Map<ResourceLocation, Sacrifice> data = buf.readWithCodec(CODEC);
+        return new SSacrificePacket(data);
     }
 
     /**
@@ -54,10 +54,7 @@ public class SSacrificePacket {
      * @param buf the PacketBuffer
      */
     public static void toBytes(final SSacrificePacket msg, final FriendlyByteBuf buf) {
-        DataResult<Tag> nbtResult = RPGGods.SACRIFICE.writeObject(msg.sacrifice);
-        Tag tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Sacrifice to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.sacrificeId);
-        buf.writeNbt((CompoundTag) tag);
+        buf.writeWithCodec(CODEC, msg.data);
     }
 
     /**
@@ -70,11 +67,23 @@ public class SSacrificePacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                RPGGods.SACRIFICE.put(message.sacrificeId, message.sacrifice);
-                ResourceLocation deityId = Sacrifice.getDeity(message.sacrificeId);
-                RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new).add(message.sacrificeId, message.sacrifice);
+                updateSacrifices(message.data);
             });
         }
         context.setPacketHandled(true);
+    }
+
+    private static void updateSacrifices(final Map<ResourceLocation, Sacrifice> data) {
+        // add data to map
+        RPGGods.SACRIFICE_MAP.clear();
+        RPGGods.SACRIFICE_MAP.putAll(data);
+        // clear all deity helper sacrifices
+        for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+            helper.sacrificeMap.clear();
+        }
+        // add offerings to deity helper
+        for(Map.Entry<ResourceLocation, Sacrifice> entry : RPGGods.SACRIFICE_MAP.entrySet()) {
+            RPGGods.DEITY_HELPER.computeIfAbsent(Sacrifice.getDeity(entry.getKey()), DeityHelper::new).add(entry.getKey(), entry.getValue());
+        }
     }
 }

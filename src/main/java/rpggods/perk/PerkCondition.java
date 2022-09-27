@@ -4,42 +4,39 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.data.BuiltinRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.TagParser;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
-import net.minecraft.util.StringRepresentable;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
+import rpggods.RGEvents;
 import rpggods.RPGGods;
 import rpggods.deity.Altar;
-import rpggods.RGEvents;
 import rpggods.entity.AltarEntity;
 import rpggods.favor.IFavor;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -205,7 +202,8 @@ public final class PerkCondition {
         boolean idMatch;
         boolean tagMatch;
         switch (this.getType()) {
-            case PATRON: return favor.getPatron().isPresent() && deity.equals(favor.getPatron().get());
+            case PATRON: return favor.getPatron().isPresent() && getData().isPresent()
+                    && favor.getPatron().get().toString().equals(getData().get());
             case BIOME: return isInBiome(player.level, player.blockPosition());
             case DAY: return player.level.isDay();
             case NIGHT: return player.level.isNight();
@@ -281,7 +279,10 @@ public final class PerkCondition {
         ResourceLocation rl = ResourceLocation.tryParse(d);
         switch (getType()) {
             case PATRON: case UNLOCKED: case NEAR_ALTAR: case LEVEL_UP: case LEVEL_DOWN:
-                return Component.translatable(Altar.createTranslationKey(rl));
+                if(rl != null) {
+                    return Component.translatable(Altar.createTranslationKey(rl));
+                }
+                return Component.literal(d);
             case MAINHAND_ITEM: case RITUAL:
                 // display name of item tag
                 if(d.startsWith("#")) {
@@ -296,10 +297,10 @@ public final class PerkCondition {
                 }
                 return Component.literal(d);
             case BIOME:
-                // read data as either biome name or biome dictionary type
-                return d.contains(":")
-                    ? Component.translatable("biome." + rl.getNamespace() + "." + rl.getPath())
-                    : Component.literal(d);
+                if(rl != null) {
+                    return Component.translatable("biome." + rl.getNamespace() + "." + rl.getPath());
+                }
+                return Component.literal(d);
             case PLAYER_INTERACT_BLOCK:
                 if(!d.startsWith("#")) {
                     Block block = ForgeRegistries.BLOCKS.getValue(rl);
@@ -314,8 +315,16 @@ public final class PerkCondition {
                     return effect.getDisplayName();
                 }
                 return Component.literal(d);
-            case DIMENSION: return Component.translatable("dimension." + rl.getNamespace() + "." + rl.getPath());
-            case STRUCTURE: return Component.translatable("structure." + rl.getNamespace() + "." + rl.getPath());
+            case DIMENSION:
+                if(rl != null) {
+                    return Component.translatable("dimension." + rl.getNamespace() + "." + rl.getPath());
+                }
+                return Component.literal(d);
+            case STRUCTURE:
+                if(rl != null) {
+                    return Component.translatable("structure." + rl.getNamespace() + "." + rl.getPath());
+                }
+                return Component.literal(d);
             case PLAYER_HURT_ENTITY: case PLAYER_KILLED_ENTITY: case ENTITY_HURT_PLAYER:
             case ENTITY_KILLED_PLAYER: case PLAYER_INTERACT_ENTITY: case PLAYER_RIDE_ENTITY:
                 // read data as Entity ID
@@ -326,37 +335,6 @@ public final class PerkCondition {
             case DAY: case NIGHT: case RANDOM_TICK: case ENTER_COMBAT: case PLAYER_CROUCHING: default:
                 return Component.empty();
         }
-    }
-
-    /**
-     * @param list the component list
-     * @param color the text component formatting
-     * @param blacklist perk condition types to not include in the list
-     * @return a list of Components, one for each perk condition, with plurality and formatting
-     */
-    public static List<Component> formatDescriptions(List<PerkCondition> list, ChatFormatting color, Collection<PerkCondition.Type> blacklist) {
-        List<Component> perkConditions = new ArrayList<>();
-        // add perk condition texts
-        for(PerkCondition condition : list) {
-            // do not show ommitted conditions
-            if(!blacklist.contains(condition.getType())) {
-                perkConditions.add(condition.getDisplayName().copy().withStyle(color));
-            }
-        }
-        // add prefix to each condition based on plurality
-        if (perkConditions.size() > 0) {
-            // add prefix to first condition
-            Component t2 = Component.translatable("favor.perk.condition.single", perkConditions.get(0))
-                    .withStyle(color);
-            perkConditions.set(0, t2);
-            // add prefix to following conditions
-            for (int i = 1, l = perkConditions.size(); i < l; i++) {
-                t2 = Component.translatable("favor.perk.condition.multiple", perkConditions.get(i))
-                        .withStyle(color);
-                perkConditions.set(i, t2);
-            }
-        }
-        return perkConditions;
     }
 
     public static enum Type implements StringRepresentable {

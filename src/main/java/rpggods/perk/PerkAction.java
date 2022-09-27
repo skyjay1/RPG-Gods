@@ -302,7 +302,7 @@ public final class PerkAction {
             case ADD_DECAY:
                 if(getId().isPresent() && getMultiplier().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
-                    if(!level.isEnabled() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
+                    if(!level.isEnabled() && RPGGods.DEITY_MAP.getOrDefault(getId().get(), Deity.EMPTY).isEnabled()) {
                         level.setDecayRate(level.getDecayRate() + getMultiplier().get());
                         return true;
                     }
@@ -311,7 +311,7 @@ public final class PerkAction {
             case UNLOCK:
                 if(getId().isPresent()) {
                     FavorLevel level = favor.getFavor(getId().get());
-                    if(!level.isEnabled() && RPGGods.DEITY.get(getId().get()).orElse(Deity.EMPTY).isEnabled()) {
+                    if(!level.isEnabled() && RPGGods.DEITY_MAP.getOrDefault(getId().get(), Deity.EMPTY).isEnabled()) {
                         favor.getFavor(getId().get()).setEnabled(true);
                         // send player feedback
                         Component message = getDisplayDescription();
@@ -600,7 +600,7 @@ public final class PerkAction {
                 if(getId().isPresent()) {
                     ResourceLocation deityId = getId().get();
                     Component deityName = DeityHelper.getName(deityId);
-                    Altar altar = RPGGods.ALTAR.get(deityId).orElse(Altar.EMPTY);
+                    Altar altar = RPGGods.ALTAR_MAP.getOrDefault(deityId, Altar.EMPTY);
                     String suffix = altar.isFemale() ? "female" : "male";
                     return Component.translatable("favor.perk.type.unlock.description." + suffix, deityName);
                 }

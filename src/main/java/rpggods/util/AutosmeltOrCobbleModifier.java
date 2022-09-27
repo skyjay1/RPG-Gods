@@ -71,10 +71,6 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         if(entity == null || itemStack == null || block == null || !block.is(ores)) {
             return generatedLoot;
         }
-        // do not apply when using silk touch tool
-        if(itemStack.getEnchantmentLevel(Enchantments.SILK_TOUCH) > 0) {
-            return generatedLoot;
-        }
         // determine which of the mining effects can activate
         List<ResourceLocation> autosmelt = new ArrayList<>();
         List<ResourceLocation> unsmelt = new ArrayList<>();
@@ -95,7 +91,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
                 Collections.shuffle(autosmelt);
                 Perk perk;
                 for(ResourceLocation id : autosmelt) {
-                    perk = RPGGods.PERK.get(id).orElse(null);
+                    perk = RPGGods.PERK_MAP.get(id);
                     if(RGEvents.runPerk(perk, player, f)) {
                         generatedLoot.forEach((stack) -> replacement.add(smelt(stack, context)));
                         return replacement;
@@ -104,7 +100,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
                 // if no autosmelt occurred, attempt to unsmelt
                 Collections.shuffle(unsmelt);
                 for(ResourceLocation id : unsmelt) {
-                    perk = RPGGods.PERK.get(id).orElse(null);
+                    perk = RPGGods.PERK_MAP.get(id);
                     if(RGEvents.runPerk(perk, player, f)) {
                         replacement.add(new ItemStack(stone.asItem()));
                         return replacement;

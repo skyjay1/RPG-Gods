@@ -1,41 +1,39 @@
 package rpggods.network;
 
-import com.google.common.collect.Lists;
-import com.mojang.serialization.DataResult;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import com.mojang.serialization.Codec;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.LogicalSide;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
 import rpggods.deity.DeityHelper;
-import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
-import rpggods.perk.PerkAction;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.Optional;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
  * Called when datapacks are (re)loaded.
- * Sent from the server to the client with a single ResourceLocation ID
- * and the corresponding Perk as it was read from JSON.
+ * Sent from the server to the client with a map of
+ * ResourceLocation IDs and Perks
  **/
 public class SPerkPacket {
 
-    protected ResourceLocation perkId;
-    protected Perk perk;
+    protected static final Codec<Map<ResourceLocation, Perk>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, Perk.CODEC);
+
+    protected Map<ResourceLocation, Perk> data;
 
     /**
-     * @param perkNameIn the ResourceLocation ID of the Perk
-     * @param perkIn     the Perk
+     * @param data the data map
      **/
-    public SPerkPacket(final ResourceLocation perkNameIn, final Perk perkIn) {
-        this.perkId = perkNameIn;
-        this.perk = perkIn;
+    public SPerkPacket(final Map<ResourceLocation, Perk> data) {
+        this.data = data;
+        if (FMLEnvironment.dist != Dist.CLIENT) {
+            // update server-side map
+            updatePerks(data);
+        }
     }
 
     /**
@@ -45,11 +43,8 @@ public class SPerkPacket {
      * @return a new instance of a SPerkPacket based on the PacketBuffer
      */
     public static SPerkPacket fromBytes(final FriendlyByteBuf buf) {
-        final ResourceLocation sName = buf.readResourceLocation();
-        final CompoundTag sNBT = buf.readNbt();
-        final Optional<Perk> sEffect = RPGGods.PERK.readObject(sNBT)
-                .resultOrPartial(error -> RPGGods.LOGGER.error("Failed to read Perk from NBT for packet\n" + error));
-        return new SPerkPacket(sName, sEffect.orElse(Perk.EMPTY));
+        final Map<ResourceLocation, Perk> data = buf.readWithCodec(CODEC);
+        return new SPerkPacket(data);
     }
 
     /**
@@ -59,10 +54,7 @@ public class SPerkPacket {
      * @param buf the PacketBuffer
      */
     public static void toBytes(final SPerkPacket msg, final FriendlyByteBuf buf) {
-        DataResult<Tag> nbtResult = RPGGods.PERK.writeObject(msg.perk);
-        Tag tag = nbtResult.resultOrPartial(error -> RPGGods.LOGGER.error("Failed to write Perk to NBT for packet\n" + error)).get();
-        buf.writeResourceLocation(msg.perkId);
-        buf.writeNbt((CompoundTag) tag);
+        buf.writeWithCodec(CODEC, msg.data);
     }
 
     /**
@@ -75,20 +67,27 @@ public class SPerkPacket {
         NetworkEvent.Context context = contextSupplier.get();
         if (context.getDirection().getReceptionSide() == LogicalSide.CLIENT) {
             context.enqueueWork(() -> {
-                Perk perk = message.perk;
-                RPGGods.PERK.put(message.perkId, perk);
-                // add Perk to Deity
-                RPGGods.DEITY_HELPER.computeIfAbsent(perk.getDeity(), DeityHelper::new).add(message.perkId, perk);
-                // add Perk to Affinity map if applicable
-                for(PerkAction action : perk.getActions()) {
-                    if(action.getAffinity().isPresent()) {
-                        Affinity affinity = action.getAffinity().get();
-                        RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                .computeIfAbsent(affinity.getType(), id -> new ArrayList<>()).add(message.perkId);
-                    }
-                }
+                updatePerks(message.data);
             });
         }
         context.setPacketHandled(true);
+    }
+
+    private static void updatePerks(final Map<ResourceLocation, Perk> data) {
+        // update map
+        RPGGods.PERK_MAP.clear();
+        RPGGods.PERK_MAP.putAll(data);
+        // clear affinity map
+        RPGGods.AFFINITY.clear();
+        // clear all deity helper perks
+        for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+            helper.perkList.clear();
+            helper.perkByConditionMap.clear();
+            helper.perkByTypeMap.clear();
+        }
+        // add perks to deity helper
+        for(Map.Entry<ResourceLocation, Perk> entry : RPGGods.PERK_MAP.entrySet()) {
+            RPGGods.DEITY_HELPER.computeIfAbsent(entry.getValue().getDeity(), DeityHelper::new).add(entry.getKey(), entry.getValue());
+        }
     }
 }

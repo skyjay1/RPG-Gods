@@ -57,6 +57,7 @@ import rpggods.RPGGods;
 import rpggods.altar.AltarItems;
 import rpggods.altar.AltarPose;
 import rpggods.block.AltarLightBlock;
+import rpggods.deity.Altar;
 import rpggods.deity.Deity;
 import rpggods.deity.DeityHelper;
 import rpggods.RGEvents;
@@ -310,7 +311,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
             }
             // attempt to place light block
             if(tickCount % 4 == 1) {
-                rpggods.deity.Altar altar = RPGGods.ALTAR.get(getAltar()).orElse(rpggods.deity.Altar.EMPTY);
+                Altar altar = RPGGods.ALTAR_MAP.getOrDefault(getAltar(), Altar.EMPTY);
                 int lightLevel = altar.getLightLevel();
                 // check light level
                 if(lightLevel > 0) {
@@ -566,7 +567,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
      */
     public void applyAltarProperties(final ResourceLocation altarId) {
         // query altar by id
-        rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
+        Altar altar = RPGGods.ALTAR_MAP.getOrDefault(altarId, Altar.EMPTY);
         // apply properties
         setDeity(altar.getDeity());
         setFemale(altar.isFemale());
@@ -598,7 +599,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
      */
     public static CompoundTag writeAltarProperties(final ResourceLocation altarId, final Rotation rotation) {
         // query altar by id
-        rpggods.deity.Altar altar = RPGGods.ALTAR.get(altarId).orElse(rpggods.deity.Altar.EMPTY);
+        Altar altar = RPGGods.ALTAR_MAP.getOrDefault(altarId, Altar.EMPTY);
         // create compound tag
         CompoundTag compoundTag = new CompoundTag();
         // write altar properties to the tag
@@ -610,7 +611,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         if (altar.getDeity().isPresent() && !altar.getDeity().get().toString().isEmpty()) {
             // determine string to save deity name
             ResourceLocation deityId = altar.getDeity().get();
-            deity = RPGGods.DEITY.get(deityId);
+            deity = Optional.ofNullable(RPGGods.DEITY_MAP.get(deityId));
             customName = DeityHelper.getName(altarId);
             compoundTag.putString(KEY_DEITY, deityId.toString());
         }

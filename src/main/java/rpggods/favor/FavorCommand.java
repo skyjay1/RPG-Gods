@@ -115,14 +115,14 @@ public class FavorCommand {
 
     private static int queryDeityList(CommandSourceStack source) {
         // create list of IDs, sorted by namespace
-        List<ResourceLocation> list = new ArrayList<>(RPGGods.DEITY.getKeys());
+        List<ResourceLocation> list = new ArrayList<>(RPGGods.DEITY_MAP.keySet());
         list.sort(ResourceLocation::compareNamespaced);
         // create string builder to add each deity
         Component builder = Component.empty();
         final String commandKey = "commands.favor.list";
         // add text to describe each deity
         for(ResourceLocation deityId : list) {
-            Optional<Deity> optional = RPGGods.DEITY.get(deityId);
+            Optional<Deity> optional = Optional.ofNullable(RPGGods.DEITY_MAP.get(deityId));
             optional.ifPresent(deity -> {
                 // add ID and name
                 builder.getSiblings().add(Component.literal("\n"));

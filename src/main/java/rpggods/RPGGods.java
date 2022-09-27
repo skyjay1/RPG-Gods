@@ -1,6 +1,5 @@
 package rpggods;
 
-import com.google.common.collect.Lists;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
@@ -10,6 +9,8 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.AddReloadListenerEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -42,6 +43,7 @@ import rpggods.perk.Affinity;
 import rpggods.perk.Perk;
 import rpggods.perk.PerkAction;
 import rpggods.tameable.ITameable;
+import rpggods.util.CodecJsonDataManager;
 import rpggods.util.GenericJsonReloadListener;
 
 import javax.annotation.Nullable;
@@ -64,50 +66,30 @@ public class RPGGods {
 
     public static Capability<ITameable> TAMEABLE = CapabilityManager.get(new CapabilityToken<>(){});
 
-    private static final String PROTOCOL_VERSION = "2";
+    private static final String PROTOCOL_VERSION = "3";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, "channel"),
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
-    // Map of Deity ID to Deity
+    // Map of Deity ID to DeityHelper
     public static final Map<ResourceLocation, DeityHelper> DEITY_HELPER = new HashMap<>();
-    // Map of Entity ID to Affinity
+    // Map of Entity ID to Perk IDs of perks that affect affinity
     public static final Map<ResourceLocation, Map<Affinity.Type, List<ResourceLocation>>> AFFINITY = new HashMap<>();
+
     // Reloadable data resource listeners
-    public static final GenericJsonReloadListener<Deity> DEITY = new GenericJsonReloadListener<>("deity/deity", Deity.class, Deity.CODEC,
-            l -> l.getEntries().forEach(e -> {
-                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SDeityPacket(e.getKey(), e.getValue().get()));
-            }));
-    public static final GenericJsonReloadListener<Altar> ALTAR = new GenericJsonReloadListener<>("deity/altar", Altar.class, Altar.CODEC,
-            l -> l.getEntries().forEach(e -> {
-                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SAltarPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(a -> a.getDeity().ifPresent(d -> RPGGods.DEITY_HELPER.computeIfAbsent(d, DeityHelper::new).add(e.getKey(), a)));
-            }));
-    public static final GenericJsonReloadListener<Offering> OFFERING = new GenericJsonReloadListener<>("deity/offering", Offering.class, Offering.CODEC,
-            l -> l.getEntries().forEach(e -> {
-                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SOfferingPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(o -> RPGGods.DEITY_HELPER.computeIfAbsent(Offering.getDeity(e.getKey()), DeityHelper::new).add(e.getKey(), o));
-            }));
-    public static final GenericJsonReloadListener<Sacrifice> SACRIFICE = new GenericJsonReloadListener<>("deity/sacrifice", Sacrifice.class, Sacrifice.CODEC,
-            l -> l.getEntries().forEach(e -> {
-                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SSacrificePacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(s -> RPGGods.DEITY_HELPER.computeIfAbsent(Sacrifice.getDeity(e.getKey()), DeityHelper::new).add(e.getKey(), s));
-            }));
-    public static final GenericJsonReloadListener<Perk> PERK = new GenericJsonReloadListener<>("deity/perk", Perk.class, Perk.CODEC,
-            l -> l.getEntries().forEach(e -> {
-                RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SPerkPacket(e.getKey(), e.getValue().get()));
-                e.getValue().ifPresent(p -> {
-                    // add Perk to Deity
-                    RPGGods.DEITY_HELPER.computeIfAbsent(p.getDeity(), DeityHelper::new).add(e.getKey(), p);
-                    // add Perk to Affinity map if applicable
-                    for(PerkAction action : p.getActions()) {
-                        if(action.getAffinity().isPresent()) {
-                            Affinity affinity = action.getAffinity().get();
-                            RPGGods.AFFINITY.computeIfAbsent(affinity.getEntity(), id -> new EnumMap<>(Affinity.Type.class))
-                                    .computeIfAbsent(affinity.getType(), id -> new ArrayList<>()).add(e.getKey());
-                        }
-                    }
-                });
-            }));
+    protected static final CodecJsonDataManager<Altar> ALTAR_JSON_MANAGER = new CodecJsonDataManager<>("deity/altar", Altar.CODEC);
+    public static final Map<ResourceLocation, Altar> ALTAR_MAP = new HashMap<>();
+
+    protected static final CodecJsonDataManager<Deity> DEITY_JSON_MANAGER = new CodecJsonDataManager<>("deity/deity", Deity.CODEC);
+    public static final Map<ResourceLocation, Deity> DEITY_MAP = new HashMap<>();
+
+    protected static final CodecJsonDataManager<Offering> OFFERING_JSON_MANAGER = new CodecJsonDataManager<>("deity/offering", Offering.CODEC);
+    public static final Map<ResourceLocation, Offering> OFFERING_MAP = new HashMap<>();
+
+    protected static final CodecJsonDataManager<Perk> PERK_JSON_MANAGER = new CodecJsonDataManager<>("deity/perk", Perk.CODEC);
+    public static final Map<ResourceLocation, Perk> PERK_MAP = new HashMap<>();
+
+    protected static final CodecJsonDataManager<Sacrifice> SACRIFICE_JSON_MANAGER = new CodecJsonDataManager<>("deity/sacrifice", Sacrifice.CODEC);
+    public static final Map<ResourceLocation, Sacrifice> SACRIFICE_MAP = new HashMap<>();
 
     public static final Logger LOGGER = LogManager.getFormatterLogger(RPGGods.MODID);
 
@@ -140,6 +122,13 @@ public class RPGGods {
         CHANNEL.registerMessage(messageId++, SUpdateSittingPacket.class, SUpdateSittingPacket::toBytes, SUpdateSittingPacket::fromBytes, SUpdateSittingPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, SUpdateAltarPacket.class, SUpdateAltarPacket::toBytes, SUpdateAltarPacket::fromBytes, SUpdateAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(messageId++, CUpdateAltarPacket.class, CUpdateAltarPacket::toBytes, CUpdateAltarPacket::fromBytes, CUpdateAltarPacket::handlePacket, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        // data managers
+        ALTAR_JSON_MANAGER.subscribeAsSyncable(CHANNEL, SAltarPacket::new);
+        DEITY_JSON_MANAGER.subscribeAsSyncable(CHANNEL, SDeityPacket::new);
+        OFFERING_JSON_MANAGER.subscribeAsSyncable(CHANNEL, SOfferingPacket::new);
+        PERK_JSON_MANAGER.subscribeAsSyncable(CHANNEL, SPerkPacket::new);
+        SACRIFICE_JSON_MANAGER.subscribeAsSyncable(CHANNEL, SSacrificePacket::new);
     }
 
     public static void setup(final FMLCommonSetupEvent event) {
