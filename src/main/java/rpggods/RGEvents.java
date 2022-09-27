@@ -459,7 +459,7 @@ public class RGEvents {
                 }
             }
             // send feedback
-            if (success) {
+            if (success && favor.getPatron().isPresent()) {
                 // summon visual lightning bolt
                 LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
                 bolt.setVisualOnly(true);
