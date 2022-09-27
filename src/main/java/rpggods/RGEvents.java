@@ -452,22 +452,22 @@ public class RGEvents {
                     success |= runPerk(perk, player, favor, Optional.of(altar), Optional.of(itemId), Optional.empty());
                 }
             }
-        }
-        // send feedback
-        if(success) {
-            // summon visual lightning bolt
-            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
-            bolt.setVisualOnly(true);
-            Vec3 position = Vec3.atBottomCenterOf(pos.below());
-            bolt.setPos(position.x, position.y, position.z);
-            altar.level.addFreshEntity(bolt);
-            // send message
-            Component message = new TranslatableComponent("favor.perk.type.patron.description.add", DeityHelper.getName(deityId))
-                    .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
-            player.displayClientMessage(message, true);
+            // send feedback
+            if(success && favor.getPatron().isPresent()) {
+                // summon visual lightning bolt
+                LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
+                bolt.setVisualOnly(true);
+                Vec3 position = Vec3.atBottomCenterOf(pos.below());
+                bolt.setPos(position.x, position.y, position.z);
+                altar.level.addFreshEntity(bolt);
+                // send message
+                Component message = new TranslatableComponent("favor.perk.type.patron.description.add", DeityHelper.getName(favor.getPatron().get()))
+                        .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+                player.displayClientMessage(message, true);
+            }
         }
 
-        return false;
+        return success;
     }
 
     public static class ModEvents {
