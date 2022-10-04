@@ -5,6 +5,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.FloatTag;
+import net.minecraft.network.chat.ComponentContents;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -594,20 +595,22 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     /**
      * Directly writes properties from an Altar to a Compound NBT Tag
      * @param altarId the Altar ID
-     * @param rotation the altar rotation
+     * @param altar the Altar as retrieved from the altar map
      * @return a CompoundTag that represents the Altar applied to an AltarEntity
      */
-    public static CompoundTag writeAltarProperties(final ResourceLocation altarId, final Rotation rotation) {
-        // query altar by id
-        Altar altar = RPGGods.ALTAR_MAP.getOrDefault(altarId, Altar.EMPTY);
+    public static CompoundTag writeAltarProperties(final ResourceLocation altarId, final Altar altar) {
         // create compound tag
         CompoundTag compoundTag = new CompoundTag();
+        if(null == altar) {
+            return compoundTag;
+        }
         // write altar properties to the tag
         // write altar
         compoundTag.putString(KEY_ALTAR, altarId.toString());
+        // determine custom name
+        Component customName = Component.literal(altar.getName().orElse(""));
         // write deity
         Optional<Deity> deity = Optional.empty();
-        Component customName = Component.literal(altar.getName().get());
         if (altar.getDeity().isPresent() && !altar.getDeity().get().toString().isEmpty()) {
             // determine string to save deity name
             ResourceLocation deityId = altar.getDeity().get();
@@ -616,8 +619,10 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
             compoundTag.putString(KEY_DEITY, deityId.toString());
         }
         // write custom name
-        compoundTag.putString("CustomName", Component.Serializer.toJson(customName));
-        compoundTag.putBoolean("CustomNameVisible", true);
+        if(customName.getContents() != ComponentContents.EMPTY) {
+            compoundTag.putString("CustomName", Component.Serializer.toJson(customName));
+            compoundTag.putBoolean("CustomNameVisible", true);
+        }
         // write inventory
         ListTag listNBT = new ListTag();
         // write inventory slots to NBT
