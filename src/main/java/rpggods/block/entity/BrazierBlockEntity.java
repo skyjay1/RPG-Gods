@@ -52,7 +52,7 @@ public class BrazierBlockEntity extends BlockEntity implements ContainerSingleIt
     protected Component name;
 
     public BrazierBlockEntity(BlockPos pos, BlockState state) {
-        super(RGRegistry.BRAZIER_TYPE.get(), pos, state);
+        super(RGRegistry.BlockEntityReg.BRAZIER.get(), pos, state);
     }
 
     // TICK AND COOLDOWN

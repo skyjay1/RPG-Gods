@@ -33,7 +33,7 @@ public class AltarStructureProcessor extends StructureProcessor {
 
     @Override
     protected StructureProcessorType<?> getType() {
-        return RGRegistry.ALTAR_STRUCTURE_PROCESSOR;
+        return RGRegistry.StructureProcessorReg.ALTAR.get();
     }
 
     @Override
@@ -46,7 +46,7 @@ public class AltarStructureProcessor extends StructureProcessor {
         CompoundTag tag = entityInfo.nbt.copy();
         Optional<EntityType<?>> entityType = EntityType.by(tag);
         // ensure entity is altar
-        if (entityType.isPresent() && entityType.get() == RGRegistry.ALTAR_TYPE.get()) {
+        if (entityType.isPresent() && entityType.get() == RGRegistry.EntityReg.ALTAR.get()) {
             // determine random instance
             final long seed = placementSettings.getBoundingBox().hashCode();
             RandomSource random = RandomSource.create(seed);

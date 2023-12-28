@@ -22,7 +22,7 @@ public class JEICompat implements IModPlugin {
 
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
-        registration.registerSubtypeInterpreter(VanillaTypes.ITEM_STACK, RGRegistry.ALTAR_ITEM.get(), (ItemStack ingredient, UidContext context) -> {
+        registration.registerSubtypeInterpreter(VanillaTypes.ITEM_STACK, RGRegistry.ItemReg.ALTAR.get(), (ItemStack ingredient, UidContext context) -> {
             if(ingredient.hasTag() && ingredient.getTag().contains(AltarItem.KEY_ALTAR)) {
                 return ingredient.getTag().getString(AltarItem.KEY_ALTAR);
             }

@@ -21,7 +21,7 @@ public class FavorContainerMenu extends AbstractContainerMenu {
     }
 
     public FavorContainerMenu(final int id, final Inventory inventory, final IFavor favorIn, final ResourceLocation deityIn) {
-        super(RGRegistry.FAVOR_CONTAINER.get(), id);
+        super(RGRegistry.MenuReg.FAVOR_CONTAINER.get(), id);
         favor = favorIn;
         deity = Optional.ofNullable(deityIn);
     }

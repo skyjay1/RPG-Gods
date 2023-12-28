@@ -3,8 +3,8 @@ package rpggods.util.altar;
 import com.mojang.serialization.Codec;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
-import com.mojang.math.Vector3f;
 import net.minecraftforge.common.util.INBTSerializable;
+import org.joml.Vector3f;
 
 import java.util.EnumMap;
 import java.util.Map.Entry;
@@ -67,7 +67,7 @@ public class AltarPose implements INBTSerializable<CompoundTag> {
     angles.put(HumanoidPart.RIGHT_ARM, new Vector3f(0, 0, 0));
     angles.put(HumanoidPart.LEFT_LEG, new Vector3f(0, 0, 0));
     angles.put(HumanoidPart.RIGHT_LEG, new Vector3f(0, 0, 0));
-    angles.put(HumanoidPart.OFFSET, new Vector3f(0, 0, 0));
+    angles.put(HumanoidPart.ROOT, new Vector3f(0, 0, 0));
   }
   
   public AltarPose(final CompoundTag tag) {

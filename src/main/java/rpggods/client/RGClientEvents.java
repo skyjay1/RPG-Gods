@@ -34,24 +34,24 @@ public final class RGClientEvents {
 
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(RGRegistry.ALTAR_TYPE.get(), rpggods.client.entity.AltarRenderer::new);
-        event.registerBlockEntityRenderer(RGRegistry.BRAZIER_TYPE.get(), rpggods.client.blockentity.BrazierBlockEntityRenderer::new);
+        event.registerEntityRenderer(RGRegistry.EntityReg.ALTAR.get(), rpggods.client.entity.AltarRenderer::new);
+        event.registerBlockEntityRenderer(RGRegistry.BlockEntityReg.BRAZIER.get(), rpggods.client.blockentity.BrazierBlockEntityRenderer::new);
     }
 
     private static void registerContainerRenders() {
-        MenuScreens.register(RGRegistry.ALTAR_CONTAINER.get(), rpggods.client.screen.AltarScreen::new);
-        MenuScreens.register(RGRegistry.FAVOR_CONTAINER.get(), rpggods.client.screen.FavorScreen::new);
+        MenuScreens.register(RGRegistry.MenuReg.ALTAR_CONTAINER.get(), rpggods.client.screen.AltarScreen::new);
+        MenuScreens.register(RGRegistry.MenuReg.FAVOR_CONTAINER.get(), rpggods.client.screen.FavorScreen::new);
     }
 
     private static List<ResourceLocation> altars = new ArrayList<>();
 
     private static void registerModelProperties() {
         // Scroll properites
-        ItemProperties.register(RGRegistry.SCROLL_ITEM.get(), new ResourceLocation("open"),
+        ItemProperties.register(RGRegistry.ItemReg.SCROLL.get(), new ResourceLocation("open"),
                 (item, world, entity, i) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
         // Altar properties
         // TODO custom item model loader instead
-        ItemProperties.register(RGRegistry.ALTAR_ITEM.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
+        ItemProperties.register(RGRegistry.ItemReg.ALTAR.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
             // determine index of altar in list
             if (altars.isEmpty() || (world != null && world.getGameTime() % 100 == 0)) {
                 altars = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());

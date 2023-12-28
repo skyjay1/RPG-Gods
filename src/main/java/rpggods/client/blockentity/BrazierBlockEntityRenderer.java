@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import rpggods.blockentity.BrazierBlockEntity;
+import rpggods.block.entity.BrazierBlockEntity;
 
 public class BrazierBlockEntityRenderer implements BlockEntityRenderer<BrazierBlockEntity> {
 

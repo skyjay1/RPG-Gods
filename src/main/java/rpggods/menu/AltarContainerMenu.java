@@ -14,7 +14,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.ForgeMod;
 import rpggods.RGRegistry;
 import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
@@ -43,7 +42,7 @@ public class AltarContainerMenu extends AbstractContainerMenu {
     }
 
     public AltarContainerMenu(final int id, final Inventory playerInv, final Container altarInv, final AltarEntity entity) {
-        super(RGRegistry.ALTAR_CONTAINER.get(), id);
+        super(RGRegistry.MenuReg.ALTAR_CONTAINER.get(), id);
         this.entity = entity;
         this.altar = entity != null ? entity.createAltarProperties() : Altar.EMPTY;
         this.altarInv = altarInv;

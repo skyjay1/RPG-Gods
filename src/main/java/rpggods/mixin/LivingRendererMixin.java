@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import rpggods.RPGGods;
-import rpggods.tameable.ITameable;
+import rpggods.data.tameable.ITameable;
 
 @Mixin(LivingEntityRenderer.class)
 public class LivingRendererMixin {

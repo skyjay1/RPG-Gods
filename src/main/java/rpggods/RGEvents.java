@@ -48,9 +48,9 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.living.LivingSetAttackTargetEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerXpEvent;
@@ -131,9 +131,9 @@ public class RGEvents {
                     if(!silent) {
                         Component message;
                         if(offering.hasMinLevel() && offering.hasMaxLevel()) {
-                            message = Component.translatable("favor.offering.deny.level.multiple", offering.getTradeMinLevel(), offering.getTradeMaxLevel());
+                            message = Component.translatable("favor.offering.deny.level().multiple", offering.getTradeMinLevel(), offering.getTradeMaxLevel());
                         } else {
-                            message = Component.translatable("favor.offering.deny.level.single", offering.getTradeMinLevel());
+                            message = Component.translatable("favor.offering.deny.level().single", offering.getTradeMinLevel());
                         }
                         player.displayClientMessage(message, true);
                     }
@@ -141,25 +141,25 @@ public class RGEvents {
                 }
                 // add favor and run function, if any
                 favor.getFavor(deity).addFavor(player, deity, offering.getFavor(), FavorChangedEvent.Source.OFFERING);
-                offering.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                offering.getFunction().ifPresent(f -> runFunction(player.level(), player, f));
                 // add cooldown
                 favor.getOfferingCooldown(offeringId).addUse();
                 // process trade, if any
                 Optional<ItemStack> trade = offering.getTrade(item);
                 if(trade.isPresent() && !trade.get().isEmpty()) {
-                    ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), trade.get().copy());
+                    ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), trade.get().copy());
                     itemEntity.setNoPickUpDelay();
-                    player.level.addFreshEntity(itemEntity);
+                    player.level().addFreshEntity(itemEntity);
                 }
                 // shrink item stack
                 if(!player.isCreative()) {
                     item.shrink(offering.getAccept().getCount());
                 }
                 // particles
-                if(entity.isPresent() && player.level instanceof ServerLevel) {
+                if(entity.isPresent() && player.level() instanceof ServerLevel serverLevel) {
                     Vec3 pos = Vec3.atBottomCenterOf(entity.get().blockPosition().above());
                     ParticleOptions particle = offering.getFavor() >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
-                    ((ServerLevel)player.level).sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
+                    serverLevel.sendParticles(particle, pos.x, pos.y, pos.z, 8, 0.5D, 0.5D, 0.5D, 0);
                 }
                 // send player message
                 if(!silent) {
@@ -214,7 +214,7 @@ public class RGEvents {
                                 cooldown.addUse();
                                 // add favor and run function, if any
                                 favor.getFavor(deityId).addFavor(player, deityId, sacrifice.getFavor(), FavorChangedEvent.Source.SACRIFICE);
-                                sacrifice.getFunction().ifPresent(f -> runFunction(player.level, player, f));
+                                sacrifice.getFunction().ifPresent(f -> runFunction(player.level(), player, f));
                             }
                         }
                     }
@@ -366,7 +366,7 @@ public class RGEvents {
     public static boolean runPerk(final Perk perk, final Player player, final IFavor favor, final Optional<Entity> entity,
                                   final Optional<ResourceLocation> data, final Optional<? extends Event> object) {
         // check favor range, perk cooldown, and random chance
-        if (perk != null && !player.level.isClientSide && perk.getRange().isInRange(favor)
+        if (perk != null && !player.level().isClientSide && perk.getRange().isInRange(favor)
                 && favor.getFavor(perk.getDeity()).isEnabled()
                 && favor.hasNoPerkCooldown(perk.getCategory())
                 && Math.random() < perk.getAdjustedChance(favor.getFavor(perk.getDeity()))) {
@@ -420,17 +420,17 @@ public class RGEvents {
         Vec3i facing = altar.getDirection().getNormal();
         BlockPos pos = altar.blockPosition().offset(facing);
         AABB aabb = new AABB(pos).inflate(0.15D, 1.0D, 0.15D);
-        List<ItemEntity> list = altar.level.getEntitiesOfClass(ItemEntity.class, aabb, e -> e.isOnFire());
+        List<ItemEntity> list = altar.level().getEntitiesOfClass(ItemEntity.class, aabb, e -> e.isOnFire());
         // detect first burning item in list
         if (list.isEmpty()) {
             return false;
         }
         ItemEntity item = list.get(0);
         // detect player who threw the item
-        if (null == item.getThrower()) {
+        if (null == item.getOwner()) {
             return false;
         }
-        Player player = altar.level.getPlayerByUUID(item.getThrower());
+        Player player = altar.level().getPlayerByUUID(item.getOwner().getUUID());
         if (null == player) {
             return false;
         }
@@ -461,11 +461,11 @@ public class RGEvents {
             // send feedback
             if (success && favor.getPatron().isPresent()) {
                 // summon visual lightning bolt
-                LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level);
+                LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(altar.level());
                 bolt.setVisualOnly(true);
                 Vec3 position = Vec3.atBottomCenterOf(pos.below());
                 bolt.setPos(position.x, position.y, position.z);
-                altar.level.addFreshEntity(bolt);
+                altar.level().addFreshEntity(bolt);
                 // send message
                 Component message = Component.translatable("favor.perk.type.patron.description.add", DeityWrapper.getName(favor.getPatron().get()))
                         .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
@@ -492,7 +492,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onLivingDeath(final LivingDeathEvent event) {
-            if (!event.isCanceled() && event.getEntity() != null && !event.getEntity().level.isClientSide() && event.getEntity().isEffectiveAi()) {
+            if (!event.isCanceled() && event.getEntity() != null && !event.getEntity().level().isClientSide() && event.getEntity().isEffectiveAi()) {
                 if (event.getEntity() instanceof Player) {
                     final Player player = (Player) event.getEntity();
                     final Entity source = event.getSource().getEntity();
@@ -517,7 +517,7 @@ public class RGEvents {
                 // onTameDeath
                 LazyOptional<ITameable> tameable = event.getEntity().getCapability(RPGGods.TAMEABLE);
                 tameable.ifPresent(t -> {
-                    Optional<LivingEntity> owner = t.getOwner(event.getEntity().level);
+                    Optional<LivingEntity> owner = t.getOwner(event.getEntity().level());
                     // send death message to owner
                     if (owner.isPresent() && owner.get() instanceof Player) {
                         Component message = event.getSource().getLocalizedDeathMessage(event.getEntity());
@@ -529,7 +529,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onLivingHurt(final LivingHurtEvent event) {
-            if (!event.isCanceled() && !event.getEntity().level.isClientSide() && event.getEntity().isEffectiveAi() && event.getEntity().isAlive()) {
+            if (!event.isCanceled() && !event.getEntity().level().isClientSide() && event.getEntity().isEffectiveAi() && event.getEntity().isAlive()) {
                 if (event.getSource().getDirectEntity() != null && event.getEntity() instanceof Player) {
                     Player player = (Player) event.getEntity();
                     Entity source = event.getSource().getDirectEntity();
@@ -560,7 +560,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onEntityInteract(final PlayerInteractEvent.EntityInteract event) {
-            if (!event.getEntity().level.isClientSide && event.getHand() == InteractionHand.MAIN_HAND) {
+            if (!event.getEntity().level().isClientSide && event.getHand() == InteractionHand.MAIN_HAND) {
                 // onPlayerInteractEntity
                 RPGGods.getFavor(event.getEntity()).ifPresent(f -> {
                     final ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(event.getTarget().getType());
@@ -588,8 +588,8 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onInteractBlock(final PlayerInteractEvent.RightClickBlock event) {
-            if (!event.getEntity().level.isClientSide) {
-                BlockState state = event.getEntity().level.getBlockState(event.getHitVec().getBlockPos());
+            if (!event.getEntity().level().isClientSide) {
+                BlockState state = event.getEntity().level().getBlockState(event.getHitVec().getBlockPos());
                 ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(state.getBlock());
                 if (blockId != null) {
                     // onPlayerInteractBlock
@@ -603,7 +603,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onChangeFavor(FavorChangedEvent.Post event) {
-            if (event.getPlayer() != null && !event.getPlayer().level.isClientSide && event.isLevelChange()) {
+            if (event.getPlayer() != null && !event.getPlayer().level().isClientSide && event.isLevelChange()) {
                 // onFavorChanged
                 RPGGods.getFavor(event.getPlayer()).ifPresent(f -> {
                     triggerPerks(PerkAction.Type.UNLOCK, event.getPlayer(), f, Optional.empty());
@@ -617,7 +617,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onEntityJoinWorld(final EntityJoinLevelEvent event) {
-            if (!event.getEntity().level.isClientSide && (event.getEntity() instanceof Arrow || event.getEntity() instanceof SpectralArrow)) {
+            if (!event.getEntity().level().isClientSide && (event.getEntity() instanceof Arrow || event.getEntity() instanceof SpectralArrow)) {
                 final AbstractArrow arrow = (AbstractArrow) event.getEntity();
                 final Entity thrower = arrow.getOwner();
                 if (thrower instanceof Player) {
@@ -629,7 +629,7 @@ public class RGEvents {
                     });
                 }
             }
-            if (!event.getEntity().level.isClientSide && event.getEntity() instanceof Mob) {
+            if (!event.getEntity().level().isClientSide && event.getEntity() instanceof Mob) {
                 Mob mob = (Mob) event.getEntity();
                 boolean fleeEnabled = RPGGods.CONFIG.isFleeEnabled();
                 boolean hostileEnabled = RPGGods.CONFIG.isHostileEnabled();
@@ -685,7 +685,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onAddPotion(final MobEffectEvent.Added event) {
-            if (!event.isCanceled() && event.getEntity() instanceof Player && !event.getEntity().level.isClientSide
+            if (!event.isCanceled() && event.getEntity() instanceof Player && !event.getEntity().level().isClientSide
                     && event.getEntity().isAlive() && event.getEffectInstance() != null) {
                 Player player = (Player) event.getEntity();
                 if (!player.isSpectator() && !player.isCreative()) {
@@ -699,14 +699,13 @@ public class RGEvents {
         }
 
         @SubscribeEvent
-        public static void onLivingTarget(final LivingSetAttackTargetEvent event) {
-            if (!event.getEntity().level.isClientSide && event.getEntity() instanceof Mob
-                    && event.getTarget() instanceof Player) {
+        public static void onLivingTarget(final LivingChangeTargetEvent event) {
+            if (!event.getEntity().level().isClientSide && event.getEntity() instanceof Mob mob
+                    && event.getNewTarget() instanceof Player player) {
                 // Determine if entity is passive or hostile toward target
-                ImmutablePair<Boolean, Boolean> passiveHostile = AffinityGoal.getPassiveAndHostile(event.getEntity(), event.getTarget());
+                ImmutablePair<Boolean, Boolean> passiveHostile = AffinityGoal.getPassiveAndHostile(event.getEntity(), player);
                 if (passiveHostile.getLeft()) {
-                    ((Mob) event.getEntity()).setTarget(null);
-                    return;
+                    event.setCanceled(true);
                 }
             }
         }
@@ -724,7 +723,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onPlayerPickupXp(final PlayerXpEvent.PickupXp event) {
-            if (event.getEntity().isEffectiveAi() && !event.getEntity().level.isClientSide()) {
+            if (event.getEntity().isEffectiveAi() && !event.getEntity().level().isClientSide()) {
                 RPGGods.getFavor(event.getEntity()).ifPresent(f -> {
                     triggerPerks(PerkAction.Type.XP, event.getEntity(), f, Optional.of(event.getOrb()));
                 });
@@ -733,7 +732,7 @@ public class RGEvents {
 
         @SubscribeEvent
         public static void onPlayerTick(final TickEvent.PlayerTickEvent event) {
-            if (!event.isCanceled() && !event.player.level.isClientSide() && event.player.isEffectiveAi()
+            if (!event.isCanceled() && !event.player.level().isClientSide() && event.player.isEffectiveAi()
                     && event.phase == TickEvent.Phase.END && event.player.isAlive() && canTickFavor(event.player)) {
                 RPGGods.getFavor(event.player).ifPresent(f -> {
                     // trigger perks
@@ -745,7 +744,7 @@ public class RGEvents {
                     // player tick
                     if(RPGGods.CONFIG.usePlayerFavor()) {
                         // reduce cooldown
-                        f.tickCooldown(event.player.level.getGameTime());
+                        f.tickCooldown(event.player.level().getGameTime());
                         // deplete favor
                         if (Math.random() < RPGGods.CONFIG.getFavorDecayRate()) {
                             f.depleteFavor(event.player);

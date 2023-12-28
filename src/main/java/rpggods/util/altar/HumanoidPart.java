@@ -9,7 +9,7 @@ public enum HumanoidPart implements StringRepresentable {
   RIGHT_ARM("right_arm"), 
   LEFT_LEG("left_leg"), 
   RIGHT_LEG("right_leg"),
-  OFFSET("offset");
+  ROOT("root");
   
   private String name;
   private HumanoidPart(final String n) {

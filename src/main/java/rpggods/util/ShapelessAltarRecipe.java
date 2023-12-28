@@ -3,6 +3,7 @@ package rpggods.util;
 import com.google.gson.JsonObject;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
@@ -25,7 +26,7 @@ public class ShapelessAltarRecipe extends ShapelessRecipe {
 
     public ShapelessAltarRecipe(ResourceLocation recipeId, final ItemStack outputItem, final Optional<ResourceLocation> altarId,
                                 final NonNullList<Ingredient> recipeItemsIn) {
-        super(recipeId, CATEGORY, resultWithTag(outputItem, altarId), recipeItemsIn);
+        super(recipeId, CATEGORY, CraftingBookCategory.MISC, resultWithTag(outputItem, altarId), recipeItemsIn);
         this.altarId = altarId;
     }
 
@@ -50,7 +51,7 @@ public class ShapelessAltarRecipe extends ShapelessRecipe {
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return RGRegistry.SHAPELESS_ALTAR_RECIPE_SERIALIZER.get();
+        return RGRegistry.RecipeReg.SHAPELESS_ALTAR_RECIPE_SERIALIZER.get();
     }
 
     public Optional<ResourceLocation> getAltarId() {

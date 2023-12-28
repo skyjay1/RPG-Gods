@@ -3,12 +3,10 @@ package rpggods.item;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.sounds.SoundEvents;
@@ -75,7 +73,7 @@ public class AltarItem extends Item {
         List<ResourceLocation> altarList = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());
         altarList.sort(ResourceLocation::compareNamespaced);
         for(ResourceLocation altarId : altarList) {
-            ItemStack itemStack = new ItemStack(RGRegistry.ALTAR_ITEM.get());
+            ItemStack itemStack = new ItemStack(RGRegistry.ItemReg.ALTAR.get());
             itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
             items.add(itemStack);
         }
@@ -92,7 +90,7 @@ public class AltarItem extends Item {
             BlockPos blockpos = blockitemusecontext.getClickedPos();
             ItemStack itemstack = context.getItemInHand();
             Vec3 vector3d = Vec3.atBottomCenterOf(blockpos);
-            AABB axisalignedbb = RGRegistry.ALTAR_TYPE.get().getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
+            AABB axisalignedbb = RGRegistry.EntityReg.ALTAR.get().getDimensions().makeBoundingBox(vector3d.x(), vector3d.y(), vector3d.z());
             if (world.noCollision(null, axisalignedbb) && world.getEntities(null, axisalignedbb).isEmpty()) {
                 if (world instanceof ServerLevel) {
                     ServerLevel serverworld = (ServerLevel)world;

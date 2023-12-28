@@ -182,13 +182,13 @@ public class BrazierBlock extends Block implements EntityBlock, SimpleWaterlogge
 
     @Override
     public BlockEntity newBlockEntity(final BlockPos pos, final BlockState state) {
-        return RGRegistry.BRAZIER_TYPE.get().create(pos, state);
+        return RGRegistry.BlockEntityReg.BRAZIER.get().create(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
-        if(blockEntityType == RGRegistry.BRAZIER_TYPE.get() && RPGGods.CONFIG.isBrazierEnabled()) {
+        if(blockEntityType == RGRegistry.BlockEntityReg.BRAZIER.get() && RPGGods.CONFIG.isBrazierEnabled()) {
             return BrazierBlockEntity::tick;
         }
         return null;

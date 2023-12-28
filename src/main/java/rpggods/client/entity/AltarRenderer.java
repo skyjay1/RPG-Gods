@@ -94,7 +94,7 @@ public class AltarRenderer extends LivingEntityRenderer<AltarEntity, AltarModel>
         RenderType rendertype = this.getRenderType(entityIn, flag, flag1, flag2);
 
         // rotate around body and translate according to pose offsets
-        getModel().translateRotateAroundBody(pose.get(HumanoidPart.OFFSET), pose.get(HumanoidPart.BODY), poseStack, partialTicks);
+        getModel().translateRotateAroundBody(pose.get(HumanoidPart.ROOT), pose.get(HumanoidPart.BODY), poseStack, partialTicks);
         // translate and rotate so the model is not upside-down
         poseStack.translate(0.0F, 2.0F + baseHeight, 0.0F);
         poseStack.mulPose(Vector3f.XP.rotationDegrees(180.0F));
