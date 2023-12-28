@@ -22,7 +22,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
+import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import javax.annotation.Nullable;
@@ -48,7 +48,7 @@ public class AltarItem extends Item {
             Optional<Altar> altar = Optional.ofNullable(RPGGods.ALTAR_MAP.get(altarId));
             if(altar.isPresent() && altar.get().getDeity().isPresent()) {
                 return Component.translatable("item.rpggods.altar_x",
-                        Component.translatable(rpggods.deity.Altar.createTranslationKey(altarId)));
+                        Component.translatable(Altar.createTranslationKey(altarId)));
             }
         }
         // fallback when no altar information provided
@@ -69,6 +69,7 @@ public class AltarItem extends Item {
         }
     }
 
+    // TODO addAltarItems to a creative tab
     public static void addAltarItems(List<ItemStack> items) {
         // add altar item stacks for each registered altar
         List<ResourceLocation> altarList = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());
@@ -77,13 +78,6 @@ public class AltarItem extends Item {
             ItemStack itemStack = new ItemStack(RGRegistry.ALTAR_ITEM.get());
             itemStack.getOrCreateTag().putString(AltarItem.KEY_ALTAR, altarId.toString());
             items.add(itemStack);
-        }
-    }
-
-    @Override
-    public void fillItemCategory(CreativeModeTab group, NonNullList<ItemStack> items) {
-        if (this.allowedIn(group)) {
-            addAltarItems(items);
         }
     }
 

@@ -1,10 +1,10 @@
-package rpggods.perk;
+package rpggods.data.perk;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.item.ItemStack;
-import com.mojang.math.Vector3f;
-import rpggods.deity.Offering;
+import org.joml.Vector3f;
+import rpggods.data.deity.Offering;
 
 public class PerkIcon {
 

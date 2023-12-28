@@ -1,4 +1,4 @@
-package rpggods.deity;
+package rpggods.data.deity;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

@@ -1,4 +1,4 @@
-package rpggods.deity;
+package rpggods.data.deity;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.util.Either;
@@ -12,6 +12,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
 
 import java.util.Optional;
@@ -22,7 +23,7 @@ public class Offering {
             Optional.empty(), Optional.empty(), 0, 0, Optional.empty(), Optional.empty());
 
     // Codec that accepts Item or ItemStack
-    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(Registry.ITEM.byNameCodec(), ItemStack.CODEC)
+    public static final Codec<ItemStack> ITEM_OR_STACK_CODEC = Codec.either(ForgeRegistries.ITEMS.getCodec(), ItemStack.CODEC)
             .xmap(either -> either.map(ItemStack::new, Function.identity()),
                     stack -> stack.getCount() == 1 && !stack.hasTag()
                             ? Either.left(stack.getItem())
@@ -43,6 +44,7 @@ public class Offering {
             Codec.STRING.optionalFieldOf("function_text").forGetter(Offering::getFunctionText)
     ).apply(instance, Offering::new));
 
+    // TODO use Ingredient instead of a single ItemStack
     private final ItemStack accept;
     private final Optional<String> acceptTagString;
     private final Optional<CompoundTag> acceptTag;
@@ -102,7 +104,7 @@ public class Offering {
      * Attempts to parse the deity from the given offering id
      *
      * @param offeringId the offering id in the form {@code namespace:deity/offering}
-     * @return the resource location if found, otherwise {@link DeityHelper#EMPTY}
+     * @return the resource location if found, otherwise {@link DeityWrapper#EMPTY}
      */
     public static ResourceLocation getDeity(final ResourceLocation offeringId) {
         String path = offeringId.getPath();
@@ -110,7 +112,7 @@ public class Offering {
         if (index > -1) {
             return new ResourceLocation(offeringId.getNamespace(), path.substring(0, index));
         }
-        return DeityHelper.EMPTY.id;
+        return DeityWrapper.EMPTY.id;
     }
 
     /**
@@ -122,7 +124,7 @@ public class Offering {
      */
     public boolean matches(ItemStack offering) {
         // check item and stack size
-        if (!this.accept.sameItemStackIgnoreDurability(offering) || offering.getCount() < this.accept.getCount()) {
+        if (!ItemStack.isSameItem(this.accept, offering) || offering.getCount() < this.accept.getCount()) {
             return false;
         }
         // check tag
@@ -142,7 +144,7 @@ public class Offering {
      */
     public Optional<ItemStack> getTrade(final ItemStack offering) {
         // special handling of trade when same item and NBT is present
-        if (trade.isPresent() && offering.sameItem(trade.get()) && tradeTag.isPresent()) {
+        if (trade.isPresent() && ItemStack.isSameItem(offering, trade.get()) && tradeTag.isPresent()) {
             // create copy of offering item with correct count
             ItemStack tradeItem = offering.copy();
             tradeItem.setCount(trade.get().getCount());

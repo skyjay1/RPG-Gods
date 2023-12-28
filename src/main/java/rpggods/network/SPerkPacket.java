@@ -8,8 +8,8 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.deity.DeityHelper;
-import rpggods.perk.Perk;
+import rpggods.data.deity.DeityWrapper;
+import rpggods.data.perk.Perk;
 
 import java.util.Map;
 import java.util.function.Supplier;
@@ -19,6 +19,7 @@ import java.util.function.Supplier;
  * Sent from the server to the client with a map of
  * ResourceLocation IDs and Perks
  **/
+// TODO use datapack registry instead
 public class SPerkPacket {
 
     protected static final Codec<Map<ResourceLocation, Perk>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, Perk.CODEC);
@@ -80,14 +81,14 @@ public class SPerkPacket {
         // clear affinity map
         RPGGods.AFFINITY.clear();
         // clear all deity helper perks
-        for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+        for(DeityWrapper helper : RPGGods.DEITY_HELPER.values()) {
             helper.perkList.clear();
             helper.perkByConditionMap.clear();
             helper.perkByTypeMap.clear();
         }
         // add perks to deity helper
         for(Map.Entry<ResourceLocation, Perk> entry : RPGGods.PERK_MAP.entrySet()) {
-            RPGGods.DEITY_HELPER.computeIfAbsent(entry.getValue().getDeity(), DeityHelper::new).add(entry.getKey(), entry.getValue());
+            RPGGods.DEITY_HELPER.computeIfAbsent(entry.getValue().getDeity(), DeityWrapper::new).add(entry.getKey(), entry.getValue());
         }
     }
 }

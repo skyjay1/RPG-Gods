@@ -60,21 +60,21 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import rpggods.deity.Cooldown;
-import rpggods.deity.DeityHelper;
-import rpggods.deity.Offering;
-import rpggods.deity.Sacrifice;
+import rpggods.data.deity.Cooldown;
+import rpggods.data.deity.DeityWrapper;
+import rpggods.data.deity.Offering;
+import rpggods.data.deity.Sacrifice;
 import rpggods.entity.AffinityGoal;
 import rpggods.entity.AltarEntity;
 import rpggods.util.FavorChangedEvent;
-import rpggods.favor.Favor;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.IFavor;
 import rpggods.network.SUpdateSittingPacket;
-import rpggods.perk.Perk;
-import rpggods.perk.PerkAction;
-import rpggods.perk.PerkCondition;
-import rpggods.tameable.ITameable;
-import rpggods.tameable.Tameable;
+import rpggods.data.perk.Perk;
+import rpggods.data.perk.PerkAction;
+import rpggods.data.perk.PerkCondition;
+import rpggods.data.tameable.ITameable;
+import rpggods.data.tameable.Tameable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -243,7 +243,7 @@ public class RGEvents {
         if (favor.isEnabled()) {
             // find matching perks (use set to ensure no duplicates)
             Set<ResourceLocation> perks = new HashSet<>();
-            for (DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+            for (DeityWrapper helper : RPGGods.DEITY_HELPER.values()) {
                 boolean deityEnabled = favor.getFavor(helper.id).isEnabled();
                 if (deityEnabled) {
                     perks.addAll(helper.perkByConditionMap.getOrDefault(type, ImmutableList.of()));
@@ -293,7 +293,7 @@ public class RGEvents {
         if (favor.isEnabled()) {
             // find matching perks
             List<ResourceLocation> perks = new ArrayList<>();
-            for (DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+            for (DeityWrapper helper : RPGGods.DEITY_HELPER.values()) {
                 boolean deityEnabled = favor.getFavor(helper.id).isEnabled();
                 if (deityEnabled) {
                     perks.addAll(helper.perkByTypeMap.getOrDefault(type, ImmutableList.of()));
@@ -400,7 +400,7 @@ public class RGEvents {
 
     public static void sendPerkFeedback(ResourceLocation deity, Player player, IFavor favor, boolean isPositive) {
         if (RPGGods.CONFIG.canGiveFeedback()) {
-            final Component deityName = DeityHelper.getName(deity);
+            final Component deityName = DeityWrapper.getName(deity);
             final Component message;
             if (isPositive) {
                 message = Component.translatable("favor.perk.feedback.positive", deityName).withStyle(ChatFormatting.GREEN);
@@ -439,7 +439,7 @@ public class RGEvents {
         if (null == itemId) {
             return false;
         }
-        DeityHelper deity = RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityHelper::new);
+        DeityWrapper deity = RPGGods.DEITY_HELPER.computeIfAbsent(deityId, DeityWrapper::new);
         List<ResourceLocation> perkIds = deity.perkByConditionMap
                 .getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of());
         // create list using perk IDs
@@ -467,7 +467,7 @@ public class RGEvents {
                 bolt.setPos(position.x, position.y, position.z);
                 altar.level.addFreshEntity(bolt);
                 // send message
-                Component message = Component.translatable("favor.perk.type.patron.description.add", DeityHelper.getName(favor.getPatron().get()))
+                Component message = Component.translatable("favor.perk.type.patron.description.add", DeityWrapper.getName(favor.getPatron().get()))
                         .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
                 player.displayClientMessage(message, true);
             }

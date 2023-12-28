@@ -8,7 +8,6 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
 import net.minecraft.world.level.material.Material;
-import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.EntityType;
@@ -16,17 +15,13 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
@@ -34,10 +29,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import rpggods.block.AltarLightBlock;
 import rpggods.block.BrazierBlock;
-import rpggods.blockentity.BrazierBlockEntity;
+import rpggods.block.entity.BrazierBlockEntity;
 import rpggods.entity.AltarEntity;
-import rpggods.favor.Favor;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.IFavor;
 import rpggods.menu.AltarContainerMenu;
 import rpggods.menu.FavorContainerMenu;
 import rpggods.item.AltarItem;
@@ -46,11 +41,8 @@ import rpggods.util.AutosmeltOrCobbleModifier;
 import rpggods.util.CropMultiplierModifier;
 import rpggods.util.ShapedAltarRecipe;
 import rpggods.util.ShapelessAltarRecipe;
-import rpggods.tameable.ITameable;
+import rpggods.data.tameable.ITameable;
 import rpggods.util.AltarStructureProcessor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class RGRegistry {
 
@@ -164,60 +156,4 @@ public final class RGRegistry {
     public static final RegistryObject<Codec<? extends CropMultiplierModifier>> CROP_LOOT_MODIFIER =
             LOOT_MODIFIER_SERIALIZERS.register("crop_multiplier", CropMultiplierModifier.CODEC_SUPPLIER);
 
-    public static final class ClientReg {
-
-        @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event) {
-            event.enqueueWork(() -> registerContainerRenders());
-            event.enqueueWork(() -> registerModelProperties());
-        }
-
-        @SubscribeEvent
-        public static void registerEntityLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
-            // create cube deformations
-            net.minecraft.client.model.geom.builders.CubeDeformation inner = new net.minecraft.client.model.geom.builders.CubeDeformation(0.25F);
-            net.minecraft.client.model.geom.builders.CubeDeformation outer = new net.minecraft.client.model.geom.builders.CubeDeformation(0.5F);
-            // register layer definitions
-            event.registerLayerDefinition(rpggods.client.entity.AltarRenderer.ALTAR_MODEL_RESOURCE, () -> rpggods.client.entity.AltarModel.createBodyLayer());
-            event.registerLayerDefinition(rpggods.client.entity.AltarRenderer.ALTAR_INNER_ARMOR_RESOURCE, () -> rpggods.client.entity.AltarArmorModel.createBodyLayer(inner));
-            event.registerLayerDefinition(rpggods.client.entity.AltarRenderer.ALTAR_OUTER_ARMOR_RESOURCE, () -> rpggods.client.entity.AltarArmorModel.createBodyLayer(outer));
-        }
-
-        @SubscribeEvent
-        public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-            event.registerEntityRenderer(ALTAR_TYPE.get(), rpggods.client.entity.AltarRenderer::new);
-            event.registerBlockEntityRenderer(BRAZIER_TYPE.get(), rpggods.client.blockentity.BrazierBlockEntityRenderer::new);
-        }
-
-        private static void registerContainerRenders() {
-            MenuScreens.register(RGRegistry.ALTAR_CONTAINER.get(), rpggods.client.screen.AltarScreen::new);
-            MenuScreens.register(RGRegistry.FAVOR_CONTAINER.get(), rpggods.client.screen.FavorScreen::new);
-        }
-
-        private static List<ResourceLocation> altars = new ArrayList<>();
-
-        private static void registerModelProperties() {
-            // Scroll properites
-            ItemProperties.register(SCROLL_ITEM.get(), new ResourceLocation("open"),
-                    (item, world, entity, i) -> (entity != null && entity.isUsingItem() && entity.getUseItem() == item) ? 1.0F : 0.0F);
-            // Altar properties
-            ItemProperties.register(ALTAR_ITEM.get(), new ResourceLocation("index"), (item, world, entity, i) -> {
-                // determine index of altar in list
-                if(altars.isEmpty() || (world != null && world.getGameTime() % 100 == 0)) {
-                    altars = new ArrayList<>(RPGGods.ALTAR_MAP.keySet());
-                    altars.sort(ResourceLocation::compareNamespaced);
-                }
-                ResourceLocation deity = ResourceLocation.tryParse(item.getOrCreateTag().getString(AltarItem.KEY_ALTAR));
-                int index = 0;
-                int size = altars.size();
-                for(int j = 0; j < size; j++) {
-                    if(altars.get(j).equals(deity)) {
-                        index = j;
-                        break;
-                    }
-                }
-                return (float) (index + 1) / (float) Math.max(1, size);
-            });
-        }
-    }
 }

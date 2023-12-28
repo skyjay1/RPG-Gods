@@ -7,7 +7,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.tameable.ITameable;
+import rpggods.data.tameable.ITameable;
 
 import java.util.Optional;
 import java.util.function.Supplier;

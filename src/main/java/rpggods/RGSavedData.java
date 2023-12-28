@@ -6,8 +6,8 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
-import rpggods.favor.Favor;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.IFavor;
 
 import java.util.Collection;
 import java.util.HashMap;

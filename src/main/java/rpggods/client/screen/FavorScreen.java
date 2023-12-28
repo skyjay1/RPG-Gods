@@ -27,18 +27,18 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
-import rpggods.deity.Deity;
-import rpggods.deity.DeityHelper;
-import rpggods.deity.Offering;
-import rpggods.deity.Sacrifice;
+import rpggods.data.deity.Altar;
+import rpggods.data.deity.Deity;
+import rpggods.data.deity.DeityWrapper;
+import rpggods.data.deity.Offering;
+import rpggods.data.deity.Sacrifice;
 import rpggods.entity.AltarEntity;
-import rpggods.favor.FavorLevel;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.FavorLevel;
+import rpggods.data.favor.IFavor;
 import rpggods.menu.FavorContainerMenu;
-import rpggods.perk.Perk;
-import rpggods.perk.PerkAction;
-import rpggods.perk.PerkCondition;
+import rpggods.data.perk.Perk;
+import rpggods.data.perk.PerkAction;
+import rpggods.data.perk.PerkCondition;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -195,14 +195,14 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
 
         // Iterate over all deities using their deity helper.
         // This allows us to skip items that were invalidated by the deity helper, such as empty offerings or perks.
-        for (DeityHelper deityHelper : RPGGods.DEITY_HELPER.values()) {
+        for (DeityWrapper deityWrapper : RPGGods.DEITY_HELPER.values()) {
             // skip deities that are not enabled or not unlocked
-            Deity d = deityHelper.getDeity().orElse(Deity.EMPTY);
+            Deity d = deityWrapper.getDeity().orElse(Deity.EMPTY);
             if (!d.isEnabled() || !favor.getFavor(d.getId()).isEnabled()) {
                 continue;
             }
             // add deity to list
-            deityList.add(deityHelper.id);
+            deityList.add(deityWrapper.id);
             // add entries to all lists for this deity
             offeringMap.put(d.getId(), new ArrayList<>());
             tradeMap.put(d.getId(), new ArrayList<>());
@@ -213,9 +213,9 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
             for (int i = favorLevel.getMin(), j = favorLevel.getMax(); i <= j; i++) {
                 perkSubMap.put(i, new ArrayList<>());
             }
-            perkMap.put(deityHelper.id, perkSubMap);
+            perkMap.put(deityWrapper.id, perkSubMap);
             // add all offerings to map using deity helper (so we can skip offerings that were invalid)
-            for (List<ResourceLocation> entry : deityHelper.offeringMap.values()) {
+            for (List<ResourceLocation> entry : deityWrapper.offeringMap.values()) {
                 for (ResourceLocation offeringId : entry) {
                     Optional<Offering> optional = Optional.ofNullable(RPGGods.OFFERING_MAP.get(offeringId));
                     optional.ifPresent(offering -> {
@@ -227,7 +227,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
                 }
             }
             // add all sacrifices to map using deity helper (so we can skip sacrifices that were invalid)
-            for (List<ResourceLocation> entry : deityHelper.sacrificeMap.values()) {
+            for (List<ResourceLocation> entry : deityWrapper.sacrificeMap.values()) {
                 for (ResourceLocation sacrificeId : entry) {
                     Optional<Sacrifice> optional = Optional.ofNullable(RPGGods.SACRIFICE_MAP.get(sacrificeId));
                     optional.ifPresent(sacrifice -> {
@@ -238,7 +238,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
             }
             // add all non-hidden perks to map using deity helper (so we can skip perks that were invalid)
             Perk perk;
-            for (ResourceLocation entry : deityHelper.perkList) {
+            for (ResourceLocation entry : deityWrapper.perkList) {
                 Optional<Perk> optional = Optional.ofNullable(RPGGods.PERK_MAP.get(entry));
                 if (optional.isPresent()) {
                     perk = optional.get();
@@ -300,7 +300,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
         int startX = (this.imageWidth - (TAB_WIDTH * TAB_COUNT)) / 2;
         int startY;
         for (int i = 0; i < tabCount; i++) {
-            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, Component.translatable(rpggods.deity.Altar.createTranslationKey(deityList.get(i))),
+            tabButtons[i] = this.addRenderableWidget(new TabButton(this, i, Component.translatable(Altar.createTranslationKey(deityList.get(i))),
                     leftPos + startX + (i * TAB_WIDTH), topPos - TAB_HEIGHT + 13));
         }
         // add tab buttons
@@ -597,7 +597,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
         scrollEnabled = false;
         switch (this.page) {
             case SUMMARY:
-                deityTitle = Component.translatable(rpggods.deity.Altar.createTranslationKey(deity) + ".title")
+                deityTitle = Component.translatable(Altar.createTranslationKey(deity) + ".title")
                         .withStyle(ChatFormatting.BLACK, ChatFormatting.ITALIC);
                 break;
             case OFFERINGS:
@@ -1531,7 +1531,7 @@ public class FavorScreen extends AbstractContainerScreen<FavorContainerMenu> {
             if (deityId < FavorScreen.this.deityList.size()) {
                 this.visible = true;
                 this.deity = FavorScreen.this.deityList.get(deityId);
-                this.setMessage(Component.translatable(rpggods.deity.Altar.createTranslationKey(deity)));
+                this.setMessage(Component.translatable(Altar.createTranslationKey(deity)));
                 this.item = RPGGods.DEITY_MAP.getOrDefault(deity, Deity.EMPTY).getIcon();
             } else {
                 this.visible = false;

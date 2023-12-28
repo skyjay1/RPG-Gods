@@ -20,7 +20,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
+import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import javax.annotation.Nullable;

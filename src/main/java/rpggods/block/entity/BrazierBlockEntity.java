@@ -1,4 +1,4 @@
-package rpggods.blockentity;
+package rpggods.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -11,10 +11,8 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
-import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -24,9 +22,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.ticks.ContainerSingleItem;
 import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
 import rpggods.RGEvents;
@@ -39,7 +38,7 @@ import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.UUID;
 
-public class BrazierBlockEntity extends BlockEntity implements Container, Nameable {
+public class BrazierBlockEntity extends BlockEntity implements ContainerSingleItem {
 
     private static final String KEY_COOLDOWN = "Cooldown";
     private static final String KEY_OWNER = "Owner";
@@ -207,17 +206,17 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
     }
 
     public void inventoryChanged() {
-        if (getLevel() != null && !getLevel().isClientSide()) {
-            getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
-        }
         ItemStack itemStack = getItem(0);
         this.name = itemStack.hasCustomHoverName() ? itemStack.getHoverName() : null;
+        setChanged();
     }
 
     @Override
     public void setChanged() {
         super.setChanged();
-        this.inventoryChanged();
+        if (getLevel() != null && !getLevel().isClientSide()) {
+            getLevel().sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
 
     @Override
@@ -227,23 +226,8 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
     }
 
     @Override
-    public int getContainerSize() {
-        return this.inventory.size();
-    }
-
-    @Override
     public int getMaxStackSize() {
         return 1;
-    }
-
-    @Override
-    public boolean canPlaceItem(int slot, ItemStack stack) {
-        return isEmpty()  || this.inventory.get(0).isEmpty() || getItem(0).getCount() < getMaxStackSize();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return this.inventory.isEmpty();
     }
 
     /**
@@ -290,10 +274,8 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
     public boolean stillValid(Player player) {
         if (this.level.getBlockEntity(this.worldPosition) != this) {
             return false;
-        } else {
-            return !(player.distanceToSqr((double) this.worldPosition.getX() + 0.5D, (double) this.worldPosition.getY() + 0.5D,
-                    (double) this.worldPosition.getZ() + 0.5D) > 64.0D);
         }
+        return player.position().closerThan(this.worldPosition.getCenter(), 8.0D);
     }
 
     // OWNER
@@ -316,23 +298,6 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
         return level.getPlayerByUUID(this.owner);
     }
 
-    // NAMEABLE
-
-    protected Component getDefaultName() {
-        return Component.translatable("container.brazier");
-    }
-
-    @Override
-    public Component getName() {
-        return this.name != null ? this.name : this.getDefaultName();
-    }
-
-    @Nullable
-    @Override
-    public Component getCustomName() {
-        return this.name;
-    }
-
     // CAPABILITY
 
     protected IItemHandler createUnSidedHandler() {
@@ -341,7 +306,7 @@ public class BrazierBlockEntity extends BlockEntity implements Container, Nameab
 
     @Override
     public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
-        if (!this.remove && cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY ) {
+        if (!this.remove && cap == ForgeCapabilities.ITEM_HANDLER) {
             return itemHandler.cast();
         }
         return super.getCapability(cap, side);

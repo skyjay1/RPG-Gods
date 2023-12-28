@@ -1,4 +1,4 @@
-package rpggods.deity;
+package rpggods.data.deity;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraftforge.common.util.INBTSerializable;

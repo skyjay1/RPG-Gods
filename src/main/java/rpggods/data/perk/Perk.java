@@ -1,12 +1,12 @@
-package rpggods.perk;
+package rpggods.data.perk;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
-import rpggods.favor.FavorLevel;
-import rpggods.favor.FavorRange;
+import rpggods.data.favor.FavorLevel;
+import rpggods.data.favor.FavorRange;
 
 import java.util.List;
 import java.util.Optional;

@@ -13,8 +13,8 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
 import rpggods.RPGGods;
-import rpggods.favor.FavorLevel;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.FavorLevel;
+import rpggods.data.favor.IFavor;
 import rpggods.menu.FavorContainerMenu;
 
 public class ScrollItem extends Item {

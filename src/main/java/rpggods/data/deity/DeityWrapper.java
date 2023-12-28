@@ -1,15 +1,15 @@
-package rpggods.deity;
+package rpggods.data.deity;
 
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
-import rpggods.favor.FavorRange;
-import rpggods.perk.Affinity;
-import rpggods.perk.Perk;
-import rpggods.perk.PerkCondition;
-import rpggods.perk.PerkAction;
+import rpggods.data.favor.FavorRange;
+import rpggods.data.perk.Affinity;
+import rpggods.data.perk.Perk;
+import rpggods.data.perk.PerkCondition;
+import rpggods.data.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -22,8 +22,8 @@ import java.util.Optional;
  * Centralizes all offerings, sacrifices, and perks
  * to reduce expensive searches and sorts after data has been loaded.
  */
-public class DeityHelper {
-    public static final DeityHelper EMPTY = new DeityHelper(new ResourceLocation("null"));
+public class DeityWrapper {
+    public static final DeityWrapper EMPTY = new DeityWrapper(new ResourceLocation("null"));
 
     /** The ResourceLocation ID **/
     public final ResourceLocation id;
@@ -43,7 +43,7 @@ public class DeityHelper {
     /**
      * @param id the ID of the associated Deity
      */
-    public DeityHelper(ResourceLocation id) {
+    public DeityWrapper(ResourceLocation id) {
         this.id = id;
     }
 

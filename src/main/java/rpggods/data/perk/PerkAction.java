@@ -1,4 +1,4 @@
-package rpggods.perk;
+package rpggods.data.perk;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -53,14 +53,14 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
-import rpggods.deity.Deity;
-import rpggods.deity.DeityHelper;
+import rpggods.data.deity.Altar;
+import rpggods.data.deity.Deity;
+import rpggods.data.deity.DeityWrapper;
 import rpggods.util.FavorChangedEvent;
 import rpggods.RGEvents;
-import rpggods.favor.FavorLevel;
-import rpggods.favor.IFavor;
-import rpggods.tameable.ITameable;
+import rpggods.data.favor.FavorLevel;
+import rpggods.data.favor.IFavor;
+import rpggods.data.tameable.ITameable;
 
 import java.util.Optional;
 
@@ -562,7 +562,7 @@ public final class PerkAction {
                 if(getMultiplier().isPresent() && getId().isPresent()) {
                     // format multiplier as signed bonus
                     String prefix = (getMultiplier().get() > 0) ? "+" : "";
-                    return Component.translatable("favor.perk.type.add_decay.description.full", prefix + getMultiplier().get(), DeityHelper.getName(getId().get()));
+                    return Component.translatable("favor.perk.type.add_decay.description.full", prefix + getMultiplier().get(), DeityWrapper.getName(getId().get()));
                 }
                 return Component.empty();
             case DURABILITY:
@@ -590,7 +590,7 @@ public final class PerkAction {
             case PATRON:
                 if(getPatron().isPresent()) {
                     if (getPatron().get().getDeity().isPresent()) {
-                        Component deityName = DeityHelper.getName(getPatron().get().getDeity().get());
+                        Component deityName = DeityWrapper.getName(getPatron().get().getDeity().get());
                         return Component.translatable("favor.perk.type.patron.description.add", deityName);
                     }
                     return Component.translatable("favor.perk.type.patron.description.remove");
@@ -599,7 +599,7 @@ public final class PerkAction {
             case UNLOCK:
                 if(getId().isPresent()) {
                     ResourceLocation deityId = getId().get();
-                    Component deityName = DeityHelper.getName(deityId);
+                    Component deityName = DeityWrapper.getName(deityId);
                     Altar altar = RPGGods.ALTAR_MAP.getOrDefault(deityId, Altar.EMPTY);
                     String suffix = altar.isFemale() ? "female" : "male";
                     return Component.translatable("favor.perk.type.unlock.description." + suffix, deityName);
@@ -615,6 +615,7 @@ public final class PerkAction {
         }
     }
 
+    // TODO dispatch codec for Perk Action
     public static enum Type implements StringRepresentable {
         FUNCTION("function"),
         POTION("potion"),

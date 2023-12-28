@@ -1,12 +1,11 @@
-package rpggods.deity;
+package rpggods.data.deity;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
-import rpggods.perk.PerkCondition;
+import rpggods.data.perk.PerkCondition;
 
 import java.util.List;
 import java.util.Optional;
@@ -56,7 +55,7 @@ public class Sacrifice {
     /**
      * Attempts to parse the deity from the given sacrifice id
      * @param sacrificeId the offering id in the form {@code namespace:deity/sacrificename}
-     * @return the resource location if found, otherwise {@link DeityHelper#EMPTY}
+     * @return the resource location if found, otherwise {@link DeityWrapper#EMPTY}
      */
     public static ResourceLocation getDeity(final ResourceLocation sacrificeId) {
         String path = sacrificeId.getPath();
@@ -64,7 +63,7 @@ public class Sacrifice {
         if(index > -1) {
             return new ResourceLocation(sacrificeId.getNamespace(), path.substring(0, index));
         }
-        return DeityHelper.EMPTY.id;
+        return DeityWrapper.EMPTY.id;
     }
 
     public ResourceLocation getEntity() {

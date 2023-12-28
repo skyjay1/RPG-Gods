@@ -8,9 +8,7 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
-import rpggods.deity.Deity;
-import rpggods.deity.DeityHelper;
+import rpggods.data.deity.Deity;
 
 import java.util.Map;
 import java.util.function.Supplier;
@@ -20,6 +18,7 @@ import java.util.function.Supplier;
  * Sent from the server to the client with a map of
  * ResourceLocation IDs and Deities
  **/
+// TODO use datapack registry instead
 public class SDeityPacket {
 
     protected static final Codec<Map<ResourceLocation, Deity>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, Deity.CODEC);

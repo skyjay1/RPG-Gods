@@ -1,4 +1,4 @@
-package rpggods.favor;
+package rpggods.data.favor;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
@@ -8,8 +8,8 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.common.util.LazyOptional;
 import rpggods.RPGGods;
-import rpggods.deity.Cooldown;
-import rpggods.deity.Deity;
+import rpggods.data.deity.Cooldown;
+import rpggods.data.deity.Deity;
 
 import java.util.HashMap;
 import java.util.Map;

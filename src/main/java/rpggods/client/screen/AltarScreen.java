@@ -23,7 +23,7 @@ import net.minecraft.network.chat.Component;
 import rpggods.RPGGods;
 import rpggods.util.altar.AltarPose;
 import rpggods.util.altar.HumanoidPart;
-import rpggods.deity.Altar;
+import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
 import rpggods.menu.AltarContainerMenu;
 import rpggods.network.CUpdateAltarPacket;

@@ -1,4 +1,4 @@
-package rpggods.tameable;
+package rpggods.data.tameable;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,7 +36,7 @@ public interface ITameable extends INBTSerializable<CompoundTag> {
 
     default void setSittingWithUpdate(Entity tamed, boolean isSitting) {
         setSitting(isSitting);
-        if(!tamed.level.isClientSide) {
+        if(!tamed.level().isClientSide) {
             RPGGods.CHANNEL.send(PacketDistributor.TRACKING_ENTITY.with(() -> tamed),
                     new SUpdateSittingPacket(tamed.getId(), isSitting));
         }

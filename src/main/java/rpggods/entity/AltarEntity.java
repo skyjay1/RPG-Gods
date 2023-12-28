@@ -4,71 +4,71 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentContents;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.material.Material;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerListener;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.Container;
-import net.minecraft.world.ContainerListener;
-import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.world.level.block.entity.SkullBlockEntity;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.HumanoidArm;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.entity.SkullBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
+import rpggods.RGEvents;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.util.altar.AltarItems;
-import rpggods.util.altar.AltarPose;
 import rpggods.block.AltarLightBlock;
-import rpggods.deity.Altar;
-import rpggods.deity.Deity;
-import rpggods.deity.DeityHelper;
-import rpggods.RGEvents;
-import rpggods.favor.Favor;
-import rpggods.favor.IFavor;
+import rpggods.data.deity.Altar;
+import rpggods.data.deity.Deity;
+import rpggods.data.deity.DeityWrapper;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.IFavor;
+import rpggods.data.perk.PerkCondition;
 import rpggods.item.AltarItem;
 import rpggods.menu.AltarContainerMenu;
 import rpggods.menu.FavorContainerMenu;
 import rpggods.network.SUpdateAltarPacket;
-import rpggods.perk.PerkCondition;
+import rpggods.util.altar.AltarItems;
+import rpggods.util.altar.AltarPose;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -102,7 +102,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
 
     public AltarEntity(final EntityType<? extends AltarEntity> entityType, final Level world) {
         super(entityType, world);
-        this.maxUpStep = 0.0F;
+        this.setMaxUpStep(0.0F);
         initInventory();
     }
 
@@ -230,16 +230,16 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (!this.level.isClientSide && !this.isRemoved()) {
-            if (DamageSource.OUT_OF_WORLD.equals(source)) {
+        if (!this.level().isClientSide && !this.isRemoved()) {
+            if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
                 this.kill();
                 return false;
             } else if (!this.isInvulnerableTo(source)) {
-                if (source.isExplosion()) {
+                if (source.is(DamageTypeTags.IS_EXPLOSION)) {
                     this.brokenByAnything(source);
                     this.kill();
                     return false;
-                } else if (DamageSource.IN_FIRE.equals(source)) {
+                } else if (source.is(DamageTypeTags.IGNITES_ARMOR_STANDS)) {
                     if (this.isOnFire()) {
                         this.causeDamage(source, 0.15F);
                     } else {
@@ -247,7 +247,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                     }
 
                     return false;
-                } else if (DamageSource.ON_FIRE.equals(source) && this.getHealth() > 0.5F) {
+                } else if (source.is(DamageTypeTags.BURNS_ARMOR_STANDS) && this.getHealth() > 0.5F) {
                     this.causeDamage(source, 4.0F);
                     return false;
                 } else {
@@ -264,9 +264,9 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                         this.kill();
                         return flag1;
                     } else {
-                        long i = this.level.getGameTime();
+                        long i = this.level().getGameTime();
                         if (i - this.lastHit > 5L && !flag) {
-                            this.level.broadcastEntityEvent(this, (byte) 32);
+                            this.level().broadcastEntityEvent(this, (byte) 32);
                             this.lastHit = i;
                         } else {
                             this.brokenByPlayer(source);
@@ -293,18 +293,18 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     @Override
     public void tick() {
         // client-side tick logic
-        if (firstTick && level.isClientSide) {
-                // update game profile
-                setCustomName(getCustomName());
+        if (firstTick && this.level().isClientSide()) {
+            // update game profile
+            setCustomName(getCustomName());
         }
         // parent tick
         super.tick();
         // server-side tick logic
-        if(!level.isClientSide) {
+        if(!this.level().isClientSide()) {
             // check if altar has a deity
             if(getDeity().isPresent()) {
                 // check if there are any perk conditions for "ritual"
-                DeityHelper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityHelper::new);
+                DeityWrapper helper = RPGGods.DEITY_HELPER.computeIfAbsent(getDeity().get(), DeityWrapper::new);
                 if(!helper.perkByConditionMap.getOrDefault(PerkCondition.Type.RITUAL, ImmutableList.of()).isEmpty()) {
                     // onPerformRitual
                     RGEvents.performRitual(this, getDeity().get());
@@ -317,10 +317,9 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 // check light level
                 if(lightLevel > 0) {
                     BlockPos posIn = getOnPos().above();
-                    BlockState blockIn = level.getBlockState(posIn);
+                    BlockState blockIn = this.level().getBlockState(posIn);
                     // check if current block can be replaced
-                    if((blockIn.getMaterial() == Material.AIR || blockIn.getMaterial().isLiquid())
-                            && !RGRegistry.LIGHT_BLOCK.get().defaultBlockState().is(blockIn.getBlock())) {
+                    if(blockIn.canBeReplaced() && !RGRegistry.LIGHT_BLOCK.get().defaultBlockState().is(blockIn.getBlock())) {
                         // determine waterlog value
                         boolean waterlogged = blockIn.getFluidState().isSource() && blockIn.getFluidState().is(FluidTags.WATER);
                         // create light block
@@ -329,7 +328,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                                 .setValue(AltarLightBlock.LEVEL, lightLevel)
                                 .setValue(AltarLightBlock.WATERLOGGED, waterlogged);
                         // place light block
-                        level.setBlock(posIn, lightBlock, Block.UPDATE_ALL);
+                        this.level().setBlock(posIn, lightBlock, Block.UPDATE_ALL);
                     }
                 }
             }
@@ -337,8 +336,8 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     private void showBreakingParticles() {
-        if (this.level instanceof ServerLevel) {
-            ((ServerLevel) this.level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.STONE.defaultBlockState()), this.getX(), this.getY(0.66D), this.getZ(), 10, (double) (this.getBbWidth() / 4.0F), (double) (this.getBbHeight() / 4.0F), (double) (this.getBbWidth() / 4.0F), 0.05D);
+        if (this.level() instanceof ServerLevel) {
+            ((ServerLevel) this.level()).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.STONE.defaultBlockState()), this.getX(), this.getY(0.66D), this.getZ(), 10, (double) (this.getBbWidth() / 4.0F), (double) (this.getBbHeight() / 4.0F), (double) (this.getBbWidth() / 4.0F), 0.05D);
         }
     }
 
@@ -357,7 +356,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         // drop altar
         final ItemStack altarItem = new ItemStack(RGRegistry.ALTAR_ITEM.get());
         altarItem.getOrCreateTag().putString(AltarItem.KEY_ALTAR, getAltar().toString());
-        Block.popResource(level, blockPosition().above(), altarItem);
+        Block.popResource(this.level(), blockPosition().above(), altarItem);
         // drop other
         this.brokenByAnything(p_213815_1_);
     }
@@ -369,23 +368,23 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         // drop inventory
         if (this.inventory != null) {
             if (!isHandsLocked()) {
-                Block.popResource(level, pos, getItemBySlot(EquipmentSlot.MAINHAND));
-                Block.popResource(level, pos, getItemBySlot(EquipmentSlot.OFFHAND));
+                Block.popResource(this.level(), pos, getItemBySlot(EquipmentSlot.MAINHAND));
+                Block.popResource(this.level(), pos, getItemBySlot(EquipmentSlot.OFFHAND));
                 setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
                 setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
             }
             if (!isArmorLocked()) {
-                Block.popResource(level, pos, getItemBySlot(EquipmentSlot.FEET));
-                Block.popResource(level, pos, getItemBySlot(EquipmentSlot.LEGS));
-                Block.popResource(level, pos, getItemBySlot(EquipmentSlot.CHEST));
-                Block.popResource(level, pos, getItemBySlot(EquipmentSlot.HEAD));
+                Block.popResource(this.level(), pos, getItemBySlot(EquipmentSlot.FEET));
+                Block.popResource(this.level(), pos, getItemBySlot(EquipmentSlot.LEGS));
+                Block.popResource(this.level(), pos, getItemBySlot(EquipmentSlot.CHEST));
+                Block.popResource(this.level(), pos, getItemBySlot(EquipmentSlot.HEAD));
                 setItemSlot(EquipmentSlot.FEET, ItemStack.EMPTY);
                 setItemSlot(EquipmentSlot.LEGS, ItemStack.EMPTY);
                 setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
                 setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
             }
             if (!isBlockLocked()) {
-                Block.popResource(level, pos, getBlockBySlot());
+                Block.popResource(this.level(), pos, getBlockBySlot());
                 setBlockSlot(ItemStack.EMPTY);
             }
         }
@@ -393,7 +392,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     }
 
     private void playBrokenSound() {
-        this.level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.STONE_BREAK, this.getSoundSource(), 1.0F, 1.0F);
+        this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.STONE_BREAK, this.getSoundSource(), 1.0F, 1.0F);
     }
 
     @Override
@@ -555,7 +554,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     public void containerChanged(Container inv) {
         this.refreshDimensions();
         // send packet to client to notify change
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             ItemStack block = getBlockBySlot();
             RPGGods.CHANNEL.send(PacketDistributor.ALL.noArg(), new SUpdateAltarPacket(this.getId(), block));
         }
@@ -584,7 +583,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
         setBlockSlot(new ItemStack(altar.getItems().getBlock().asItem()));
         // custom name
         if (altar.getDeity().isPresent()) {
-            setCustomName(DeityHelper.getName(altarId));
+            setCustomName(DeityWrapper.getName(altarId));
         } else if (altar.getName().isPresent()) {
             setCustomName(Component.literal(altar.getName().get()));
         }
@@ -615,7 +614,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
             // determine string to save deity name
             ResourceLocation deityId = altar.getDeity().get();
             deity = Optional.ofNullable(RPGGods.DEITY_MAP.get(deityId));
-            customName = DeityHelper.getName(altarId);
+            customName = DeityWrapper.getName(altarId);
             compoundTag.putString(KEY_DEITY, deityId.toString());
         }
         // write custom name
@@ -692,7 +691,7 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
     /**
      * @return a new Altar instance with the same properties as found in this entity.
      */
-    public rpggods.deity.Altar createAltarProperties() {
+    public Altar createAltarProperties() {
         AltarItems items;
         items = new AltarItems(
                 getItemBySlot(EquipmentSlot.HEAD),
@@ -705,9 +704,9 @@ public class AltarEntity extends LivingEntity implements ContainerListener {
                 isArmorLocked(), isHandsLocked(), isBlockLocked());
         Optional<String> name = hasCustomName() ? Optional.of(getCustomName().getString()) : Optional.empty();
         boolean enabled = true; // TODO
-        ResourceLocation material = rpggods.deity.Altar.MATERIAL; // TODO
+        ResourceLocation material = Altar.MATERIAL; // TODO
         int lightLevel = 0; // TODO
-        return new rpggods.deity.Altar(enabled, name, isFemale(), isSlim(), lightLevel, items,
+        return new Altar(enabled, name, isFemale(), isSlim(), lightLevel, items,
                 material, getAltarPose(), isAltarPoseLocked());
     }
 

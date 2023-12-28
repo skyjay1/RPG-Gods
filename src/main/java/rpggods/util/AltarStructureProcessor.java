@@ -14,14 +14,13 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProc
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
+import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 public class AltarStructureProcessor extends StructureProcessor {
 

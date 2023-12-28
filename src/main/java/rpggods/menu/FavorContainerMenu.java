@@ -6,8 +6,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import rpggods.RGRegistry;
-import rpggods.favor.Favor;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.IFavor;
 
 import java.util.Optional;
 

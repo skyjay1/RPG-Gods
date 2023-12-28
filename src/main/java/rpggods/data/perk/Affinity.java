@@ -1,4 +1,4 @@
-package rpggods.perk;
+package rpggods.data.perk;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -64,7 +64,7 @@ public final class Affinity {
                     return DataResult.success(t);
                 }
             }
-            return DataResult.error("Failed to parse affinity type '" + id + "'");
+            return DataResult.error(() -> "Failed to parse affinity type '" + id + "'");
         }
 
         public Component getDisplayName() {

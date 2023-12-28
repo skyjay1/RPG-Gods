@@ -91,7 +91,7 @@ public class CUpdateAltarPacket {
             context.enqueueWork(() -> {
                 final ServerPlayer player = context.getSender();
                 Entity entity = context.getSender().getCommandSenderWorld().getEntity(message.entityId);
-                double maxDistance = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get());
+                double maxDistance = player.getEntityReach();
                 if (entity != null && entity instanceof AltarEntity && player.distanceToSqr(entity) < Math.pow(maxDistance, 2)) {
                     // update pose and name
                     AltarEntity altar = (AltarEntity) entity;

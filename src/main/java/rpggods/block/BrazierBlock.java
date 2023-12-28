@@ -42,9 +42,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 import rpggods.RGRegistry;
 import rpggods.RPGGods;
-import rpggods.blockentity.BrazierBlockEntity;
-
-import java.util.Random;
+import rpggods.block.entity.BrazierBlockEntity;
 
 public class BrazierBlock extends Block implements EntityBlock, SimpleWaterloggedBlock {
 

@@ -1,4 +1,4 @@
-package rpggods.favor;
+package rpggods.data.favor;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -7,7 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.ChatFormatting;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.INBTSerializable;
-import rpggods.deity.DeityHelper;
+import rpggods.data.deity.DeityWrapper;
 import rpggods.util.FavorChangedEvent;
 
 import javax.annotation.Nullable;
@@ -206,7 +206,7 @@ public class FavorLevel implements INBTSerializable<CompoundTag> {
         long favorToNext = Math.min(calculateFavor(maxLevel), getFavorToNextLevel());
         String sFavorToNext = (favorToNext == 0 ? "--" : String.valueOf(favorToNext));
         playerIn.displayClientMessage(Component.translatable("favor.current_favor",
-                DeityHelper.getName(deity), getFavor(), sFavorToNext, getLevel())
+                DeityWrapper.getName(deity), getFavor(), sFavorToNext, getLevel())
                 .withStyle(ChatFormatting.LIGHT_PURPLE), false);
     }
 

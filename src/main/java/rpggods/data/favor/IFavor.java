@@ -1,4 +1,4 @@
-package rpggods.favor;
+package rpggods.data.favor;
 
 import com.google.common.collect.Iterables;
 import net.minecraft.world.entity.player.Player;
@@ -7,11 +7,11 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.util.INBTSerializable;
 import rpggods.RPGGods;
-import rpggods.deity.Offering;
-import rpggods.deity.Sacrifice;
+import rpggods.data.deity.Offering;
+import rpggods.data.deity.Sacrifice;
 import rpggods.util.FavorChangedEvent;
-import rpggods.deity.Cooldown;
-import rpggods.perk.Patron;
+import rpggods.data.deity.Cooldown;
+import rpggods.data.perk.Patron;
 
 import java.util.Map;
 import java.util.Map.Entry;

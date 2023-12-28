@@ -19,12 +19,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
-import rpggods.deity.DeityHelper;
+import rpggods.data.deity.DeityWrapper;
 import rpggods.RGEvents;
-import rpggods.favor.IFavor;
-import rpggods.perk.Perk;
-import rpggods.perk.PerkAction;
+import rpggods.data.favor.IFavor;
+import rpggods.data.perk.Perk;
+import rpggods.data.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,7 +36,7 @@ public class CropMultiplierModifier extends LootModifier {
 
     public static final Supplier<Codec<CropMultiplierModifier>> CODEC_SUPPLIER = Suppliers.memoize(() -> RecordCodecBuilder.create(inst ->
             codecStart(inst)
-                    .and(TagKey.codec(Registry.BLOCK_REGISTRY).fieldOf("crops").forGetter(CropMultiplierModifier::getCrops))
+                    .and(TagKey.codec(ForgeRegistries.Keys.BLOCKS).fieldOf("crops").forGetter(CropMultiplierModifier::getCrops))
                     .apply(inst, CropMultiplierModifier::new)));;
 
     private final TagKey<Block> crops;
@@ -59,7 +60,7 @@ public class CropMultiplierModifier extends LootModifier {
         }
         // determine which of the mining effects can activate
         List<ResourceLocation> cropHarvest = new ArrayList<>();
-        for (DeityHelper deity : RPGGods.DEITY_HELPER.values()) {
+        for (DeityWrapper deity : RPGGods.DEITY_HELPER.values()) {
             cropHarvest.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.CROP_HARVEST, ImmutableList.of()));
         }
         // make sure this is an ore mined by a non-creative player

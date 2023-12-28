@@ -22,12 +22,13 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import rpggods.deity.Altar;
-import rpggods.deity.Deity;
-import rpggods.deity.DeityHelper;
-import rpggods.deity.Offering;
-import rpggods.deity.Sacrifice;
-import rpggods.favor.IFavor;
+import rpggods.client.RGClientEvents;
+import rpggods.data.deity.Altar;
+import rpggods.data.deity.Deity;
+import rpggods.data.deity.DeityWrapper;
+import rpggods.data.deity.Offering;
+import rpggods.data.deity.Sacrifice;
+import rpggods.data.favor.IFavor;
 import rpggods.network.CUpdateAltarPacket;
 import rpggods.network.SAltarPacket;
 import rpggods.network.SDeityPacket;
@@ -36,9 +37,9 @@ import rpggods.network.SPerkPacket;
 import rpggods.network.SSacrificePacket;
 import rpggods.network.SUpdateAltarPacket;
 import rpggods.network.SUpdateSittingPacket;
-import rpggods.perk.Affinity;
-import rpggods.perk.Perk;
-import rpggods.tameable.ITameable;
+import rpggods.data.perk.Affinity;
+import rpggods.data.perk.Perk;
+import rpggods.data.tameable.ITameable;
 import rpggods.util.CodecJsonDataManager;
 
 import javax.annotation.Nullable;
@@ -64,7 +65,7 @@ public class RPGGods {
             () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
     // Map of Deity ID to DeityHelper
-    public static final Map<ResourceLocation, DeityHelper> DEITY_HELPER = new HashMap<>();
+    public static final Map<ResourceLocation, DeityWrapper> DEITY_HELPER = new HashMap<>();
     // Map of Entity ID to Perk IDs of perks that affect affinity
     public static final Map<ResourceLocation, Map<Affinity.Type, List<ResourceLocation>>> AFFINITY = new HashMap<>();
 
@@ -90,7 +91,7 @@ public class RPGGods {
         // Deferred registers
         RGRegistry.register();
         // Mod event bus listeners
-        FMLJavaModLoadingContext.get().getModEventBus().register(RGRegistry.ClientReg.class);
+        FMLJavaModLoadingContext.get().getModEventBus().register(RGClientEvents.class);
         FMLJavaModLoadingContext.get().getModEventBus().register(RGEvents.ModEvents.class);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(RPGGods::setup);
         // Config file

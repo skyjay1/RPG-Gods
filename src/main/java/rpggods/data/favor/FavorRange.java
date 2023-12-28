@@ -1,4 +1,4 @@
-package rpggods.favor;
+package rpggods.data.favor;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -55,7 +55,7 @@ public class FavorRange {
      * @return true if this is a server world and the player matches this favor range
      */
     public boolean isInRange(final Player player) {
-        if (!player.level.isClientSide && player.isEffectiveAi() && RPGGods.getFavor(player).isPresent() && this != FavorRange.EMPTY) {
+        if (!player.level().isClientSide() && RPGGods.getFavor(player).isPresent() && this != FavorRange.EMPTY) {
             return isInRange(RPGGods.getFavor(player).orElse(Favor.EMPTY));
         }
         return false;

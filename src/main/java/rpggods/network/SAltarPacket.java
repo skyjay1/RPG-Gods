@@ -8,8 +8,8 @@ import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
-import rpggods.deity.DeityHelper;
+import rpggods.data.deity.Altar;
+import rpggods.data.deity.DeityWrapper;
 
 import java.util.Map;
 import java.util.function.Supplier;
@@ -19,6 +19,7 @@ import java.util.function.Supplier;
  * Sent from the server to the client with a map of
  * ResourceLocation IDs and Altars
  **/
+// TODO use datapack registry instead
 public class SAltarPacket {
 
     protected static final Codec<Map<ResourceLocation, Altar>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, Altar.CODEC);
@@ -78,13 +79,13 @@ public class SAltarPacket {
         RPGGods.ALTAR_MAP.clear();
         RPGGods.ALTAR_MAP.putAll(data);
         // clear all deity helper altars
-        for(DeityHelper helper : RPGGods.DEITY_HELPER.values()) {
+        for(DeityWrapper helper : RPGGods.DEITY_HELPER.values()) {
             helper.altarList.clear();
         }
         // add altars to deity helper
         for(Map.Entry<ResourceLocation, Altar> entry : RPGGods.ALTAR_MAP.entrySet()) {
             entry.getValue().getDeity().ifPresent(deity ->
-                    RPGGods.DEITY_HELPER.computeIfAbsent(deity, DeityHelper::new).add(entry.getKey(), entry.getValue())
+                    RPGGods.DEITY_HELPER.computeIfAbsent(deity, DeityWrapper::new).add(entry.getKey(), entry.getValue())
             );
         }
     }

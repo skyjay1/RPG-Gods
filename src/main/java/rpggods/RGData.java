@@ -5,7 +5,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AddReloadListenerEvent;
@@ -15,12 +14,12 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
 import rpggods.entity.AltarEntity;
-import rpggods.favor.Favor;
-import rpggods.favor.FavorCommand;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.FavorCommand;
+import rpggods.data.favor.IFavor;
 import rpggods.network.SUpdateAltarPacket;
-import rpggods.tameable.ITameable;
-import rpggods.tameable.Tameable;
+import rpggods.data.tameable.ITameable;
+import rpggods.data.tameable.Tameable;
 
 public final class RGData {
 
@@ -80,7 +79,7 @@ public final class RGData {
      */
     @SubscribeEvent
     public static void onStartTracking(final PlayerEvent.StartTracking event) {
-        if(event.getEntity().isAlive() && !event.getEntity().level.isClientSide) {
+        if(event.getEntity().isAlive() && !event.getEntity().level().isClientSide) {
             // sync altar entity
             if(event.getTarget() instanceof AltarEntity) {
                 int entityId = event.getTarget().getId();

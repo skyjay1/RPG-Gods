@@ -9,7 +9,6 @@ import net.minecraft.core.Registry;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.SimpleContainer;
@@ -26,11 +25,11 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RPGGods;
-import rpggods.deity.DeityHelper;
+import rpggods.data.deity.DeityWrapper;
 import rpggods.RGEvents;
-import rpggods.favor.IFavor;
-import rpggods.perk.Perk;
-import rpggods.perk.PerkAction;
+import rpggods.data.favor.IFavor;
+import rpggods.data.perk.Perk;
+import rpggods.data.perk.PerkAction;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +41,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
     public static final Supplier<Codec<AutosmeltOrCobbleModifier>> CODEC_SUPPLIER = Suppliers.memoize(() -> RecordCodecBuilder.create(inst ->
             codecStart(inst)
                     .and(ForgeRegistries.BLOCKS.getCodec().fieldOf("stone").forGetter(AutosmeltOrCobbleModifier::getStone))
-                    .and(TagKey.codec(Registry.BLOCK_REGISTRY).fieldOf("ores").forGetter(AutosmeltOrCobbleModifier::getOres))
+                    .and(TagKey.codec(ForgeRegistries.Keys.BLOCKS).fieldOf("ores").forGetter(AutosmeltOrCobbleModifier::getOres))
                     .apply(inst, AutosmeltOrCobbleModifier::new)));;
 
     private final Block stone;
@@ -74,7 +73,7 @@ public class AutosmeltOrCobbleModifier extends LootModifier {
         // determine which of the mining effects can activate
         List<ResourceLocation> autosmelt = new ArrayList<>();
         List<ResourceLocation> unsmelt = new ArrayList<>();
-        for (DeityHelper deity : RPGGods.DEITY_HELPER.values()) {
+        for (DeityWrapper deity : RPGGods.DEITY_HELPER.values()) {
             autosmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.AUTOSMELT, ImmutableList.of()));
             unsmelt.addAll(deity.perkByTypeMap.getOrDefault(PerkAction.Type.UNSMELT, ImmutableList.of()));
         }

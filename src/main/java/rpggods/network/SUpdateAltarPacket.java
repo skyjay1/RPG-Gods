@@ -72,8 +72,7 @@ public class SUpdateAltarPacket {
                 if(world.isPresent()) {
                     // locate the entity by ID
                     Entity entity = world.get().getEntity(message.entityId);
-                    if (entity != null && entity instanceof AltarEntity) {
-                        AltarEntity altar = (AltarEntity) entity;
+                    if (entity != null && entity instanceof AltarEntity altar) {
                         // update block slot
                         altar.setBlockSlot(message.block);
                     }

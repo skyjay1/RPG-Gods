@@ -16,6 +16,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ForgeMod;
 import rpggods.RGRegistry;
+import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
 
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class AltarContainerMenu extends AbstractContainerMenu {
     private List<Slot> altarSlots;
 
     private AltarEntity entity;
-    private rpggods.deity.Altar altar;
+    private Altar altar;
     private Container altarInv;
 
     public AltarContainerMenu(int id, final Inventory inventory) {
@@ -44,7 +45,7 @@ public class AltarContainerMenu extends AbstractContainerMenu {
     public AltarContainerMenu(final int id, final Inventory playerInv, final Container altarInv, final AltarEntity entity) {
         super(RGRegistry.ALTAR_CONTAINER.get(), id);
         this.entity = entity;
-        this.altar = entity != null ? entity.createAltarProperties() : rpggods.deity.Altar.EMPTY;
+        this.altar = entity != null ? entity.createAltarProperties() : Altar.EMPTY;
         this.altarInv = altarInv;
         checkContainerSize(altarInv, ALTAR_INV_SIZE);
         altarInv.startOpen(playerInv.player);
@@ -78,13 +79,13 @@ public class AltarContainerMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(final Player playerIn) {
-        final double maxDistanceSq = Math.pow(playerIn.getAttributeValue(ForgeMod.REACH_DISTANCE.get()) + 1.0D, 2);
+        final double maxDistanceSq = Math.pow(playerIn.getEntityReach() + 1.0D, 2);
         return getEntity() != null && getEntity().isAlive() && playerIn.distanceToSqr(getEntity()) < maxDistanceSq;
     }
 
-    public rpggods.deity.Altar getAltar() { return altar; }
+    public Altar getAltar() { return altar; }
 
-    public void setAltar(final rpggods.deity.Altar altar) { this.altar = altar; }
+    public void setAltar(final Altar altar) { this.altar = altar; }
 
     public AltarEntity getEntity() { return entity; }
 

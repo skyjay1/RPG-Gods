@@ -1,4 +1,4 @@
-package rpggods.perk;
+package rpggods.data.perk;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
@@ -7,11 +7,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
-import net.minecraft.data.BuiltinRegistries;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -33,12 +35,13 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 import rpggods.RGEvents;
 import rpggods.RPGGods;
-import rpggods.deity.Altar;
+import rpggods.data.deity.Altar;
 import rpggods.entity.AltarEntity;
-import rpggods.favor.IFavor;
+import rpggods.data.favor.IFavor;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class PerkCondition {
 
@@ -165,6 +168,28 @@ public final class PerkCondition {
     }
 
     /**
+     * @param registryAccess the registry access
+     * @param key the structure key
+     * @param structures a set of structures
+     * @return true if any structure matches the given key
+     */
+    private static boolean hasStructure(final RegistryAccess registryAccess, final ResourceKey<Structure> key, final Set<Structure> structures) {
+        final Registry<Structure> registry = registryAccess.registryOrThrow(Registries.STRUCTURE);
+        for(Structure structure : structures) {
+            // load structure resource key
+            Optional<ResourceKey<Structure>> resourceKey = registry.getResourceKey(structure);
+            if(resourceKey.isEmpty()) continue;
+            // check equality
+            if(resourceKey.get().equals(key)) {
+                return true;
+            }
+        }
+        // all checks failed
+        return false;
+    }
+
+
+    /**
      * @param level the level
      * @param origin the position of the event
      * @param distance the maximum distance to the altar
@@ -253,7 +278,7 @@ public final class PerkCondition {
                         && getId().get().equals(ForgeRegistries.ENTITY_TYPES.getKey(player.getVehicle().getType()))
                         && (!tag.isPresent() || NbtUtils.compareNbt(tag.get(), entityTag.get(), true));
             case DIMENSION: return getId().isPresent() && getId().get().equals(player.level.dimension().location());
-            case STRUCTURE: return player.level instanceof ServerLevel && isInStructure((ServerLevel) player.level, player.blockPosition());
+            case STRUCTURE: return hasStructure(player.level().registryAccess(), this.structure, player.level().structureManager().getAllStructuresAt(blockpos).keySet());
             // match data to perk condition data
             case RITUAL:
             case EFFECT_START:
@@ -337,6 +362,7 @@ public final class PerkCondition {
         }
     }
 
+    // TODO dispatch registry for PerkCondition
     public static enum Type implements StringRepresentable {
         PATRON("patron"),
         BIOME("biome"),

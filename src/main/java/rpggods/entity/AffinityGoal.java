@@ -13,7 +13,6 @@ import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
-import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
@@ -27,20 +26,19 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import rpggods.RPGGods;
-import rpggods.favor.Favor;
-import rpggods.favor.FavorRange;
-import rpggods.favor.IFavor;
-import rpggods.perk.Affinity;
-import rpggods.perk.Perk;
-import rpggods.tameable.ITameable;
-import rpggods.tameable.Tameable;
+import rpggods.data.favor.Favor;
+import rpggods.data.favor.FavorRange;
+import rpggods.data.favor.IFavor;
+import rpggods.data.perk.Affinity;
+import rpggods.data.perk.Perk;
+import rpggods.data.tameable.ITameable;
+import rpggods.data.tameable.Tameable;
 
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class AffinityGoal {
 
@@ -137,7 +135,7 @@ public class AffinityGoal {
         LazyOptional<ITameable> tameable = mob.getCapability(RPGGods.TAMEABLE);
         if(tameable.isPresent()) {
             ITameable t = tameable.orElse(null);
-            Optional<LivingEntity> owner = t.getOwner(mob.level);
+            Optional<LivingEntity> owner = t.getOwner(mob.level());
             // tamed entity should not attack owner or owner team
             if(t.isOwner(target) || (owner.isPresent() && owner.get().isAlliedTo(target))) {
                 return true;
@@ -290,7 +288,7 @@ public class AffinityGoal {
         @Override
         public boolean canUse() {
             ITameable tameable = entity.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
-            Optional<LivingEntity> owner = tameable.getOwner(entity.level);
+            Optional<LivingEntity> owner = tameable.getOwner(entity.level());
             if (!owner.isPresent()) {
                 return false;
             }
@@ -375,19 +373,19 @@ public class AffinityGoal {
         }
 
         private boolean isTeleportFriendlyBlock(BlockPos pos) {
-            BlockPathTypes pathType = WalkNodeEvaluator.getBlockPathTypeStatic(this.entity.level, pos.mutable());
+            BlockPathTypes pathType = WalkNodeEvaluator.getBlockPathTypeStatic(this.entity.level(), pos.mutable());
 
             if (pathType != BlockPathTypes.WALKABLE) {
                 return false;
             }
 
-            BlockState posDown = this.entity.level.getBlockState(pos.below());
+            BlockState posDown = this.entity.level().getBlockState(pos.below());
             if (!this.teleportToLeaves && posDown.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock) {
                 return false;
             }
 
             BlockPos distance = pos.subtract(this.entity.blockPosition());
-            if (!this.entity.level.noCollision(this.entity, this.entity.getBoundingBox().move(distance))) {
+            if (!this.entity.level().noCollision(this.entity, this.entity.getBoundingBox().move(distance))) {
                 return false;
             }
 
@@ -415,7 +413,7 @@ public class AffinityGoal {
          */
         public boolean canUse() {
             ITameable tameable = mob.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
-            Optional<LivingEntity> owner = tameable.getOwner(mob.level);
+            Optional<LivingEntity> owner = tameable.getOwner(mob.level());
             if (tameable == Tameable.EMPTY || !owner.isPresent() || !tameable.isTamed() || tameable.isSitting()) {
                 return false;
             }
@@ -455,7 +453,7 @@ public class AffinityGoal {
          */
         public boolean canUse() {
             ITameable tameable = mob.getCapability(RPGGods.TAMEABLE).orElse(Tameable.EMPTY);
-            Optional<LivingEntity> owner = tameable.getOwner(mob.level);
+            Optional<LivingEntity> owner = tameable.getOwner(mob.level());
             if (tameable == Tameable.EMPTY || !owner.isPresent() || !tameable.isTamed() || tameable.isSitting()) {
                 return false;
             }

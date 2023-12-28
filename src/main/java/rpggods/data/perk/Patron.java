@@ -1,4 +1,4 @@
-package rpggods.perk;
+package rpggods.data.perk;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
