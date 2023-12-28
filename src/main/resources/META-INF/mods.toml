@@ -1,20 +1,28 @@
 modLoader="javafml"
-loaderVersion="[43,)"
-# The license for your mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
-license="GNU GPLv3"
-# A URL to refer people to when problems occur with this mod
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
 issueTrackerURL="https://github.com/skyjay1/RPG-Gods/issues"
 
 [[mods]]
-    modId="rpggods"
-    version="19.2.2"
-    displayName="RPG Gods"
-    credits=""
-    authors="skyjay1"
-    description='''Gods and goddesses galore'''
-[[dependencies.rpggods]]
+    modId="${mod_id}"
+    version="${mod_version}"
+    displayName="${mod_name}"
+    #updateJSONURL="https://change.me.example.invalid/updates.json"
+    displayURL="https://www.curseforge.com/minecraft/mc-mods/rpg-gods"
+    credits="${mod_credits}"
+    authors="${mod_authors}"
+    displayTest="MATCH_VERSION"
+    description='''${mod_description}'''
+
+[[dependencies.${mod_id}]]
     modId="forge"
     mandatory=true
-    versionRange="[43.1,)"
+    versionRange="${forge_version_range}"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
